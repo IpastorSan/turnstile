@@ -1,0 +1,293 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deployedAt": "2026-06-29T05:35:12.452Z",
+  "repo": "https://github.com/ensdomains/contracts-v2",
+  "commit": "48b3e2d (Post Audit Changes #301)",
+  "namespace": "contracts/deployments/sepolia",
+  "verificationMethod": "eth_getCode against https://ethereum-sepolia-rpc.publicnode.com compared byte-for-byte with each artifact deployedBytecode; all differences fall strictly inside declared immutableReferences slots",
+  "contracts": [
+    {
+      "name": "ApprovedUpgradeGate",
+      "contractName": "ApprovedUpgradeGate",
+      "address": "0xc319c9efaae0bd01fec99b7f709fe41510a20595",
+      "sourceFile": "src/registry/ApprovedUpgradeGate.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/ApprovedUpgradeGate.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "BatchRegistrar",
+      "contractName": "BatchRegistrar",
+      "address": "0xfe2aab6df1cbff84534ce65d9e4a755ba02d6795",
+      "sourceFile": "src/registrar/BatchRegistrar.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/BatchRegistrar.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "ContractNamer_Implementation",
+      "contractName": "ContractNamer",
+      "address": "0x1520935e3c23c7d3cf0024537f53bf2bf26c9553",
+      "sourceFile": "src/utils/ContractNamer.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/ContractNamer_Implementation.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "ContractNamer",
+      "contractName": "ContractNamer",
+      "address": "0x68658a771044873906fc9b6e9f278ac5a0501342",
+      "sourceFile": "src/utils/ContractNamer.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/ContractNamer.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "ContractNamer_Proxy",
+      "contractName": "ERC1967Proxy",
+      "address": "0x68658a771044873906fc9b6e9f278ac5a0501342",
+      "sourceFile": "solc_0.8/openzeppelin/proxy/ERC1967/ERC1967Proxy.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/ContractNamer_Proxy.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "DefaultReverseRegistrarAdapter",
+      "contractName": "DefaultReverseRegistrarAdapter",
+      "address": "0x1f7b9461d17d5cf43553253c6b78d252d9575954",
+      "sourceFile": "src/reverse-registrar/DefaultReverseRegistrarAdapter.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/DefaultReverseRegistrarAdapter.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "DNSV1MirrorRootBatchRegistrar",
+      "contractName": "BatchRegistrar",
+      "address": "0x08c297214c7ea8de81e2d984d66dcc1684054037",
+      "sourceFile": "src/registrar/BatchRegistrar.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/DNSV1MirrorRootBatchRegistrar.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "ENSV1Resolver",
+      "contractName": "ENSV1Resolver",
+      "address": "0x5339161a7896ca9841ecc034a49edca40f7b9491",
+      "sourceFile": "src/resolver/ENSV1Resolver.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/ENSV1Resolver.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "ENSV2Resolver",
+      "contractName": "ENSV2Resolver",
+      "address": "0x6f988f299926ce361450db390d66dd604dcd8b21",
+      "sourceFile": "src/resolver/ENSV2Resolver.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/ENSV2Resolver.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "ETHRegistrar",
+      "contractName": "ETHRegistrar",
+      "address": "0xa4449a0dd2b83007553d9b1d28b583a46a805a30",
+      "sourceFile": "src/registrar/ETHRegistrar.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/ETHRegistrar.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "bytecode-verified: on-chain eth_getCode matches artifact deployedBytecode exactly outside immutable slots"
+    },
+    {
+      "name": "ETHRegistry",
+      "contractName": "PermissionedRegistry",
+      "address": "0x67b728a792e789a8978b30cf1b3b641f19354b43",
+      "sourceFile": "src/registry/PermissionedRegistry.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/ETHRegistry.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "bytecode-verified: on-chain eth_getCode matches artifact deployedBytecode exactly outside immutable slots",
+      "crossCheck": "Additionally confirmed live: returned by RootRegistry.getSubregistry(\"eth\") on Sepolia. Sepolia Etherscan shows contract name PermissionedRegistry, source verified (Exact Match), created 2026-06-29 (67 days before 2026-09-04) by 0x84D3a426D4E12E955d1DF95db0B24fe26afE39D3, tx 0x5700e0b4ea84267da71a17def83bcdcdc49d7b1b6ee1b1de8b718e7ca5f2a7e4."
+    },
+    {
+      "name": "ETHRenewerV1",
+      "contractName": "ETHRenewerV1",
+      "address": "0x1be516ae1b72765ae55bd5e9ca628c9058a1c622",
+      "sourceFile": "src/registrar/ETHRenewerV1.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/ETHRenewerV1.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "Graveyard",
+      "contractName": "Graveyard",
+      "address": "0x6f4bf58ac55e0018589b2d9734ed8bb82740124d",
+      "sourceFile": "src/migration/Graveyard.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/Graveyard.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "LabelStore",
+      "contractName": "LabelStore",
+      "address": "0xb03524289c16424f71802a1794c29c7bd1b9f577",
+      "sourceFile": "src/utils/LabelStore.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/LabelStore.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "LockedMigrationController",
+      "contractName": "LockedMigrationController",
+      "address": "0x681802eff57b83edce99d688c023ab1284495176",
+      "sourceFile": "src/migration/LockedMigrationController.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/LockedMigrationController.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "ManagedUniversalResolverProxy",
+      "contractName": "UpgradableUniversalResolverProxy",
+      "address": "0x6d80F2172CFdEc5730fE683860C33d26fC42e6F1",
+      "sourceFile": "src/universalResolver/UpgradableUniversalResolverProxy.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/ManagedUniversalResolverProxy.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "MigrationHelper",
+      "contractName": "MigrationHelper",
+      "address": "0xd54a53c1567b26f9653c8565dccc39bceb6ab327",
+      "sourceFile": "src/migration/MigrationHelper.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/MigrationHelper.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "MockDAI",
+      "contractName": "MockERC20",
+      "address": "0xe33a01a41ee4a68616b5278183aa88808326ed8e",
+      "sourceFile": "test/mocks/MockERC20.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/MockDAI.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "MockUSDC",
+      "contractName": "MockERC20",
+      "address": "0xd3322b29a7bdee707d1684676f149bf41aa3422f",
+      "sourceFile": "test/mocks/MockERC20.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/MockUSDC.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "PermissionedResolverImpl",
+      "contractName": "PermissionedResolver",
+      "address": "0x7e4b2d59938930168024201752ee5503df402303",
+      "sourceFile": "src/resolver/PermissionedResolver.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/PermissionedResolverImpl.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "bytecode-verified: on-chain eth_getCode matches artifact deployedBytecode exactly outside immutable slots"
+    },
+    {
+      "name": "PublicResolverSet",
+      "contractName": "PermissionedAddressSet",
+      "address": "0x24be557df149980a52241dd78a376d78f73689a5",
+      "sourceFile": "src/utils/PermissionedAddressSet.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/PublicResolverSet.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "PublicResolverV2",
+      "contractName": "PublicResolverV2",
+      "address": "0xd25f66dd4ff61486c2c5c1e6201a23576698d3df",
+      "sourceFile": "src/resolver/PublicResolverV2.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/PublicResolverV2.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "bytecode-verified: on-chain eth_getCode matches artifact deployedBytecode exactly outside immutable slots"
+    },
+    {
+      "name": "ReverseRegistrarAdapter",
+      "contractName": "ReverseRegistrarAdapter",
+      "address": "0x94e64e29e25533f93ba0a430646ae42cb47bf8f3",
+      "sourceFile": "src/reverse-registrar/ReverseRegistrarAdapter.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/ReverseRegistrarAdapter.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "RootRegistry",
+      "contractName": "PermissionedRegistry",
+      "address": "0x11b5bfbe9078d826b1edbdd1cfc12f5828d9f50c",
+      "sourceFile": "src/registry/PermissionedRegistry.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/RootRegistry.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "bytecode-verified: on-chain eth_getCode matches artifact deployedBytecode exactly outside immutable slots",
+      "crossCheck": "Additionally confirmed live: RootRegistry.getSubregistry(\"eth\") returns the ETHRegistry address below."
+    },
+    {
+      "name": "StandardRentPriceOracle",
+      "contractName": "StandardRentPriceOracle",
+      "address": "0x09340d50a6489e7bfb2959acc4e32bcbc401e203",
+      "sourceFile": "src/registrar/StandardRentPriceOracle.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/StandardRentPriceOracle.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "UniversalResolverV2",
+      "contractName": "UniversalResolverV2",
+      "address": "0x85edf8b6b7d4211e2b07aa687506b746357b92cf",
+      "sourceFile": "src/universalResolver/UniversalResolverV2.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/UniversalResolverV2.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "bytecode-verified: on-chain eth_getCode matches artifact deployedBytecode exactly outside immutable slots"
+    },
+    {
+      "name": "UnlockedMigrationController",
+      "contractName": "UnlockedMigrationController",
+      "address": "0xd021a69db7f9e276a59cbbccf06e7f1e5434215c",
+      "sourceFile": "src/migration/UnlockedMigrationController.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/UnlockedMigrationController.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "UpgradableUniversalResolverProxy",
+      "contractName": "UpgradableUniversalResolverProxy",
+      "address": "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe",
+      "sourceFile": "src/universalResolver/UpgradableUniversalResolverProxy.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/UpgradableUniversalResolverProxy.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "code-present: eth_getCode returned non-empty bytecode at this address on Sepolia"
+    },
+    {
+      "name": "UserRegistryImpl",
+      "contractName": "UserRegistry",
+      "address": "0x840fa461059862ea466a711e8c98c8de732061c0",
+      "sourceFile": "src/registry/UserRegistry.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/UserRegistryImpl.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "bytecode-verified: on-chain eth_getCode matches artifact deployedBytecode exactly outside immutable slots"
+    },
+    {
+      "name": "VerifiableFactory",
+      "contractName": "VerifiableFactory",
+      "address": "0x118bc31a50d559f7015a8da26d54b3b030cdb70f",
+      "sourceFile": "lib/verifiable-factory/src/VerifiableFactory.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/VerifiableFactory.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "bytecode-verified: on-chain eth_getCode matches artifact deployedBytecode exactly outside immutable slots",
+      "crossCheck": "Additionally confirmed live: proxyLogic() returns 0x7e98c31ae2ac5c3c88f2ce00c22a10b8cb84bce2."
+    },
+    {
+      "name": "WrapperRegistryImpl",
+      "contractName": "WrapperRegistry",
+      "address": "0xcf9f4863a1b44216cfc0be65f4e47b2b9a043924",
+      "sourceFile": "src/registry/WrapperRegistry.sol",
+      "source": "ensdomains/contracts-v2@48b3e2d :: contracts/deployments/sepolia/WrapperRegistryImpl.json (.address) \u2014 mirrored in contracts/docs/addresses/sepolia.md",
+      "verified": true,
+      "verification": "bytecode-verified: on-chain eth_getCode matches artifact deployedBytecode exactly outside immutable slots"
+    }
+  ]
+}
