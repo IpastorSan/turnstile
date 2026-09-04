@@ -130,3 +130,25 @@ and nothing else on this list survives forgetting it.
 1inch Aqua · Hedera ATS · Hedera Harness as the product (side PR only) · Arc DeFi pool ·
 Uniswap v4 hook · Bazantic "Agentify a new API" · Chainlink liquidation challenge (requirements
 still "coming soon") · every Continuity prize.
+
+### MOV-217 — ENSv2 registry + registrar (2026-09-04)
+
+Appended, not ticked: gate 8 and the ENS bounty lines above belong to other
+issues, and `CHECKLIST.md` is `merge=union`, so editing an existing line from a
+worktree duplicates it rather than conflicting.
+
+- Gate 8 (real ENSv2 Sepolia addresses) is satisfied by MOV-212 **and now
+  continuously verified**: `contracts/test/fork/SepoliaEnsV2.t.sol` asserts
+  `RootRegistry.getSubregistry("eth")` still returns `0x67b7…4b43` on every
+  `forge test`. Passing as of 2026-09-04 — ENS has not redeployed.
+- ENS "features central, not cosmetic": contracts and tests are done, 37 passing.
+  Still **open** — nothing is deployed, because there is no funded Sepolia key
+  (MOV-211).
+- ENS "no hard-coded values": ENS addresses are read from
+  `contracts/addresses.sepolia.json` at run time by `script/EnsSepolia.sol`, not
+  compiled in. A redeploy is a one-file regeneration.
+- Blocking: buy `turnstile.eth` through the paid `ETHRegistrar` commit/reveal
+  flow. It is currently `AVAILABLE` with no owner (checked on-chain 2026-09-04),
+  and we hold no `ROLE_REGISTRAR` on ENS's `.eth` registry — asserted by
+  `testFork_weHoldNoRegistrarRoleOnTheEthRegistry`.
+- Run book: `docs/ensv2-deploy.md`. Deployment estimate 0.0057 ETH.
