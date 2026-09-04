@@ -24,7 +24,7 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 | 5 | `npm i -g @ledgerhq/wallet-cli`; run `wallet-cli genuine-check` and `ring init` **with the device attached** — this is the only step that needs hardware | Ledger |
 | 6 | Create **portal.hedera.com** account + ECDSA testnet accounts (1,000 HBAR/24h × up to 5) | Hedera |
 | 7 | Create **bazantic.com** account | Bazantic |
-| 8 | ⚠️ **Get real ENSv2 Sepolia addresses** — clone `ensdomains/contracts-v2` and grep `broadcast/<script>/11155111/run-latest.json`. Do **not** trust doc-scraped addresses; the ones found on 09-04 could not be corroborated and may be fabricated | ENS |
+| 8 | ✅ **Real ENSv2 Sepolia addresses** — done (MOV-212). All 31 verified against live `eth_getCode`; zero bytes differ outside declared `immutableReferences` slots. Recorded in `contracts/addresses.sepolia.json`, method and caveats in `docs/ensv2-notes.md`. Artifacts are **rocketh/hardhat-deploy** at `contracts/deployments/sepolia/<Name>.json` — there is no Foundry `broadcast/`. Pinned to the 2026-06-29 deploy, not permanent: re-check before deploying, and `contracts/test/fork/SepoliaEnsV2.t.sol` is the canary | ENS |
 | 9 | Ask Discord: is `sponsor_sdks: up to three` a real cap? (Not in the global rules) | ETHGlobal |
 | 10 | Ask Discord: does Arc "deployment-ready by 30 Sep" accept testnet + mainnet config? ($3,500) | Arc |
 | 11 | `git init` **at kickoff**, public repo, first commit dated in-window | All |
@@ -133,12 +133,12 @@ still "coming soon") · every Continuity prize.
 
 ### MOV-217 — ENSv2 registry + registrar (2026-09-04)
 
-Appended, not ticked: gate 8 and the ENS bounty lines above belong to other
-issues, and `CHECKLIST.md` is `merge=union`, so editing an existing line from a
-worktree duplicates it rather than conflicting.
+Gate 8 is ticked in place. The ENS bounty lines below it are not, because they
+are not yet true — nothing is deployed. Union merge only rewrites a line when
+both sides changed it, so a single owner editing a row is safe; two are not.
 
-- Gate 8 (real ENSv2 Sepolia addresses) is satisfied by MOV-212 **and now
-  continuously verified**: `contracts/test/fork/SepoliaEnsV2.t.sol` asserts
+- Gate 8 is ticked above. It is now **continuously** verified rather than
+  verified once: `contracts/test/fork/SepoliaEnsV2.t.sol` asserts
   `RootRegistry.getSubregistry("eth")` still returns `0x67b7…4b43` on every
   `forge test`. Passing as of 2026-09-04 — ENS has not redeployed.
 - ENS "features central, not cosmetic": contracts and tests are done, 37 passing.
