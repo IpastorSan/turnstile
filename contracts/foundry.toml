@@ -1,0 +1,26 @@
+# Foundry config — Turnstile ENSv2 subname registry + registrar.
+#
+# Dependency revisions are pinned to exactly what ensdomains/contracts-v2@48b3e2d
+# pins (see its contracts/foundry.lock). Same compiler settings as contracts-v2
+# so that anything we deploy behind their VerifiableFactory is built the same way.
+
+[profile.default]
+src = "src"
+out = "out"
+test = "test"
+script = "script"
+libs = ["lib"]
+solc = "0.8.36"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+fs_permissions = [{ access = "read-write", path = "./" }]
+
+[profile.default.fuzz]
+runs = 256
+
+[rpc_endpoints]
+# Read-only forking needs no key. SEPOLIA_RPC_URL overrides when set; the tests
+# themselves fall back to the same public endpoint via vm.envOr, so `forge test`
+# works with no environment at all.
+sepolia = "${SEPOLIA_RPC_URL}"
