@@ -3,6 +3,11 @@
 Verbatim copy of §4 of `plan/turnstile-v3.md`. Every row is a binary
 disqualifier. Append-only (`merge=union`) — tick boxes, never rewrite lines.
 
+> ⚠️ **The repo is PRIVATE right now, on purpose.** It must be flipped to
+> public before submitting or all 12 submissions fail. See
+> [Before submitting](#before-submitting--blocks-all-12-submissions) at the
+> bottom of this file.
+
 ## 4. Qualification checklist
 
 Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from day 1.**
@@ -32,6 +37,7 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 | 13 | Append to **`FEEDBACK.md`** every time we hit a Uniswap rough edge |
 | 14 | Append to **`WORLD-FEEDBACK.md`**: docs + integration flow, Developer Portal navigation/search/discovery/debugging, Sandbox states, proof flows, test users, errors, edge cases, what was confusing/missing/broken |
 | 15 | Capture **every on-chain tx the first time it works** — HashScan links, tx hashes, terminal output |
+| 16 | Repo is **private during the build**. Flipping it to public is the last step before submitting — see [Before submitting](#before-submitting--blocks-all-12-submissions) |
 
 ### Per-submission
 
@@ -106,6 +112,18 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] Recipe using **both**, final result depends meaningfully on both
 - [ ] Screen recording start to finish
 - [ ] **Bazantic username in the submission** for attribution
+
+### Before submitting — blocks all 12 submissions
+
+The repo is deliberately **private** for the 12 build days, to keep the ERC-8004
+Substreams module and the "sell the answer, keep the method" framing out of view
+of other teams. Flipping visibility preserves the full commit history, so the
+ETHGlobal and 1inch history audits are unaffected — but the flip is not optional
+and nothing else on this list survives forgetting it.
+
+- [ ] **Before submitting: `gh repo edit IpastorSan/turnstile --visibility public`** — every sponsor requires a public repo; a private repo fails all 12 submissions.
+- [ ] Confirm it took: `gh repo view IpastorSan/turnstile --json visibility`
+- [ ] Open the repo URL in a logged-out browser before pasting it into any submission form.
 
 ### Explicitly not doing
 
