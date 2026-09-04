@@ -1,0 +1,31 @@
+# Copy to .envrc (direnv) or source manually. .envrc itself is not tracked.
+
+# Six Rust worktrees must not mean six full Substreams builds. One shared
+# target dir across every worktree.
+export CARGO_TARGET_DIR="$HOME/.cache/turnstile-target"
+
+# --- The Graph ---
+export GRAPH_DEPLOY_KEY=""          # Subgraph Studio
+export GRAPH_GATEWAY_API_KEY=""     # query gateway
+export SUBSTREAMS_API_TOKEN=""      # thegraph.market JWT
+
+# --- Chainlink CRE ---
+export CRE_API_KEY=""
+
+# --- Hedera ---
+export HEDERA_OPERATOR_ID=""
+export HEDERA_OPERATOR_KEY=""       # ECDSA testnet
+
+# --- Circle / Arc ---
+export CIRCLE_API_KEY=""
+
+# --- Privy ---
+export PRIVY_APP_ID=""
+export PRIVY_APP_SECRET=""
+
+# --- World ---
+export WORLD_APP_ID=""
+export WORLD_SANDBOX_KEY=""
+
+# --- ENS (Sepolia) ---
+export SEPOLIA_RPC_URL=""

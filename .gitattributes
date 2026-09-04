@@ -1,0 +1,6 @@
+# Append-only files, written from many parallel worktrees at once.
+# Union merge keeps concurrent appends instead of conflicting on every merge.
+# Append at the end; never rewrite someone else's lines.
+CHECKLIST.md       merge=union
+FEEDBACK.md        merge=union
+WORLD-FEEDBACK.md  merge=union
