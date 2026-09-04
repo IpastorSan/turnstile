@@ -1,0 +1,3 @@
+# contracts/test
+
+Foundry tests.
