@@ -19,7 +19,19 @@ kickoff (2026-09-04) and every commit is dated in-window.
 - **Commit every day.** 1inch explicitly disqualifies final-day single-commit
   dumps and ETHGlobal audits history generally. Small, real commits — never one
   squashed dump at the end.
-- The repo is **public** and open source (MIT). Several prizes require it.
+- The repo is **private during the build, and MUST be flipped to public before
+  submitting.** Every sponsor requires a public repo — a private one fails all
+  12 submissions. It is private on purpose, to keep the ERC-8004 Substreams
+  module and the "sell the answer, keep the method" framing out of view of
+  other teams for the 12 days. Flipping visibility preserves the whole commit
+  history, so the history audits are unaffected.
+
+  ```bash
+  gh repo edit IpastorSan/turnstile --visibility public   # the last step before submitting
+  ```
+
+  This is tracked as a hard gate in `CHECKLIST.md` under **Before submitting**.
+  Open source, MIT.
 
 `CHECKLIST.md` is the list of binary prize gates. Every line in it is a
 disqualifier. If your work satisfies one, tick it in the same commit.
