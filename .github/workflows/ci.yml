@@ -43,3 +43,48 @@ jobs:
           fi
           npm run --if-present lint
           npm run --if-present typecheck
+
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The ENS contracts we compile against are submodules, pinned to the
+          # revisions contracts-v2 itself pins. Recursive because contracts-v2
+          # carries its own.
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: '1.8.1'
+
+      - name: Build
+        working-directory: contracts
+        run: forge build --sizes
+
+      - name: Test
+        working-directory: contracts
+        # Local tests only. The fork tests run in their own job so that a flaky
+        # public RPC cannot redden the build history judges read.
+        run: forge test --no-match-path 'test/fork/*' -vv
+
+  contracts-fork:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Advisory. This job carries the ENS redeploy canary — if it goes red, every
+    # address in contracts/addresses.sepolia.json is stale and the ENS work needs
+    # re-checking. It does not gate, because it depends on a free public RPC.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: '1.8.1'
+
+      - name: Fork tests against live Sepolia
+        working-directory: contracts
+        run: forge test --match-path 'test/fork/*' -vv
