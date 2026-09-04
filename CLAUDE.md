@@ -110,9 +110,13 @@ even mid-feature.
   fails at runtime. `seller/secrets/*.enc` *is* tracked and does follow.
 - **Per-worktree installs are expensive.** Set `CARGO_TARGET_DIR=~/.cache/turnstile-target`
   globally and use a pnpm store, so six worktrees do not mean six full builds.
-- **Append-only files conflict constantly** across parallel worktrees. `.gitattributes` sets
-  `merge=union` on `CHECKLIST.md`, `FEEDBACK.md` and `WORLD-FEEDBACK.md` — append at the end,
-  never rewrite someone else's lines.
+- **`merge=union` is for appending, not editing.** `.gitattributes` sets it on `CHECKLIST.md`,
+  `FEEDBACK.md` and `WORLD-FEEDBACK.md` so two worktrees appending in *different* places both
+  land. But union merge only engages on a hunk both sides touched, and when it does it keeps
+  **both** versions instead of raising a conflict — so two branches editing the same line
+  produce a silent duplicate, not an error. That is worse than a conflict, because a conflict
+  is loud. Append at the end. To change an existing line, route it to a single owner and have
+  everyone else stand down.
 - `rails/PaymentRail.ts` is the shared seam most likely to conflict. Land **MOV-219** and merge
   it to `dev` **before** starting the two rail implementations in parallel.
 - The workflow must live in the turnstile repo's own `CLAUDE.md`, not only in Linear —
