@@ -1,0 +1,18 @@
+{
+  "//": "Separate from the repo root tsconfig on purpose. This tree compiles to WASM against a pinned SDK and its own viem/zod copies, so it must not be typechecked with the root's nodenext resolution or the root's dependency versions. allowImportingTsExtensions is on because it reaches back into seller/analyst, which the whole repo imports with explicit .ts extensions.",
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext"],
+    "outDir": "./dist",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": []
+  },
+  "include": ["main.ts", "workflow.ts", "../verdict.ts", "../../analyst/scoring.ts", "../../analyst/types.ts"]
+}

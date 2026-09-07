@@ -1,0 +1,12 @@
+{
+  "schedule": "0 */5 * * * *",
+  "evidenceUrl": "http://127.0.0.1:8787/evidence/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
+  "evidenceSecretId": "EVIDENCE_TOKEN",
+  "calibrationSecretId": "CALIBRATION",
+  "compareToPublicCalibration": true,
+  "evm": {
+    "chainSelectorName": "ethereum-testnet-sepolia",
+    "verdictConsumer": "0x0000000000000000000000000000000000000000",
+    "gasLimit": "600000"
+  }
+}

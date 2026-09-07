@@ -1,0 +1,15 @@
+# ==========================================================================
+# CRE PROJECT SETTINGS — Turnstile
+# ==========================================================================
+# Sepolia only. The verdict settles through the CRE Forwarder into
+# VerdictConsumer (contracts/src/VerdictConsumer.sol); the enclave itself
+# reads no chain.
+staging-settings:
+    rpcs:
+        - chain-name: ethereum-testnet-sepolia
+          url: https://ethereum-sepolia-rpc.publicnode.com
+# ==========================================================================
+production-settings:
+    rpcs:
+        - chain-name: ethereum-testnet-sepolia
+          url: https://ethereum-sepolia-rpc.publicnode.com
