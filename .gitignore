@@ -15,3 +15,4 @@ dist/
 
 # Local agent scratch
 .ralph-loop.sh
+.turnstile-eth-secret
