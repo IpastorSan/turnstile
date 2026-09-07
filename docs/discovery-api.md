@@ -23,6 +23,33 @@ actually publish, and `liquidity.turnstile.eth` read off Sepolia.
 | `ask_x402` — advertises x402, price knowable but unquoted | 96 |
 | `none` — no price and no way to get one | 100 |
 
+**Correction (2026-09-07, MOV-230):** this table previously gave `ask_x402` 96
+and `none` 100, and the document-state counts further down as `failed` 28 /
+`off_module` 123. Those were right for the run they were written from, but they
+are not stable numbers. Re-read against the same store on 2026-09-07 (`select
+price_source, count(*) from agent_current group by price_source`):
+
+| Price source | Then | Now |
+| --- | ---: | ---: |
+| `turnstile` | 1 | **1** |
+| `x402` | 0 | **0** |
+| `document` | 0 | **0** |
+| `ask_x402` | 96 | **97** |
+| `none` | 100 | **99** |
+
+Document states are now `off_module` 126, `failed` 25, `in_module` 15, `no_uri`
+30, `not_fetchable` 1. The cause is the one this document already identifies:
+Cloudflare 530s and other transient origin failures resolve on a later pass, so
+an agent moves from `failed` to `off_module`, and a document that turns out to
+carry `x402Support` moves from `none` to `ask_x402`.
+
+**What is unchanged is the finding.** `turnstile` is 1, and `x402` and
+`document` are both still 0 — one agent in 197 has a readable price and it is
+ours. Only the two "cannot be read" buckets move, and they move *between each
+other*. Treat 96/100 and 97/99 alike as a snapshot of a live directory, not as
+constants; the web app computes them from the store at request time rather than
+quoting either figure.
+
 This is not a gap in the sink. EIP-8004 registration-v1 has no price field, and
 under x402 the quote is returned dynamically in the HTTP 402 response, so there
 is nothing on-chain for a registry to carry. MOV-221 surveyed 1,200 live
@@ -30,7 +57,8 @@ registrations across three chains and found zero with a price; this run of 197
 independently found zero as well.
 
 `x402Support` is the signal that actually exists, and it means **ask the
-endpoint**. 96 of 197 agents set it. Of those, only **13** publish an HTTP
+endpoint**. 96 of 197 agents set it (97 as re-read on 2026-09-07 — see the
+correction above). Of those, only **13** publish an HTTP
 endpoint that can be asked, and **none of the 13 returned a 402** — see
 "Probing" below.
 
