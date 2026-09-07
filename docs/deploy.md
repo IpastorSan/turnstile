@@ -52,6 +52,22 @@ pinned in `web/next.config.ts` under `outputFileTracingIncludes`:
 `graph/sink/schema.sql` was found only by running the standalone bundle in a
 clean directory. Do not remove that step from the release check.
 
+### The snapshot is opened read-only
+
+`openDb()` executes `schema.sql` on every connect. The DDL is idempotent, but it
+is still a **write**: it mutates the database file, which showed up as
+`web/data/discovery.db` appearing modified in `git status` after merely serving
+a page. On the read-only filesystem most platforms give a server bundle, that
+same write fails outright and the market page goes down.
+
+`web/lib/discovery.ts` therefore opens the store with
+`new DatabaseSync(path, { readOnly: true })` and calls `findSellers` directly
+rather than going through `findSellersAt`. The web app only ever reads, and the
+snapshot already carries the schema, so there is nothing to migrate.
+
+Verified by `chmod 444 web/data/discovery.db` and serving from it: 197 agents,
+zero errors, file unchanged.
+
 ---
 
 ## Docker — the portable path

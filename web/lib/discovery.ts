@@ -13,7 +13,9 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { findSellersAt } from '../../seller/service/discovery.ts';
+import { DatabaseSync } from 'node:sqlite';
+
+import { findSellers } from '../../seller/service/discovery.ts';
 import type { FindSellersQuery, FindSellersResult } from '../../seller/service/discovery.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -105,8 +107,18 @@ export function querySellers(query: FindSellersQuery): DiscoveryResponse {
         'No discovery store is present. Run graph/sink/ to build one, or npm run snapshot to commit a dated copy. No data is served rather than placeholder data.',
     };
   }
-  const result = toPlain(findSellersAt(store.path, query));
-  return { ok: true, provenance: store.provenance, result };
+  // Opened read-only, rather than through openDb(). openDb executes schema.sql
+  // on every connect — idempotent DDL, but still a write, which mutates the
+  // file and fails outright on the read-only filesystem most deployments give
+  // a server bundle. The web app only ever reads, and the snapshot already has
+  // the schema, so there is nothing to migrate.
+  const db = new DatabaseSync(store.path, { readOnly: true });
+  try {
+    const result = toPlain(findSellers(db, query));
+    return { ok: true, provenance: store.provenance, result };
+  } finally {
+    db.close();
+  }
 }
 
 export type { FindSellersQuery, FindSellersResult };
