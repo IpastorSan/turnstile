@@ -83,6 +83,14 @@ export interface SellerResult {
   matchedOn: string[];
   endpoints: SellerEndpoint[];
   price: SellerPrice | null;
+  /**
+   * Why `price` is what it is. `price` is null for BOTH 'ask_x402' and 'none',
+   * and those are different situations for a buyer: one agent takes money and
+   * will quote you if its endpoint ever answers, the other publishes nothing
+   * anywhere. Only the aggregate `priceSources` used to carry the difference,
+   * which meant a caller rendering one row could not tell them apart.
+   */
+  priceSource: PriceSource;
   /** Set when this agent is one of ours, with the offer read from its ENS name. */
   turnstile: {
     ensName: string;
@@ -414,6 +422,7 @@ export function findSellers(db: DatabaseSync, query: FindSellersQuery = {}): Fin
       matchedOn: matchedOn(db, row.agent_uid, tokens),
       endpoints: toEndpoints(db, row.agent_uid),
       price,
+      priceSource: row.price_source,
       turnstile: row.turnstile_name
         ? {
             ensName: row.turnstile_name,

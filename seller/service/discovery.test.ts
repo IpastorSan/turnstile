@@ -201,3 +201,25 @@ test('normalizePriceUsd refuses units it cannot convert', () => {
   assert.equal(normalizePriceUsd('not a number', 'USDC', 'x402').usd, null);
   assert.equal(normalizePriceUsd(null, 'USDC', 'x402').usd, null);
 });
+
+test('a null price says which kind of nothing it is', () => {
+  // Both of these agents have `price: null`, and they are not the same case. One
+  // advertises x402, so a price exists and could be quoted if its endpoint ever
+  // answered; the other publishes no price anywhere and has nothing to ask. A
+  // caller rendering a single row has only `priceSource` to tell them apart —
+  // the aggregate counts cannot say which row is which.
+  const db = fixture();
+  const { sellers } = findSellers(db, { includeUnknownPrice: true });
+  const bySource = Object.fromEntries(sellers.map((s) => [s.agentId, s.priceSource]));
+
+  assert.equal(bySource['1'], 'ask_x402', 'x402Support and no quote is askable, not absent');
+  assert.equal(bySource['2'], 'none', 'no price and no x402 is genuinely nothing');
+  assert.equal(bySource['3'], 'turnstile', 'an ENS price record is the only readable source here');
+
+  const askable = sellers.find((s) => s.agentId === '1');
+  const nothing = sellers.find((s) => s.agentId === '2');
+  assert.equal(askable?.price, null);
+  assert.equal(nothing?.price, null);
+  assert.notEqual(askable?.priceSource, nothing?.priceSource);
+  db.close();
+});
