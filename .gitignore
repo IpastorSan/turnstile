@@ -18,3 +18,6 @@ dist/
 .turnstile-eth-secret
 .env.bak*
 .env.*.bak
+
+# Discovery store — rebuilt from the chain by graph/sink/, never committed
+graph/sink/data/
