@@ -18,3 +18,6 @@ dist/
 .turnstile-eth-secret
 .env.bak*
 .env.*.bak
+
+# Personal operational runbook — must not ship in the public submission repo
+docs/manual-steps.md
