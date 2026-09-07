@@ -114,6 +114,14 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] **Bazantic username in the submission** for attribution
 
 ### Before submitting — blocks all 12 submissions
+- [ ] **Decide on `docs/manual-steps.md` in git history.** Untracked from the tree as of
+      2026-09-07, but still reachable in commit `711c0083` and its merge. Contains **no
+      credentials** — machine specifics, the World app ID, the deployer address, Ledger
+      audit reasoning. Purging it means rewriting and force-pushing `dev`, which damages the
+      per-feature history ETHGlobal audits and 1inch scores. Recommendation: **leave it**.
+      Recorded here so the call is made deliberately before the repo goes public, not
+      discovered afterwards.
+
 
 The repo is deliberately **private** for the 12 build days, to keep the ERC-8004
 Substreams module and the "sell the answer, keep the method" framing out of view
