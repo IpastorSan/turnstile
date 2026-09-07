@@ -42,9 +42,9 @@
 //
 // `runtime.usingTheDons()` is documented as a one-way crossing: everything
 // after it runs on ordinary Workflow DON nodes and is no longer confidential.
-// So it is crossed exactly once, at the very end, carrying a 105-byte compact
-// verdict and nothing else. The raw bundle, the calibration and the full
-// reasoning never appear on that side of the line.
+// So it is crossed exactly once, at the very end, carrying a seven-field
+// compact verdict — 224 bytes ABI-encoded — and nothing else. The raw bundle,
+// the calibration and the full reasoning never appear on that side of the line.
 
 import {
 	bytesToHex,

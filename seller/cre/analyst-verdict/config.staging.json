@@ -6,7 +6,7 @@
   "compareToPublicCalibration": true,
   "evm": {
     "chainSelectorName": "ethereum-testnet-sepolia",
-    "verdictConsumer": "0x0000000000000000000000000000000000000000",
+    "verdictConsumer": "0xfE95CD0f710DDC5ceED0e93c4e25412Dc3d8eEeA",
     "gasLimit": "600000"
   }
 }

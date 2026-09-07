@@ -1,0 +1,13 @@
+{
+  "//": "The production settlement point for the CRE confidential workflow. Gated on the real CRE Forwarder, so only a DON-signed report that passed enclave attestation can write here. Nothing has settled into it yet: that needs `cre workflow deploy`, which needs deployment access this org does not have (verified 2026-09-07). See addresses.verdict-rehearsal.sepolia.json for what HAS settled, and read its note before quoting it.",
+  "chainId": 11155111,
+  "verdictConsumer": "0xfE95CD0f710DDC5ceED0e93c4e25412Dc3d8eEeA",
+  "creForwarder": "0xF8344CFd5c43616a4366C34E3EEE75af79a74482",
+  "owner": "0x0Adca6e14bA956201D221feC767e4f24194bf5F2",
+  "salt": "27555312021309693626315265573490928942851074985027923154462317248183064493722",
+  "deployTx": "0xb57fc9f277be89227dc81c6730878d421af8a43de46c20cbd3bbeb9b754a2cee",
+  "explorer": "https://sepolia.etherscan.io/address/0xfE95CD0f710DDC5ceED0e93c4e25412Dc3d8eEeA",
+  "etherscanVerified": true,
+  "gated": false,
+  "gatingNote": "expectedAuthor and expectedWorkflowId are both unset, because a workflow id does not exist until the workflow is registered. Close them with setExpectedAuthor/setExpectedWorkflowId once it is. verdictsAreGated() reports this."
+}

@@ -6,8 +6,9 @@
 // *not* what goes on chain — an LP-safety report published in the clear is a
 // report nobody needs to buy.
 //
-// So this file defines the narrow waist. A `CompactVerdict` is 105 bytes ABI-
-// encoded and carries exactly four things:
+// So this file defines the narrow waist. A `CompactVerdict` is seven fields —
+// 224 bytes ABI-encoded, 65 bytes of actual information — carrying exactly four
+// things:
 //
 //   - which pool was judged, so the verdict is addressable;
 //   - the rating and confidence, so a contract can act on it;

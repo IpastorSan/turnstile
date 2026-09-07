@@ -35,7 +35,7 @@ contract VerdictConsumerTest is Test {
         0x60caa3841046ee545a5a91881ba92e5ce201a49048f3d3ec08ad5369c2bd02c2;
 
     function setUp() public {
-        consumer = new VerdictConsumer(FORWARDER);
+        consumer = new VerdictConsumer(FORWARDER, address(this));
     }
 
     // --- helpers -----------------------------------------------------------
@@ -65,7 +65,21 @@ contract VerdictConsumerTest is Test {
 
     function test_constructorRejectsZeroForwarder() public {
         vm.expectRevert(VerdictConsumer.ForwarderRequired.selector);
-        new VerdictConsumer(address(0));
+        new VerdictConsumer(address(0), address(this));
+    }
+
+    /// @dev Deploying through the canonical CREATE2 factory makes `msg.sender`
+    ///      in the constructor the factory itself, so the owner has to be
+    ///      passed in. Rejecting the zero address stops the ownerless variant
+    ///      of that mistake — a consumer whose gates can never be closed.
+    function test_constructorRejectsZeroOwner() public {
+        vm.expectRevert(VerdictConsumer.OwnerRequired.selector);
+        new VerdictConsumer(FORWARDER, address(0));
+    }
+
+    function test_theOwnerIsTheOnePassedIn() public {
+        VerdictConsumer other = new VerdictConsumer(FORWARDER, AUTHOR);
+        assertEq(other.owner(), AUTHOR);
     }
 
     function test_supportsTheReceiverInterface() public view {

@@ -40,7 +40,8 @@ interface IReceiver is IERC165 {
 /// The full verdict is seven signals, each with a headline, a paragraph of
 /// reasoning and a block of labelled evidence. Publishing that on Sepolia would
 /// hand away the product — an LP-safety report in the clear is a report nobody
-/// needs to buy. So 105 bytes land here and the rest is sold off-chain:
+/// needs to buy. So seven fields land here — 224 bytes ABI-encoded, 65 bytes
+/// of actual information — and the rest is sold off-chain:
 ///
 /// | Field | Why it is public |
 /// | --- | --- |
@@ -132,6 +133,7 @@ contract VerdictConsumer is IReceiver {
     event ExpectedWorkflowIdUpdated(bytes32 indexed previous, bytes32 indexed next);
 
     error ForwarderRequired();
+    error OwnerRequired();
     error NotOwner(address caller);
     error NotForwarder(address caller, address expected);
     error WrongAuthor(address received, address expected);
@@ -150,9 +152,18 @@ contract VerdictConsumer is IReceiver {
 
     /// @param _forwarder The CRE Forwarder for this chain. On Sepolia:
     ///        0xF8344CFd5c43616a4366C34E3EEE75af79a74482.
-    constructor(address _forwarder) {
+    /// @param _owner Who may later close the identity gates.
+    /// @dev The owner is an explicit argument rather than `msg.sender` because
+    ///      this contract is deployed through the canonical CREATE2 factory —
+    ///      the address has to be derivable before the deploy, since the
+    ///      workflow config must name it. Under CREATE2 `msg.sender` in the
+    ///      constructor is the factory, so `owner = msg.sender` would hand
+    ///      ownership to 0x4e59b448… and leave `setExpectedWorkflowId`
+    ///      permanently uncallable. Caught by deploying it that way once.
+    constructor(address _forwarder, address _owner) {
         if (_forwarder == address(0)) revert ForwarderRequired();
-        owner = msg.sender;
+        if (_owner == address(0)) revert OwnerRequired();
+        owner = _owner;
         forwarder = _forwarder;
         emit ForwarderUpdated(address(0), _forwarder);
     }
