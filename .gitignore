@@ -21,3 +21,6 @@ dist/
 
 # Personal operational runbook — must not ship in the public submission repo
 docs/manual-steps.md
+
+# Discovery store — rebuilt from the chain by graph/sink/, never committed
+graph/sink/data/

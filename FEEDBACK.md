@@ -32,3 +32,20 @@ submitted form, not just the file.
 ## Subgraphs and data
 
 ## Everything else
+
+## Substreams / Graph Market — MOV-222 (2026-09-07)
+
+- **Concurrent stream limit is 2, and the error only appears at the third.**
+  Sinking three chains in parallel fails one of them with
+  `ResourceExhausted: Concurrent stream limit exceeded (active sessions: 2/2)`.
+  The limit is not documented anywhere we found before hitting it, and it is not
+  in `substreams --help`. A sink that fans out per chain — the obvious shape —
+  silently loses a chain unless it checks exit codes.
+- **`substreams run` refuses a store as an output module**, so a store can only
+  be exercised through a map that reads it, and that map then has to backfill
+  the store from its `initialBlock` before it emits anything:
+  `this request needs to process 37,200 blocks (37,000 of them to prepare the
+  stores)`. For a consumer that wants a recent window, the pure map module plus
+  a fold in the sink is dramatically cheaper. Worth saying so in the docs — the
+  composable-store story reads as strictly better than the map, and for this
+  access pattern it is not.

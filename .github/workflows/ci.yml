@@ -44,6 +44,17 @@ jobs:
           npm run --if-present lint
           npm run --if-present typecheck
 
+      # The sink and discovery tests are pure: no network, no .env, in-memory
+      # SQLite. The commands that do touch the chain are exercised by hand and
+      # written up in docs/, not run here.
+      - name: Test
+        run: |
+          if [ ! -f package.json ]; then
+            echo "no package.json yet — skipping"
+            exit 0
+          fi
+          npm run --if-present test
+
   contracts:
     runs-on: ubuntu-latest
     timeout-minutes: 25
