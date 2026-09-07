@@ -23,6 +23,8 @@
     "serve": "node seller/service/server.ts",
     "hedera:setup": "node scripts/hedera-setup.ts",
     "hedera:pay": "node scripts/hedera-paid-request.ts",
+    "privy:setup": "node scripts/privy-org-setup.ts",
+    "privy:mandate": "node scripts/privy-mandate.ts",
     "arc:setup": "node scripts/arc-setup.ts",
     "arc:pay": "node scripts/arc-paid-request.ts",
     "arc:receipts": "node scripts/arc-receipts.ts",
