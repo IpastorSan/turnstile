@@ -24,7 +24,7 @@ import { createPublicClient, http } from 'viem';
 import type { Address, PublicClient } from 'viem';
 import { arcTestnet } from 'viem/chains';
 
-import { NATIVE_DECIMALS, RPC_URL, USDC_ASSET, USDC_DECIMALS } from './config.ts';
+import { FACILITATOR_URL, GATEWAY_DOMAIN, NATIVE_DECIMALS, RPC_URL, USDC_ASSET, USDC_DECIMALS } from './config.ts';
 
 const BALANCE_OF = [{
   name: 'balanceOf', type: 'function', stateMutability: 'view',
@@ -72,4 +72,36 @@ export function formatUsdc(atomic: bigint | string): string {
   const unit = 10n ** BigInt(USDC_DECIMALS);
   const whole = value / unit;
   return `${whole}.${String(value % unit).padStart(USDC_DECIMALS, '0')}`;
+}
+
+/**
+ * The address's **Gateway** balance — the spendable one.
+ *
+ * Added by MOV-228. The Circle SDK exposes this as `GatewayClient.getBalances()`,
+ * but a `GatewayClient` cannot be constructed without a private key, and after
+ * MOV-228 the org has no private key to give it: the warm tier is a Privy server
+ * wallet whose secret lives in an enclave. The endpoint itself needs no key and
+ * no auth header — verified 2026-09-07 — so reading it directly is both simpler
+ * and the only option left.
+ *
+ * Returns `null` when Gateway has never seen this depositor, which is a normal
+ * state (a wallet that has not been funded yet) rather than an error.
+ */
+export async function gatewayBalance(
+  address: Address,
+  options: { facilitatorUrl?: string; fetch?: typeof globalThis.fetch } = {},
+): Promise<{ available: string; total: string } | null> {
+  const url = `${options.facilitatorUrl ?? FACILITATOR_URL}/v1/balances`;
+  const response = await (options.fetch ?? globalThis.fetch)(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ token: 'USDC', sources: [{ depositor: address, domain: GATEWAY_DOMAIN }] }),
+  });
+  if (!response.ok) return null;
+  const body = (await response.json()) as { balances?: { balance?: string; withdrawing?: string }[] };
+  const first = body.balances?.[0];
+  if (!first?.balance) return null;
+  const available = first.balance;
+  const withdrawing = first.withdrawing ?? '0';
+  return { available, total: (Number(available) + Number(withdrawing)).toFixed(USDC_DECIMALS) };
 }
