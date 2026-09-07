@@ -204,16 +204,29 @@ CREATE TABLE IF NOT EXISTS x402_quote (
 -- Seams: tables that exist so the join has somewhere to land, and are empty
 -- ---------------------------------------------------------------------------
 
--- MOV-220. Settled volume is the ranking signal we actually want; it comes from
--- Hedera Consensus Service receipts, which do not exist yet. Discovery ranks by
--- this table when it has rows and says so; when it is empty it falls back to
--- registration recency and LABELS the result a placeholder. It never fakes a
--- number.
+-- Settled volume is the ranking signal we actually want; it comes from Hedera
+-- Consensus Service receipts. Discovery ranks by this table when it has rows and
+-- says so; when it is empty it falls back to registration recency and LABELS the
+-- result a placeholder. It never fakes a number.
+--
+-- **Correction (2026-09-07, MOV-220):** this comment previously said the
+-- receipts "do not exist yet". They do — `rails/hedera-x402/hcs.ts` writes one
+-- per settled payment to a topic, and `graph/sink/ingest-receipts.ts` reads the
+-- topic back off the public mirror node and fills this table. The seam
+-- description was otherwise right and is unchanged.
+--
+-- **Correction (2026-09-07, MOV-220):** `amount` was commented as "smallest unit
+-- of `asset`". That is wrong and always was: `settled_volume` below sums it with
+-- `CAST(amount AS REAL)` across every rail, which only means anything if the
+-- number means the same thing on all of them, and MOV-222's own test inserts
+-- '5.00' expecting 5. It holds **decimal US dollars**, with `currency` naming
+-- the unit. The atomic amount stays on the HCS message and on chain, where it is
+-- exact.
 CREATE TABLE IF NOT EXISTS settlement_receipt (
-  receipt_id     TEXT PRIMARY KEY,
+  receipt_id     TEXT PRIMARY KEY,   -- the rail-native settlement id (a Hedera transaction id)
   agent_uid      TEXT NOT NULL,
   buyer          TEXT,
-  amount         TEXT NOT NULL,   -- smallest unit of `asset`
+  amount         TEXT NOT NULL,   -- decimal US dollars; see the correction above
   currency       TEXT,
   asset          TEXT,
   rail           TEXT,            -- x402 | usdc-arc
