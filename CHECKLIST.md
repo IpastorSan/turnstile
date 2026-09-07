@@ -114,6 +114,44 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] Screen recording start to finish
 - [ ] **Bazantic username in the submission** for attribution
 
+### Endgame sequence — go-public is deliberately late, but not last-minute
+
+Everything stays private as long as possible. The constraint is not secrecy versus
+convenience, it is that **three of these steps depend on each other** and the first-ever
+real deploy must not happen on the final day.
+
+**Sept 13 — rehearsal deploy, then tear it down.**
+Cheap insurance, ~30 minutes. MOV-230 already found three bugs that appear *only* in the
+production bundle and not in dev: `node:sqlite` null-prototype rows that rendered the market
+page **completely blank** with the error only in the server log, `schema.sql` missing from the
+trace, and the DB opened read-write. Those were caught by running the bundle in an isolated
+directory. A real platform can still surface its own. Deploy, confirm it serves all 197 agents
+and reads Sepolia live, delete it. Preview URLs are unguessable, so exposure is ~zero.
+
+**Sept 14 — real deploy, stays up.** Then Bazantic registration the same day, which needs the
+public `--spec-url` and `--endpoint` plus a browser session (`baz login`). See
+`docs/bazantic-gateway.md`.
+
+**Sept 15 — go public, in this order:**
+1. `gh repo edit IpastorSan/turnstile --visibility public`
+2. Verify: `gh repo view --json visibility`, then open the URL logged-out
+3. `substreams registry publish` for `graph/substreams/erc8004-agent-registry-v0.1.0.spkg`
+4. **Only now** submit the Uniswap feedback form — it requires a link to `FEEDBACK.md`, which
+   404s for the reviewer while the repo is private
+5. Record videos against the live deployment, deriving live figures on camera
+
+**Sept 16 — submit.**
+
+**What is genuinely lost by waiting:** nothing until Sept 14. The ENS gate reads *"a video
+recording **or** link to a live demo (ideally both)"* — the video alone satisfies it. Arc wants
+a working frontend and backend *demonstrated*, not hosted. Only Bazantic ($1,000, cut-line #1)
+strictly needs public URLs, because its facilitator fetches them server-side.
+
+**What the repo staying private actually protects:** the ERC-8004 Substreams angle and the
+sealed-calibration design. The deployed *site* only shows a market page and a seller page —
+far less revealing. Worth keeping those two decisions separate rather than treating "go public"
+as one switch.
+
 ### Before submitting — blocks all 12 submissions
 - [ ] **Decide on `docs/manual-steps.md` in git history.** Untracked from the tree as of
       2026-09-07, but still reachable in commit `711c0083` and its merge. Contains **no
