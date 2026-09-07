@@ -44,11 +44,16 @@ export const QUOTER_V2_ADDRESS = '0x61fFE014bA17989E743c5F6cB21bF9697530B21e';
 export const UNISWAP_TRADING_API_URL = 'https://trade-api.gateway.uniswap.org/v1/quote';
 
 /**
- * QuoterV2 is `nonpayable` in its ABI — it deliberately reverts inside the swap
- * and catches its own revert to return the amounts — so it cannot be read with
- * `readContract`, which requires `view`. It has to go through a raw `eth_call`
- * with manual encode/decode. This trips people up and is worth stating rather
- * than leaving as an unexplained low-level call.
+ * QuoterV2's quote functions are `nonpayable`, not `view`: they run the swap and
+ * revert on purpose, and the contract catches its own revert to return the
+ * amounts. Uniswap's own v3 SDK guide says so and reaches for ethers'
+ * `callStatic`.
+ *
+ * With viem no special handling is needed — `readContract` simulates through
+ * `eth_call` and decodes a nonpayable function fine, verified against mainnet
+ * on 2026-09-07. Worth writing down because the only place the quirk is
+ * explained at all is an ethers-specific SDK guide, whose remedy has no viem
+ * equivalent by that name, so the natural conclusion is that viem cannot do it.
  */
 const QUOTER_ABI = parseAbi([
   'function quoteExactInputSingle((address tokenIn, address tokenOut, uint256 amountIn, uint24 fee, uint160 sqrtPriceLimitX96)) returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate)',
@@ -141,6 +146,14 @@ export async function fetchDepthFromQuoter(
     }
 
     try {
+      // Encode, `call`, decode — rather than `readContract`, which does work
+      // here (see the ABI note above) but whose return type collapses to
+      // `never` against a chain-agnostic `PublicClient`. The client has to stay
+      // chain-agnostic: the analyst is pointed at mainnet or Arbitrum from a
+      // flag, since the same Messari document answers on both.
+      //
+      // Every rung is pinned to `atBlock`, so the ladder is one coherent view
+      // of the pool rather than five samples taken as it moved.
       const data = encodeFunctionData({
         abi: QUOTER_ABI,
         functionName: 'quoteExactInputSingle',
