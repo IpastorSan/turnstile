@@ -189,12 +189,134 @@ the settlement. That lookup is `PaymentRail.receipt(id)`, and it is what
 discovery's `settledVolume` ranking needs before it can stop calling itself a
 placeholder.
 
-**The premium body carries `analystInput`.** `scoring.ts` is a pure function of
-it, so the buyer can re-derive the verdict and get the same bytes. On a real pool
-it is about 9.2KB (measured on USDC/WETH 0.05%, 2026-09-07 — see
-`seller/analyst/README.md`); the 712 bytes above is the test fixture, which has
-no hourly snapshots and no depth ladder. MOV-227 runs `assess()` over exactly
-this object inside a Chainlink TEE and fills in `attestation`.
+**The premium body carries `analystInput`.** On a real pool it is about 9.2KB
+(measured on USDC/WETH 0.05%, 2026-09-07 — see `seller/analyst/README.md`); the
+712 bytes above is the test fixture, which has no hourly snapshots and no depth
+ladder. Why that matters has its own section below.
+
+---
+
+## What makes the premium tier checkable, and the one way to break it
+
+This is the Chainlink claim, and it is worth being exact about because it looks
+like an implementation detail and is not.
+
+Turnstile's pitch is **sell the answer, keep the method**. The premium tier hands
+over a verdict *and* the complete `AnalystInput` that produced it, while
+`seller/analyst/scoring.ts` — the actual judgement — is never disclosed. What
+stops that being "trust us" is that the buyer can verify the verdict came from an
+attested run over exactly the input they are holding, without ever seeing the
+scorer.
+
+Two properties of `seller/analyst/` carry that, both measured rather than
+assumed, on a real run against Uniswap v3 USDC/WETH 0.05% on 2026-09-07:
+
+1. **`assess()` is pure** — a total function of `AnalystInput`, with no clock, no
+   network, no filesystem and no module state. `now` is a field on the input, not
+   a call to `Date.now()`.
+2. **A complete `AnalystInput` serializes to 9,210 bytes and round-trips
+   losslessly.** `assess(JSON.parse(JSON.stringify(input)))` is byte-identical to
+   `assess(input)`.
+
+Together they mean the enclave's argument and the premium payload are **one
+object**. That is why attestation needed no new tier, no new field and no second
+fetch.
+
+### The failure mode, stated plainly
+
+**An implementation must hash exactly the bytes the buyer receives in
+`analystInput`.**
+
+Hash a normalized form, a re-fetched input, a re-serialization with different key
+ordering, or anything carrying a timestamp the buyer cannot reconstruct — and the
+premium tier silently stops being checkable. It becomes an assertion with extra
+steps.
+
+Nothing would fail. No test would go red, no error would surface, the service
+would keep returning 200s. The only person who would ever find out is a buyer who
+tried to verify and found the hash never matches — or a judge who tried the same
+thing. That is why the seam is written to make the correct thing the easy thing:
+`seller/service/app.ts` passes the *same object reference* to the attestation
+port that it serializes into the response, and
+`seller/service/attestation.test.ts` asserts that the two serialize identically.
+
+### The seam
+
+`seller/service/attestation.ts`:
+
+```ts
+interface Attestation {
+  status: 'unattested' | 'attested' | 'failed';
+  note?: string;
+  [key: string]: unknown;    // MOV-227's fields — consumer, pool key, evidence hash
+}
+
+interface AttestationPort {
+  attest(input: AnalystInput, verdict: Verdict): Promise<Attestation>;
+}
+```
+
+Injected on `ServiceOptions.attestation`, defaulting to `unattestedPort()`, which
+reports `'unattested'` — not `'failed'`, because nothing was attempted and
+claiming a failure we did not have is the same category of error as discovery
+reporting `'unverified'` where it means `'unknown'`.
+
+A port that throws **degrades rather than withholds**: `status: 'failed'` with the
+reason, and the verdict and input are still delivered. That is deliberately the
+opposite of how a settlement failure is handled, and the difference is what the
+buyer still has. On a settlement failure they have nothing and have paid nothing,
+so withholding is clean. Here they hold the verdict *and* the input behind it and
+can re-derive the verdict themselves — which is exactly the fallback purity buys.
+Throwing a delivered, checkable answer away because the notary was offline would
+be the worse outcome for them.
+
+*Open and deliberately undecided:* the buyer still paid the premium price for an
+attestation they did not get. Whether to discount, refuse up front when the
+enclave is known down, or leave it, is a pricing decision for MOV-227 and belongs
+in Linear rather than being settled by accident in a catch block.
+
+---
+
+## Why `no-chain-code.test.ts` exists
+
+If it fails your branch, it has found a boundary, not an obstacle. Please do not
+route around it by adding your file to the exemption list.
+
+`seller/service/no-chain-code.test.ts` scans every `.ts` in that directory and
+fails on chain, vendor, asset and signature-format identifiers — `Sepolia`,
+`eip155`, `viem`, `chainId`, `USDC`, `hedera`, `arc`. It also asserts that
+exactly one file (`server.ts`, the composition root) imports a concrete rail.
+
+The rule it enforces is the MOV-219 acceptance criterion: **the service speaks US
+dollars and opaque strings; rails speak chains.** Stating that in a README does
+not keep it true. Two rails land in parallel (MOV-220, MOV-225), and the cheapest
+way for either to make its own life easier is a small `if` in the service — a
+Hedera-shaped field on the challenge, a special case for how Arc reports a payer.
+Each is individually reasonable. Together they are the abstraction gone, and by
+then two implementations depend on it.
+
+So when it fires, the answer is almost always **the code is in the wrong
+directory**, not that the rule is too strict:
+
+| You are writing | It goes in |
+|---|---|
+| a payment rail | `rails/<id>/` |
+| an enclave, or anything reading a contract | `seller/cre/` |
+| a chain-shaped client the buyer signs with | `buyer/watchdog/` |
+| an interface plus an injected implementation | `seller/service/` |
+
+`AnalystPort` and `AttestationPort` are both that last pattern, and both exist
+because of this test.
+
+The exemption list is short, by name, and each entry has a written reason —
+`discovery.ts` is on it because it reads a multi-chain agent registry, so chain
+identifiers are its subject matter rather than a leak. If you genuinely need an
+exemption, get it agreed rather than adding yourself: the list is the audit trail
+for the rule.
+
+The matcher is self-tested, which is how it was found to miss
+`payload.hederaTransaction` under a naive `\bhedera\b` — the realistic leak is a
+camelCase prefix with no word boundary after it.
 
 ---
 

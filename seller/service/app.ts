@@ -20,6 +20,8 @@ import type { Express, Request } from 'express';
 
 import type { RailRegistry } from '../../rails/registry.ts';
 import type { AnalystInput, Verdict } from '../analyst/types.ts';
+import { attestOrDegrade, unattestedPort } from './attestation.ts';
+import type { AttestationPort } from './attestation.ts';
 import { TIERS, assertWithinCeiling } from './tiers.ts';
 import type { Tier } from './tiers.ts';
 import { paidRoute } from './x402.ts';
@@ -42,6 +44,13 @@ export interface AnalystPort {
 export interface ServiceOptions {
   registry: RailRegistry;
   analyst: AnalystPort;
+  /**
+   * Attaches an attested verdict to the premium tier. Defaults to
+   * `unattestedPort()`, which says honestly that nobody has attested anything.
+   * MOV-227 implements the real one in `seller/cre/` and wires it in
+   * `server.ts`.
+   */
+  attestation?: AttestationPort;
   serviceName?: string;
   tiers?: { standard: Tier; premium: Tier };
 }
@@ -62,6 +71,7 @@ function poolParam(req: Request): string {
 
 export function createApp(options: ServiceOptions): Express {
   const { registry, analyst } = options;
+  const attestation = options.attestation ?? unattestedPort();
   const tiers = options.tiers ?? { standard: TIERS.standard, premium: TIERS.premium };
   const serviceName = options.serviceName ?? 'liquidity.turnstile.eth';
 
@@ -113,22 +123,22 @@ export function createApp(options: ServiceOptions): Express {
       return {
         tier: tiers.premium.id,
         verdict,
-        // The MOV-227 seam, and the premium tier's actual deliverable.
+        // The premium tier's actual deliverable, and the MOV-227 seam.
         //
         // `assess()` is a pure total function of this object, so a buyer holding
         // it can re-derive the verdict above and get the same bytes — the claim
-        // is checkable rather than merely asserted. MOV-227 replaces this with a
-        // TEE-attested run over the same argument; no field here has to change,
-        // because the enclave's input and the premium payload are one object.
+        // is checkable rather than merely asserted. The enclave's argument and
+        // this payload are one object, which is why attestation needed no new
+        // tier and no new field.
         //
         // Measured on a real run against USDC/WETH 0.05% (2026-09-07): 9,210
         // bytes, and `assess(JSON.parse(JSON.stringify(input)))` is byte
-        // identical to `assess(input)`. See seller/analyst/README.md.
+        // identical to `assess(input)`. See seller/analyst/README.md, and
+        // attestation.ts for why an implementation must hash exactly these bytes.
         analystInput: input,
-        attestation: {
-          status: 'unattested',
-          note: 'Reproducible but not yet attested. MOV-227 runs assess() over exactly this input inside a Chainlink TEE and returns the attestation here.',
-        },
+        // Passed `input` rather than a copy or a re-fetch, so whatever the port
+        // hashes is what the buyer above receives.
+        attestation: await attestOrDegrade(attestation, input, verdict),
       };
     },
   ));
