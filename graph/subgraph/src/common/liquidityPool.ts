@@ -175,7 +175,17 @@ export function getOrCreatePool(
   amounts.tokenPrices = [ZERO_BD, ZERO_BD];
   amounts.save();
 
+  // Price the reserves we just read, rather than reporting a pool that has
+  // real balances and a zero TVL until its first swap. WETH and stablecoin
+  // pairs resolve immediately; a pair anchored to neither stays at zero, which
+  // is the honest answer for a token this subgraph cannot price.
+  const initialTVL = refreshPoolValues(pool);
+  pool.save();
+
   protocol.totalPoolCount += 1;
+  protocol.totalValueLockedUSD = protocol.totalValueLockedUSD.plus(initialTVL);
+  protocol.totalLiquidityUSD = protocol.totalLiquidityUSD.plus(initialTVL);
+  protocol.activeLiquidityUSD = protocol.activeLiquidityUSD.plus(initialTVL);
   protocol.lastUpdateTimestamp = event.block.timestamp;
   protocol.lastUpdateBlockNumber = event.block.number;
   protocol.save();

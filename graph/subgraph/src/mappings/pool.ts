@@ -69,7 +69,18 @@ export function handleInitialize(event: Initialize): void {
     event.params.sqrtPriceX96,
     event.block.number
   );
-  refreshPoolValues(pool);
+
+  // Initialize is the first moment a brand-new pool has a price at all, so the
+  // TVL it produces has to reach the protocol total like any other change.
+  const protocol = getOrCreateProtocol();
+  const tvlDelta = refreshPoolValues(pool);
+  protocol.totalValueLockedUSD = protocol.totalValueLockedUSD.plus(tvlDelta);
+  protocol.totalLiquidityUSD = protocol.totalLiquidityUSD.plus(tvlDelta);
+  protocol.activeLiquidityUSD = protocol.activeLiquidityUSD.plus(tvlDelta);
+  protocol.lastUpdateTimestamp = event.block.timestamp;
+  protocol.lastUpdateBlockNumber = event.block.number;
+  protocol.save();
+
   pool.lastUpdateTimestamp = event.block.timestamp;
   pool.lastUpdateBlockNumber = event.block.number;
   pool.save();
