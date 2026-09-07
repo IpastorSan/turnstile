@@ -1,0 +1,29 @@
+query AmmVitals {
+  dexAmmProtocols(first: 1) {
+    name
+    slug
+    schemaVersion
+    network
+    totalValueLockedUSD
+    cumulativeVolumeUSD
+    cumulativeSupplySideRevenueUSD
+    cumulativeUniqueUsers
+    totalPoolCount
+  }
+  liquidityPools(first: 3, orderBy: totalValueLockedUSD, orderDirection: desc) {
+    name
+    inputTokens { symbol }
+    totalValueLockedUSD
+    cumulativeVolumeUSD
+    fees { feeType feePercentage }
+  }
+  swaps(first: 2, orderBy: timestamp, orderDirection: desc) {
+    blockNumber
+    timestamp
+    tokenIn { symbol }
+    amountInUSD
+    tokenOut { symbol }
+    amountOutUSD
+  }
+  _meta { block { number timestamp } }
+}

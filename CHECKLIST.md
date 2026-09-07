@@ -205,3 +205,30 @@ note. The second is left open on purpose.
 - `forge test`: 66 passing, including 7 fork tests that assert the *live*
   deployment still has the offer and still denies the hot key the payout record
   (`contracts/test/fork/SepoliaOffer.t.sol`).
+### MOV-215 — Messari-conformant subgraph (2026-09-07)
+
+Appending rather than ticking the three **Composable** rows in place. MOV-217's
+note is right that a single owner editing a row is safe — but Composable is a
+joint gate between this issue and the Substreams work, so I am not its single
+owner. Whoever closes both should tick rows 45–47 in one commit.
+
+- "Build on a standardized schema" — **satisfied**. `graph/subgraph/schema.graphql`
+  is Messari DEX AMM (Extended) v4.0.1, copied verbatim from `messari/subgraphs`.
+  The only edit is `@entity` → `@entity(immutable: false)` on 12 bare
+  occurrences, forced by graph-cli ≥ 0.90 and semantics-preserving. No entity or
+  field name differs from the standard.
+- "A single subgraph query with no composition does not qualify" — **satisfied**.
+  `graph/subgraph/queries/cross-protocol.graphql` runs byte-identical against
+  four AMMs by four different teams on two chains (Uniswap v3 Arbitrum,
+  Sushiswap v3, Sushiswap v2, Curve). `scripts/run-query.sh` re-runs it;
+  `samples/` holds the responses.
+- "**Live** data from a Graph provider" — **satisfied for the query artifact**,
+  via the decentralized gateway. Samples captured at mainnet block 25925032
+  (2026-09-07T10:58:23Z), 14s before the sweep finished. Nothing mocked, local
+  or static anywhere in this directory.
+- **Open**: our own subgraph is built and its IPFS bundle uploads
+  (`QmS97mesuaXzXePGmD4JXvGRQ7tbMYtCzukYSzZj2qUWfA`), but Studio returns
+  `Subgraph not found` — a deploy key can deploy to a subgraph, it cannot create
+  one, and Studio's `createSubgraph` wants a wallet signature. Someone with the
+  Studio account must create the slug `turnstile-uniswap-v3-messari` once; the
+  deploy then succeeds unattended. Details in `graph/subgraph/README.md`.

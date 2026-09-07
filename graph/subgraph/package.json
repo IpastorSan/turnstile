@@ -1,0 +1,16 @@
+{
+  "name": "turnstile-messari-dex-amm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Messari DEX AMM Extended v4.0.1 conformant subgraph for Uniswap v3 on Ethereum mainnet",
+  "license": "MIT",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy turnstile-uniswap-v3-messari --node https://api.studio.thegraph.com/deploy/ --ipfs https://ipfs.satsuma.xyz"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-cli": "0.97.1",
+    "@graphprotocol/graph-ts": "0.38.1"
+  }
+}
