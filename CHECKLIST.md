@@ -71,8 +71,8 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 
 **Arc — Agentic ($1,667) + Launch ($3,500)**
 - [ ] **State explicitly which bounty** each submission targets
-- [ ] Working **frontend and backend**
-- [ ] **Architecture diagram** (§2.1 + §2.2)
+- [x] Working **frontend and backend** — done (MOV-230). Next.js 16 app in `web/`: market and seller pages server-rendered, plus `/api/sellers`, `/api/offer/:name` and `/api/health` as real routes over the discovery store and live Sepolia. Not a static export. **Still not deployed** — see `docs/deploy.md`
+- [x] **Architecture diagram** (§2.1 + §2.2) — done (MOV-230). `docs/architecture.svg` + `.png`, embedded in `README.md`, walked through in `docs/architecture.md`. Panel A the cold/warm/hot key tiers, Panel B discovery → offer → 402 → rail → answer
 - [ ] Video + presentation + detailed docs; GitHub link
 - [ ] Launch track: deployed or **deployment-ready on Arc mainnet by 30 Sep**
 
@@ -338,3 +338,37 @@ a separate row — the file alone does not win the prize.
   costs confidence), but a demo recorded before it catches up will show a
   two-week-old history beside a current quote. Check `_meta.block.timestamp`
   before filming.
+### MOV-230 — web app: market, seller, architecture diagram (2026-09-07)
+
+Two Arc gates ticked in place above (frontend+backend, architecture diagram).
+The lines below are appended rather than edited, per the union-merge rule.
+
+- Arc "working frontend and backend": **true, not deployed.** `web/` is a
+  Next.js 16 app with three server routes over real data — 197 ERC-8004
+  registrations across Base, mainnet and Sepolia, and live ENSv2 resolver reads.
+  Verified by running the standalone production bundle in a clean directory:
+  197 agents served, seller page read Sepolia at block 11,654,544, zero errors.
+- Arc "architecture diagram": **done.** Both required subjects are drawn — the
+  three key tiers with the "no upward authority" invariant, and the six-step
+  request path. `docs/architecture.md` marks which steps are live (01–02) and
+  which are not built (03–06), so the diagram is not read as a claim that the
+  settlement half exists.
+- ENS "demo functional, no hard-coded values": **half true, and the missing half
+  is the deploy.** No ENS name is hard-coded anywhere on the demo path — seller
+  identity is read from `contracts/addresses.turnstile.sepolia.json`, `/seller`
+  redirects to whatever the manifest names, and the seller page reads every
+  record off the resolver per request with nothing cached. What is missing is a
+  *functional public demo*: the app is not hosted anywhere.
+- ENS "video and/or live demo link": **still open**, and now the single highest
+  leverage remaining item for this issue. No hosting credentials exist on the
+  build machine (no Vercel, Netlify, Fly or Cloudflare CLI or token), so the
+  deploy could not be performed. `web/Dockerfile` and `docs/deploy.md` reduce it
+  to one command plus one environment variable, `SEPOLIA_RPC_URL`.
+- Two routes are deliberately **not** built and are labelled as such in the app:
+  `/onboard` (MOV-223, blocked on World Sandbox approval) and `/mandate`
+  (MOV-228, not started). Neither shows invented data. A faked panel would put
+  every honest number on the site in doubt, and the Graph tracks disqualify
+  mocked datasets outright.
+- Re-cut `web/data/discovery.db` (`cd web && npm run snapshot`) close to the
+  judging date, so the directory shown is current. It is a committed snapshot of
+  the live store, dated in `web/data/provenance.json`.
