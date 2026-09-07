@@ -178,8 +178,21 @@ of its required fields cannot be filled by an agent on the user's behalf:
 **email**, **Telegram handle**, and the **"I agree to Uniswap Labs Terms of
 Service and Privacy Policy"** checkbox.
 
-**Note the ordering constraint:** the form wants a link to `FEEDBACK.md`, and
-this repository is private until the pre-submission
-`gh repo edit IpastorSan/turnstile --visibility public`. A GitHub blob URL to a
-private repo 404s for the reviewer. Submit the form **after** the visibility
-flip, or accept that the link is dead until it happens.
+**Paste-ready answers for every field are in
+[`docs/uniswap-feedback-form-answers.md`](./uniswap-feedback-form-answers.md).**
+
+**It is downstream of two other steps, and the order matters more than it
+looks.** Both change what the reviewer sees when they click the link:
+
+1. **`dev` → `main`.** `main` is the default branch, so it is what the permalink
+   resolves to — and as of 2026-09-07 `main` was 139 commits behind `dev`, with
+   `FEEDBACK.md` still the empty 34-line template. A reviewer would see a stub,
+   which is worse than a 404: a 404 reads as "not public yet", an empty template
+   reads as "they did not do the work".
+2. **`gh repo edit IpastorSan/turnstile --visibility public`.** Until then the
+   link 404s for anyone outside the org.
+
+The full sequence, with the verification commands, is in `CHECKLIST.md` under
+**Before submitting**. The exception, so it does not have to be decided under
+pressure: if the form closes when the hackathon does, submit immediately after
+step 2 rather than waiting.
