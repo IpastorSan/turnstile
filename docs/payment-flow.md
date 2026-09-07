@@ -16,8 +16,13 @@ marked as such.
 Reproduce it in one command:
 
 ```bash
-node scripts/hedera-paid-request.ts --fixture
+npm run hedera:pay              # live analyst
+npm run hedera:pay -- --fixture # same payment, fixture analyst
 ```
+
+`--fixture` changes what is *sold*, never how it is paid for. Use it when the
+point of the run is the transaction and you do not want a slow subgraph in the
+middle of a take.
 
 ---
 
@@ -31,7 +36,9 @@ Per `CLAUDE.md`: silence reads as confidence, so this is explicit.
 | The facilitator settles `exact` on `hedera:testnet`, fee payer `0.0.7162784` | **Verified** — read off `/supported` |
 | The payment reached consensus with `result: SUCCESS` | **Verified** — mirror node record above |
 | The buyer paid no gas | **Verified** — the fee debit is on `0.0.7162784`, not on `0.0.10408012` |
-| The HCS receipt is readable by a third party with no key | **Verified** — 6 messages on `0.0.10408013` via the public mirror node |
+| The HCS receipt is readable by a third party with no key | **Verified** — messages on `0.0.10408013` read via the public mirror node with no credential. The count grows with every run, so it is not pinned here |
+| Receipts flow into discovery's ranking | **Verified** — `ingest-receipts.ts` read 8 live receipts off the topic and wrote 8 rows to `settlement_receipt` |
+| The flow works against the **live** analyst, not just the fixture | **Verified** — `node scripts/hedera-paid-request.ts` (no `--fixture`) settled `0.0.7162784@1788792273.045633775`. The verdict came back `INSUFFICIENT_DATA` at 0.14 confidence, which is a subgraph-coverage question for MOV-215/216 and says nothing about the payment path |
 | The HashScan link renders | **Not verified.** `hashscan.io` answers 404 to curl for *every* path including its own root — it is a single-page app behind bot filtering, so a status code says nothing. The mirror node link is the one that has been checked end to end. **Open HashScan in a browser before putting it in front of a judge.** |
 | Mainnet behaviour | **Not tested.** Everything here is testnet |
 
