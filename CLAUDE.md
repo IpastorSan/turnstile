@@ -185,6 +185,45 @@ is not always possible.
 
 ---
 
+## Documents go stale. Correcting them is part of the work.
+
+**If your work shows that a document in this repo is wrong, fix the document in the same
+branch. Reporting it is not enough.**
+
+This has bitten us four times in three days, and once the correction was reported clearly in
+a final report and still never landed — so the next agent read the wrong claim anyway. The
+failure mode is always identical: a finding is verified, written up, and the file that other
+agents actually read is left untouched.
+
+The report is read once, by one person. The file is read by everyone who comes after.
+
+### Rules
+
+1. **Correct in the same branch as the finding.** Not a follow-up issue, not a line in your
+   final report. The same branch, ideally its own commit so the history stays readable.
+2. **Mark the correction; do not silently overwrite.** Write `**Correction (YYYY-MM-DD,
+   MOV-XXX):** this file previously said X. That is wrong because Y.` Someone who remembers
+   the old claim needs to know it changed and why — a silent edit just looks like they
+   misread it.
+3. **Say what is still true.** When only half a claim falls, say so. "The registry gotchas
+   are unchanged; only the resolver claim was wrong" stops the next reader discarding the
+   good half with the bad.
+4. **Date and source every factual claim you add.** `verified 2026-09-07 against live
+   eth_getCode` beats a bare assertion, because the next reader can judge whether it has aged.
+5. **If you could not verify something, write that down.** Silence reads as confidence.
+
+### Scope
+
+`CHECKLIST.md`, `README.md`, everything in `docs/`, per-directory READMEs, and this file.
+
+`plan/turnstile-v3.md` in the research repo is a **day-1 snapshot** and is deliberately not
+maintained — treat it as history, never as truth. Linear issues and `CHECKLIST.md` are the
+live record.
+
+**Where two owners share a line** — e.g. a `CHECKLIST.md` row covering two issues — append
+rather than editing in place, and say who should tick it. `merge=union` keeps *both* sides of
+a contested line instead of conflicting, so a two-owner edit becomes a silent duplicate.
+
 ## Commit messages
 
 Small and real. End every commit body with:
