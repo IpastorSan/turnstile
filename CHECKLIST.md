@@ -152,3 +152,29 @@ both sides changed it, so a single owner editing a row is safe; two are not.
   and we hold no `ROLE_REGISTRAR` on ENS's `.eth` registry — asserted by
   `testFork_weHoldNoRegistrarRoleOnTheEthRegistry`.
 - Run book: `docs/ensv2-deploy.md`. Deployment estimate 0.0057 ETH.
+
+### MOV-221 — ERC-8004 agent-registry Substreams (2026-09-07)
+
+Nothing is ticked in place. The Graph rows above are shared with MOV-215
+(subgraph), and union merge turns two branches editing one line into a silent
+duplicate rather than a conflict — so the Graph block needs a single owner.
+Here is what is now true, for whoever ticks it:
+
+- **"Live data from a Graph provider"** — satisfied. `graph/substreams/`
+  streams the ERC-8004 Identity Registry live through the Graph Market JWT on
+  Ethereum mainnet, Base, Sepolia and Base Sepolia. Nothing mocked, nothing
+  local. Run output and TraceIDs in `docs/erc8004-substreams.md`.
+- **"Build on a standardized schema"** — satisfied. The module is authored
+  against EIP-8004 and names its fields after the standard and the Agent0
+  subgraph schema (`agentId`, `agentURI`, `owner`, `agentWallet`,
+  `x402Support`, `supportedTrust`) rather than inventing terms.
+- **"Compose ≥2 Graph products"** — Substreams is one. Pairing it with the
+  subgraph is MOV-215's half; this branch does not claim it.
+- **"Reusable infrastructure, not one end-user app"** — satisfied.
+  `erc8004-agent-registry-v0.1.0.spkg` is committed and runs standalone, with
+  no checkout: `substreams run <spkg> map_agent_registrations --network base`.
+  `graph/substreams/README.md` documents the message shape for third parties.
+- **Still open:** `substreams registry publish` to substreams.dev. It needs an
+  interactive browser login, and publishing now would expose the module during
+  the private build window. It belongs with the repo visibility flip in
+  **Before submitting**, not before it.
