@@ -19,6 +19,7 @@
 import { fileURLToPath } from 'node:url';
 import type { DatabaseSync } from 'node:sqlite';
 
+import { flag, main, numberFlag } from './cli.ts';
 import { DEFAULT_DB_PATH, openDb } from './db.ts';
 import { DEFAULT_TIMEOUT_MS, isBlockedHost } from './card.ts';
 
@@ -225,28 +226,28 @@ export function writeQuote(db: DatabaseSync, agentUid: string, endpoint: string,
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const argv = process.argv.slice(2);
-  const get = (flag: string): string | undefined => {
-    const i = argv.indexOf(flag);
-    return i >= 0 ? argv[i + 1] : undefined;
-  };
-
-  const db = openDb(get('--db') ?? DEFAULT_DB_PATH);
-  const url = get('--url');
-  if (url) {
-    console.log(JSON.stringify(await probeEndpoint(url, Number(get('--timeout-ms') ?? DEFAULT_TIMEOUT_MS)), null, 2));
-    db.close();
-  } else {
-    const candidates = selectProbeCandidates(db, Number(get('--limit') ?? 25), get('--network'));
-    process.stderr.write(`${candidates.length} x402 endpoints to probe\n`);
-    const byStatus: Record<string, number> = {};
-    for (const c of candidates) {
-      const result = await probeEndpoint(c.uri, Number(get('--timeout-ms') ?? DEFAULT_TIMEOUT_MS));
-      writeQuote(db, c.agent_uid, c.uri, result);
-      byStatus[result.status] = (byStatus[result.status] ?? 0) + 1;
-      process.stderr.write(`  ${result.status.padEnd(14)} ${result.amount ?? ''} ${result.currency ?? ''} ${c.uri}\n`);
+  await main(async () => {
+    const argv = process.argv.slice(2);
+    const timeoutMs = numberFlag(argv, '--timeout-ms', DEFAULT_TIMEOUT_MS);
+    const url = flag(argv, '--url');
+    const db = openDb(flag(argv, '--db') ?? DEFAULT_DB_PATH);
+    try {
+      if (url) {
+        console.log(JSON.stringify(await probeEndpoint(url, timeoutMs), null, 2));
+        return;
+      }
+      const candidates = selectProbeCandidates(db, numberFlag(argv, '--limit', 25), flag(argv, '--network'));
+      process.stderr.write(`${candidates.length} x402 endpoints to probe\n`);
+      const byStatus: Record<string, number> = {};
+      for (const c of candidates) {
+        const result = await probeEndpoint(c.uri, timeoutMs);
+        writeQuote(db, c.agent_uid, c.uri, result);
+        byStatus[result.status] = (byStatus[result.status] ?? 0) + 1;
+        process.stderr.write(`  ${result.status.padEnd(14)} ${result.amount ?? ''} ${result.currency ?? ''} ${c.uri}\n`);
+      }
+      process.stderr.write(`\n${JSON.stringify(byStatus)}\n`);
+    } finally {
+      db.close();
     }
-    process.stderr.write(`\n${JSON.stringify(byStatus)}\n`);
-    db.close();
-  }
+  });
 }

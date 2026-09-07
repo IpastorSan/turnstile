@@ -13,14 +13,14 @@
 // (`foldWallets`). Same answer, none of the backfill.
 
 import { spawn } from 'node:child_process';
-import { createReadStream } from 'node:fs';
-import { mkdirSync } from 'node:fs';
+import { createReadStream, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline';
 import type { Readable } from 'node:stream';
 import type { DatabaseSync } from 'node:sqlite';
 
+import { flag, has, main, numberFlag } from './cli.ts';
 import {
   DEFAULT_DB_PATH,
   foldWallets,
@@ -305,6 +305,9 @@ async function runSubstreams(opts: SinkOptions, db: DatabaseSync): Promise<SinkR
 }
 
 async function runFromFile(opts: SinkOptions, db: DatabaseSync): Promise<SinkResult> {
+  // Checked up front: a stream error surfaces as an unhandled rejection with a
+  // stack, which reads like a bug in the sink rather than a typo in a path.
+  if (!existsSync(opts.fromFile!)) throw new Error(`no such capture file: ${opts.fromFile}`);
   return ingest(db, createReadStream(opts.fromFile!), { network: opts.network, quiet: opts.quiet });
 }
 
@@ -320,36 +323,32 @@ export async function sink(opts: SinkOptions): Promise<SinkResult> {
 
 // --- entry point ------------------------------------------------------------
 
-function parseArgs(argv: string[]): SinkOptions {
-  const get = (flag: string): string | undefined => {
-    const i = argv.indexOf(flag);
-    return i >= 0 ? argv[i + 1] : undefined;
-  };
-  const network = get('--network');
+export function parseArgs(argv: string[]): SinkOptions {
+  const network = flag(argv, '--network');
   if (!network) throw new Error(`--network is required, one of: ${NETWORKS.join(', ')}`);
 
-  const start = get('--start');
-  const stop = get('--stop');
   return {
     network,
-    start: start === undefined ? undefined : Number(start),
-    stop: stop === undefined ? undefined : Number(stop),
-    dbPath: get('--db') ?? DEFAULT_DB_PATH,
-    spkg: get('--spkg') ?? DEFAULT_SPKG,
-    fromFile: get('--from-file'),
-    quiet: argv.includes('--quiet'),
+    start: flag(argv, '--start') === undefined ? undefined : numberFlag(argv, '--start', 0),
+    stop: flag(argv, '--stop') === undefined ? undefined : numberFlag(argv, '--stop', 0),
+    dbPath: flag(argv, '--db') ?? DEFAULT_DB_PATH,
+    spkg: flag(argv, '--spkg') ?? DEFAULT_SPKG,
+    fromFile: flag(argv, '--from-file'),
+    quiet: has(argv, '--quiet'),
   };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const opts = parseArgs(process.argv.slice(2));
-  const started = Date.now();
-  const result = await sink(opts);
-  const seconds = ((Date.now() - started) / 1000).toFixed(1);
-  process.stderr.write(
-    `\n${result.network} (chain ${result.chainId}): ` +
-    `${result.registrations} registrations, ${result.walletUpdates} wallet updates ` +
-    `over ${result.blocks} blocks ${result.firstBlock}..${result.lastBlock} in ${seconds}s ` +
-    `(${result.walletsFolded} operators folded)\n`,
-  );
+  await main(async () => {
+    const opts = parseArgs(process.argv.slice(2));
+    const started = Date.now();
+    const result = await sink(opts);
+    const seconds = ((Date.now() - started) / 1000).toFixed(1);
+    process.stderr.write(
+      `\n${result.network} (chain ${result.chainId}): ` +
+      `${result.registrations} registrations, ${result.walletUpdates} wallet updates ` +
+      `over ${result.blocks} blocks ${result.firstBlock}..${result.lastBlock} in ${seconds}s ` +
+      `(${result.walletsFolded} operators folded)\n`,
+    );
+  });
 }

@@ -17,6 +17,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Address } from 'viem';
 
+import { flag, main } from './cli.ts';
 import { DEFAULT_DB_PATH, openDb } from './db.ts';
 import { makePublicClient, readAgentBacklink, readSellerOffer } from './ens.ts';
 import type { SellerOffer } from './ens.ts';
@@ -139,34 +140,34 @@ export async function hydrateSeller(
 // --- entry point ------------------------------------------------------------
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const argv = process.argv.slice(2);
-  const get = (flag: string): string | undefined => {
-    const i = argv.indexOf(flag);
-    return i >= 0 ? argv[i + 1] : undefined;
-  };
+  await main(async () => {
+    const argv = process.argv.slice(2);
+    const rpcUrl = flag(argv, '--rpc') ?? process.env.SEPOLIA_RPC_URL;
+    if (!rpcUrl) throw new Error('SEPOLIA_RPC_URL is not set and --rpc was not given — source .env first');
 
-  const rpcUrl = get('--rpc') ?? process.env.SEPOLIA_RPC_URL;
-  if (!rpcUrl) throw new Error('SEPOLIA_RPC_URL is not set and --rpc was not given');
+    const sellersPath = flag(argv, '--sellers');
+    const sellers: SellerConfig[] = sellersPath
+      ? (JSON.parse(readFileSync(sellersPath, 'utf8')) as SellerConfig[])
+      : sellersFromManifest(JSON.parse(readFileSync(flag(argv, '--manifest') ?? DEFAULT_MANIFEST, 'utf8')));
 
-  const sellersPath = get('--sellers');
-  const sellers: SellerConfig[] = sellersPath
-    ? (JSON.parse(readFileSync(sellersPath, 'utf8')) as SellerConfig[])
-    : sellersFromManifest(JSON.parse(readFileSync(get('--manifest') ?? DEFAULT_MANIFEST, 'utf8')));
-
-  const db = openDb(get('--db') ?? DEFAULT_DB_PATH);
-  for (const seller of sellers) {
-    const result = await hydrateSeller(db, seller, seller.rpcUrl ?? rpcUrl);
-    const o = result.offer;
-    process.stdout.write(
-      `${o.ensName}\n` +
-      `  price          ${o.price ?? '(unset)'}  ceiling ${o.priceCeiling ?? '(unset)'}  rails ${o.rails ?? '(unset)'}\n` +
-      `  mcp            ${o.mcpEndpoint ?? '(unset)'}\n` +
-      `  payout         ${o.payoutAddr ?? '(unset)'}\n` +
-      `  resolver       ${o.resolverVerified ? 'verified' : 'UNVERIFIED'} (impl ${o.resolverImplementation ?? '?'})\n` +
-      `  agent link     ${result.linked ? result.uid : 'NOT LINKED'}\n` +
-      `  read at block  ${o.readAtBlock}\n`,
-    );
-    if (result.warning) process.stderr.write(`  warning: ${result.warning}\n`);
-  }
-  db.close();
+    const db = openDb(flag(argv, '--db') ?? DEFAULT_DB_PATH);
+    try {
+      for (const seller of sellers) {
+        const result = await hydrateSeller(db, seller, seller.rpcUrl ?? rpcUrl);
+        const o = result.offer;
+        process.stdout.write(
+          `${o.ensName}\n` +
+          `  price          ${o.price ?? '(unset)'}  ceiling ${o.priceCeiling ?? '(unset)'}  rails ${o.rails ?? '(unset)'}\n` +
+          `  mcp            ${o.mcpEndpoint ?? '(unset)'}\n` +
+          `  payout         ${o.payoutAddr ?? '(unset)'}\n` +
+          `  resolver       ${o.resolverVerified ? 'verified' : 'UNVERIFIED'} (impl ${o.resolverImplementation ?? '?'})\n` +
+          `  agent link     ${result.linked ? result.uid : 'NOT LINKED'}\n` +
+          `  read at block  ${o.readAtBlock}\n`,
+        );
+        if (result.warning) process.stderr.write(`  warning: ${result.warning}\n`);
+      }
+    } finally {
+      db.close();
+    }
+  });
 }

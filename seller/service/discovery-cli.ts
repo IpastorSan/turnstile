@@ -7,37 +7,32 @@
 
 import { fileURLToPath } from 'node:url';
 
+import { flag, has, main, numberFlag } from '../../graph/sink/cli.ts';
 import { DEFAULT_DB_PATH, openDb } from '../../graph/sink/db.ts';
 import { findSellers } from './discovery.ts';
 import type { FindSellersQuery } from './discovery.ts';
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const argv = process.argv.slice(2);
-  const get = (flag: string): string | undefined => {
-    const i = argv.indexOf(flag);
-    return i >= 0 ? argv[i + 1] : undefined;
-  };
-
-  const chains = get('--chains');
-  const maxPrice = get('--max-price');
+  const chains = flag(argv, '--chains');
   const query: FindSellersQuery = {
-    capabilities: get('--capability')?.split(',').map((s) => s.trim()).filter(Boolean),
-    maxPriceUsd: maxPrice === undefined ? undefined : Number(maxPrice),
+    capabilities: flag(argv, '--capability')?.split(',').map((s) => s.trim()).filter(Boolean),
+    maxPriceUsd: flag(argv, '--max-price') === undefined ? undefined : numberFlag(argv, '--max-price', 0),
     chains: chains
       ? chains.split(',').map((c) => (/^\d+$/.test(c.trim()) ? Number(c.trim()) : c.trim()))
       : undefined,
-    requireX402: argv.includes('--x402'),
-    turnstileOnly: argv.includes('--turnstile-only'),
-    includeUnknownPrice: argv.includes('--include-unknown-price'),
-    matchText: !argv.includes('--no-text-match'),
-    limit: Number(get('--limit') ?? 20),
+    requireX402: has(argv, '--x402'),
+    turnstileOnly: has(argv, '--turnstile-only'),
+    includeUnknownPrice: has(argv, '--include-unknown-price'),
+    matchText: !has(argv, '--no-text-match'),
+    limit: numberFlag(argv, '--limit', 20),
   };
 
-  const db = openDb(get('--db') ?? DEFAULT_DB_PATH);
+  const db = openDb(flag(argv, '--db') ?? DEFAULT_DB_PATH);
   const result = findSellers(db, query);
   db.close();
 
-  if (argv.includes('--json')) {
+  if (has(argv, '--json')) {
     console.log(JSON.stringify(result, null, 2));
   } else {
     const c = result.coverage;

@@ -13,6 +13,7 @@
 import { fileURLToPath } from 'node:url';
 import type { DatabaseSync } from 'node:sqlite';
 
+import { flag, has, main, numberFlag } from './cli.ts';
 import { DEFAULT_DB_PATH, jsonOrNull, nullIfEmpty, openDb, replaceEndpoints } from './db.ts';
 import { DEFAULT_TIMEOUT_MS, fetchAgentCard, parseAgentDocument } from './card.ts';
 import type { FetchOutcome } from './card.ts';
@@ -229,41 +230,39 @@ export async function resolvePending(
 // --- entry point ------------------------------------------------------------
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const argv = process.argv.slice(2);
-  const get = (flag: string): string | undefined => {
-    const i = argv.indexOf(flag);
-    return i >= 0 ? argv[i + 1] : undefined;
-  };
+  await main(async () => {
+    const argv = process.argv.slice(2);
+    const db = openDb(flag(argv, '--db') ?? DEFAULT_DB_PATH);
+    try {
+      if (has(argv, '--reindex')) {
+        const { rows, capabilities } = reindex(db);
+        process.stderr.write(`reindexed ${rows} stored documents; ${capabilities} capability tokens\n`);
+        return;
+      }
 
-  const db = openDb(get('--db') ?? DEFAULT_DB_PATH);
+      const pending = selectPending(db, {
+        network: flag(argv, '--network'),
+        limit: numberFlag(argv, '--limit', 5000),
+        retryFailed: has(argv, '--retry-failed'),
+        force: has(argv, '--force'),
+      });
 
-  if (argv.includes('--reindex')) {
-    const { rows, capabilities } = reindex(db);
-    process.stderr.write(`reindexed ${rows} stored documents; ${capabilities} capability tokens\n`);
-    db.close();
-    process.exit(0);
-  }
+      process.stderr.write(`${pending.length} agents to resolve off-module\n`);
+      const stats = await resolvePending(db, pending, {
+        concurrency: numberFlag(argv, '--concurrency', 8),
+        timeoutMs: numberFlag(argv, '--timeout-ms', DEFAULT_TIMEOUT_MS),
+        quiet: has(argv, '--quiet'),
+      });
 
-  const pending = selectPending(db, {
-    network: get('--network'),
-    limit: Number(get('--limit') ?? 5000),
-    retryFailed: argv.includes('--retry-failed'),
-    force: argv.includes('--force'),
+      const resolved = stats.byStatus.resolved ?? 0;
+      const pct = stats.attempted > 0 ? ((resolved / stats.attempted) * 100).toFixed(1) : '0.0';
+      process.stderr.write(
+        `\nattempted ${stats.attempted}, resolved ${resolved} (${pct}%), median ${stats.medianMs}ms\n` +
+        `${JSON.stringify(stats.byStatus)}\n` +
+        `endpoints ${stats.withEndpoints}, x402Support ${stats.withX402}, price ${stats.withPrice}\n`,
+      );
+    } finally {
+      db.close();
+    }
   });
-
-  process.stderr.write(`${pending.length} agents to resolve off-module\n`);
-  const stats = await resolvePending(db, pending, {
-    concurrency: Number(get('--concurrency') ?? 8),
-    timeoutMs: Number(get('--timeout-ms') ?? DEFAULT_TIMEOUT_MS),
-    quiet: argv.includes('--quiet'),
-  });
-
-  const resolved = stats.byStatus.resolved ?? 0;
-  const pct = stats.attempted > 0 ? ((resolved / stats.attempted) * 100).toFixed(1) : '0.0';
-  process.stderr.write(
-    `\nattempted ${stats.attempted}, resolved ${resolved} (${pct}%), median ${stats.medianMs}ms\n` +
-    `${JSON.stringify(stats.byStatus)}\n` +
-    `endpoints ${stats.withEndpoints}, x402Support ${stats.withX402}, price ${stats.withPrice}\n`,
-  );
-  db.close();
 }

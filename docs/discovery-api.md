@@ -144,10 +144,21 @@ attempted 151, resolved 123 (81.5%), median 178ms
 | `network_error` | 6 | DNS or connection failure |
 | `parse_error` | 1 | 200 OK, body was not JSON |
 
-**Document coverage went from 7.6% to 70.1%** (138 of 197 have a document; 30
-more have no URI at all and never will). The off-module success rate against
-live URIs is **81.5%**, comfortably above the 28% the module alone can reach —
-so the framing MOV-221 used holds up, and if anything understates it.
+A second run from a clean store, an hour later, resolved **126 of 151 (83.4%)**
+— the difference is entirely Cloudflare 530s coming back. So the rate is
+**81–84%**, not a fixed number: some fraction of these failures are origins
+being briefly down rather than URLs being dead, which is exactly why
+`--retry-failed` exists and why failures are stored with a status instead of
+being folded into "unresolvable".
+
+**Document coverage went from 7.6% to about 70%** (138–141 of 197 have a
+document; 30 more have no URI at all and never will). The off-module success
+rate against live URIs is comfortably above the ~28% the module alone can reach,
+so the framing MOV-221 used holds up and if anything understates it.
+
+The whole store rebuilds from scratch — six `sink.ts` replays, one
+`resolve-cards.ts`, one `hydrate-sellers.ts` — and comes back to the same 197
+agents on the same three chains, with the same single knowable price.
 
 The 28 failures are stored with their status rather than dropped.
 `document_state` in `agent_current` is `in_module` (15), `off_module` (123),
