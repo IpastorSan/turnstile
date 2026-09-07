@@ -1,6 +1,69 @@
 # seller/service
 
-Two things live here: the x402-gated HTTP service, and the discovery API.
+Three things live here: the x402-gated HTTP service, the discovery API, and the
+premium tier.
+
+## `premium.ts` — the answer, plus a pointer to the attested verdict
+
+Discovery is free: you can find the analyst, read its price and see what it
+claims to do. `answerPremium()` is the thing itself, and it returns two
+artefacts rather than one — the full seven-signal `Verdict`, which never goes on
+chain, and a pointer to the on-chain record of the same verdict produced inside
+a Chainlink CRE confidential workflow. See `seller/cre/` and
+`docs/cre-confidential-workflow.md`.
+
+The second is what makes the first worth buying from a stranger. An analyst you
+have never met asserting AVOID is a claim; an attested enclave asserting AVOID
+over evidence you can hash yourself is a fact.
+
+### Attestation strength is four values, not a boolean
+
+| `strength` | Means |
+|---|---|
+| `attested` | delivered by the CRE Forwarder from a pinned workflow id — the full claim |
+| `forwarded-ungated` | the CRE Forwarder, but the consumer would accept any workflow this owner deploys |
+| `self-delivered` | not the CRE Forwarder. Somebody wrote this by hand. |
+| `none` | nothing has settled for this pool |
+
+Collapsing these into `verified: true` is the one bug that would make the tier
+worthless, because three of the four are not the claim. As of 2026-09-07 the
+only consumer holding anything reports `self-delivered`: `cre workflow deploy`
+needs deployment access this org does not have, so the DON-signed link is the
+one thing not yet exercised.
+
+`commitsToEvidence` is the buyer's own check, run for them — hash the bundle in
+the response, ask the chain whether the settled verdict commits to those exact
+bytes. A `false` there means the seller substituted the evidence, which is the
+one form of cheating the on-chain record exists to catch.
+
+### The seam MOV-219 plugs into
+
+`rails/PaymentRail.ts` did not exist on `dev` when this was written, so nothing
+in `premium.ts` imports it. The join is one function:
+
+```ts
+answerPremium(options) -> PremiumAnswer
+```
+
+A rail calls it **after** it has verified payment, and puts the result in its own
+receipt. Nothing here checks payment, quotes a price, or knows what a rail is —
+which is what lets x402-on-Hedera and Arc USDC both use it without either
+learning about the other. `PREMIUM_TIER` is exported so a rail matches on a
+constant rather than a string literal.
+
+```bash
+node seller/service/premium-cli.ts \
+  --evidence seller/cre/fixtures/usdc-weth-500.json \
+  --consumer 0xEE72d3d0E4b090eBB8Db6abc26547bcd1fc9C5F2
+```
+
+Prefer `--evidence <pinned bundle>` over `--pool`. The on-chain verdict commits
+to specific bytes, so re-gathering produces a different hash and the buyer's
+check fails through nobody's fault — `premium.ts` adds a caveat saying exactly
+that when you do it anyway.
+
+---
+
 
 ## `discovery.ts` — find and rank sellers
 
