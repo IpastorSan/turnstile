@@ -116,10 +116,37 @@ gated.
 | `rails/` | `PaymentRail.ts` seam + Hedera x402 and Arc USDC implementations |
 | `buyer/` | Mandate policy, Privy org wallet, the watchdog agent |
 | `mcp-turnstile/` | MCP server + `SKILL.md` — the reusable-infrastructure artifact |
+| `uniswap-mcp/` | Standalone MCP server + `SKILL.md` over the Uniswap stack. No repo imports, no API key |
 | `identity/` | World Selfie Check, nullifier ↔ cold key binding |
 | `web/` | Next.js frontend and backend — market + seller pages, live ENS and discovery reads |
 | `docs/` | Architecture notes, submission copy, on-chain evidence |
 | `scripts/` | `wt.sh`, the worktree helper the git workflow runs on; Hedera setup and the end-to-end paid request |
+
+## Uniswap contributions
+
+Three separable contributions, each of which stands on its own —
+[`docs/uniswap-contributions.md`](./docs/uniswap-contributions.md) has the full
+account, with the code links and the evidence for every claim.
+
+1. **A standardized AMM subgraph** ([`graph/subgraph/`](./graph/subgraph)) —
+   Messari DEX AMM Extended v4.0.1 over Uniswap v3, deployed and answering. One
+   query document runs byte-identical against four AMMs by four teams on two
+   chains, which is what makes cross-protocol comparison arithmetic rather than
+   archaeology. It is also more correct than Messari's own published v3
+   subgraphs, which return a constant for `Tick.prices` and zero for
+   `Position.liquidityUSD`.
+2. **`uniswap-mcp`** ([`uniswap-mcp/`](./uniswap-mcp)) — an MCP server and
+   `SKILL.md` for depth-at-size, per-pool quoting and Messari AMM history.
+   Copy the directory out and it runs: nothing in it imports anything else in
+   this repo, and it needs no API key. Its flagship output is
+   `initializedTicksCrossed` across a size ladder, which is the difference
+   between a pool that is deep and one that merely has a large TVL attached.
+3. **An upstream fix** to `Uniswap/uniswap-ai`, Uniswap's official agent-tooling
+   repo: its v4 quoting skill mandates ethers v5's `callStatic`, which v6
+   removed and viem never had — in a skill whose every other snippet is viem.
+   Its eval rubrics grade for it too.
+
+Rough edges are recorded in [`FEEDBACK.md`](./FEEDBACK.md) as we hit them.
 
 ## Working in this repo
 
