@@ -128,8 +128,22 @@ Interface: `src/access-control/interfaces/IEnhancedAccessControl.sol:66` and `:7
 **Second gotcha:** `PermissionedRegistry` *overrides* `grantRoles`
 (`src/registry/PermissionedRegistry.sol:233`) so the first argument is a **token id**, not a
 raw resource — it internally does `super.grantRoles(getResource(anyId), …)`. Same 3-arg
-shape, different meaning. `PermissionedResolver` has its own override at
-`src/resolver/PermissionedResolver.sol:720` where the first arg *is* a resource.
+shape, different meaning.
+
+**Correction (2026-09-07, MOV-218 — verified against the deployed contract).** This file
+previously said `PermissionedResolver` has an override at `:720` "where the first arg *is* a
+resource". That is **wrong**. `PermissionedResolver.grantRoles` (`:720`) and `revokeRoles`
+(`:734`) are `pure` and **revert unconditionally** — the resolver *disables* the function
+rather than reinterpreting its argument. Every resolver grant goes through
+`authorize(Name|Text|Data|Addr)Roles` instead. Pinned by
+`contracts/test/OfferRecords.t.sol:test_resolverDisablesGrantRolesEntirely`.
+
+The two *registry* gotchas above are unchanged and still correct; only the resolver claim was
+wrong.
+
+**Second correction: three roles are per-record, not eight.** Only `setText(key)`,
+`setData(key)` and `setAddr(coinType)` are part-scoped; every other role passes `part = 0`.
+Three is still sufficient for the cold/hot split — they are the three that matter.
 
 ### Registration
 
