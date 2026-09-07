@@ -122,6 +122,20 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
       per-feature history ETHGlobal audits and 1inch scores. Recommendation: **leave it**.
       Recorded here so the call is made deliberately before the repo goes public, not
       discovered afterwards.
+- [ ] **Every live figure in submission copy carries its capture timestamp and block.** Owner:
+      whoever writes MOV-232. These numbers *drift* — the same pool's claimed TVL read
+      $106.68M, $105.9M and $105.72M within three hours on 2026-09-07, and reachable-within-1%
+      moved 0.944% → 0.946%. A bare "$105.9M" in a video or README is wrong by the time a
+      judge re-runs it. Either timestamp it ("$105.72M at block 25910956, 2026-09-07") or
+      derive it live on camera. Applies to TVL, volume, slippage, agent counts and price-source
+      counts alike.
+- [ ] **Bazantic gateway + Recipe** (MOV-231). Owner: user, in a browser. Needs `baz login`
+      (browser-approval only, no API-key path exists) and **two public HTTPS URLs** for
+      `--spec-url` and `--endpoint`, which the public deployment provides. Paste-ready material
+      is in `docs/bazantic-gateway.md`; the spec is `docs/openapi.turnstile.json`. Recipes are
+      web-app only — not in the CLI at all. Record `IpastorSan` as the attribution handle.
+      **This is cut-line #1 — drop it rather than let it delay anything else.**
+
 
 
 The repo is deliberately **private** for the 12 build days, to keep the ERC-8004
