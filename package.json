@@ -14,6 +14,7 @@
     "hydrate-sellers": "node graph/sink/hydrate-sellers.ts",
     "discover": "node seller/service/discovery-cli.ts",
     "mcp": "node mcp-turnstile/server.ts",
+    "typecheck": "tsc --noEmit",
     "test": "node --test"
   },
   "dependencies": {
