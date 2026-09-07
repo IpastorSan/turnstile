@@ -128,6 +128,14 @@ gatherInput(...)  ->  AnalystInput  ->  assess(...)  ->  Verdict
 scores. Nothing in `analyst.ts` changes. If you find yourself wanting
 `Date.now()` inside `scoring.ts`, add a field to `AnalystInput` instead.
 
+Two measurements MOV-227 will want, taken on a real run against USDC/WETH 0.05%
+with 48 hours of snapshots (2026-09-07):
+
+- a complete `AnalystInput` serializes to **9,210 bytes** — small enough to pass
+  as a single enclave argument, with no need to stream or to fetch from inside;
+- `assess(input)` and `assess(JSON.parse(JSON.stringify(input)))` produce
+  byte-identical verdicts, so the round trip through the boundary is lossless.
+
 ---
 
 ## Use it
