@@ -1,0 +1,47 @@
+{
+  "name": "mcp-turnstile",
+  "version": "0.2.0",
+  "description": "MCP server that lets one agent find, price, pay and audit another over ERC-8004, ENSv2 and x402.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "mcp-turnstile": "_bundle/mcp-turnstile/server.js"
+  },
+  "comment": "Working in the repo needs no build step: Node runs the .ts sources directly (type stripping, on by default since 22.18) and node:sqlite is built in. PUBLISHING does, and only because Node refuses to strip types under node_modules (ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING, verified on Node 26.7 \u2014 2026-09-07). scripts/prepack.mjs walks the import graph from server.ts, compiles what it finds into _bundle/ mirroring the repository layout so relative imports resolve unchanged, and copies the SQL schema and the discovery snapshot beside it. _bundle/ is generated and not committed. Still no native module and no compiler for the consumer.",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "files": [
+    "_bundle",
+    "SKILL.md",
+    "README.md",
+    "scripts/prepack.mjs"
+  ],
+  "scripts": {
+    "prepack": "node scripts/prepack.mjs",
+    "start": "node server.ts"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "x402",
+    "erc-8004",
+    "ens",
+    "agent-payments",
+    "agent-discovery"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IpastorSan/turnstile.git",
+    "directory": "mcp-turnstile"
+  },
+  "dependencies": {
+    "@hiero-ledger/sdk": "2.85.0",
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "@x402/core": "^2.25.0",
+    "@x402/fetch": "^2.25.0",
+    "@x402/hedera": "^2.25.0",
+    "viem": "^2.40.0",
+    "zod": "^3.25.0"
+  }
+}
