@@ -133,8 +133,26 @@ public `--spec-url` and `--endpoint` plus a browser session (`baz login`). See
 `docs/bazantic-gateway.md`.
 
 **Sept 15 — go public, in this order:**
-1. `gh repo edit IpastorSan/turnstile --visibility public`
-2. Verify: `gh repo view --json visibility`, then open the URL logged-out
+
+⚠️ **Correction (2026-09-07, MOV-226).** This block previously began at the visibility flip.
+That was wrong and would have been expensive. **`main` is 139 commits behind `dev`, and its
+`FEEDBACK.md` is still the original 34-line empty template — zero entries.** `dev` has 312
+lines and ten. So flipping visibility without merging first publishes a repo whose
+`FEEDBACK.md` is a stub, and the Uniswap link would resolve to **an empty feedback template**.
+That is *worse* than the 404 we were guarding against: a 404 reads as "not public yet", an
+empty stub reads as "they did not do the work" — arriving exactly when an auditor is checking
+whether the link was decoration.
+
+1. **`git merge --no-ff dev` into `main`, and push.** Without this, everything below is
+   published against a 139-commit-stale tree.
+2. `gh repo edit IpastorSan/turnstile --visibility public`
+3. Verify **both** — the first only proves the repo is public and says nothing about what
+   `main` contains:
+   ```
+   curl -s -o /dev/null -w '%{http_code}\n' https://github.com/IpastorSan/turnstile/blob/main/FEEDBACK.md
+   git show main:FEEDBACK.md | grep -c '^### 2026'    # expect >= 10
+   ```
+4. Open the URL logged-out
 3. `substreams registry publish` for `graph/substreams/erc8004-agent-registry-v0.1.0.spkg`
 4. **Only now** submit the Uniswap feedback form — it requires a link to `FEEDBACK.md`, which
    404s for the reviewer while the repo is private
