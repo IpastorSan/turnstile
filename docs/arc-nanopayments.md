@@ -6,7 +6,15 @@ below was captured from that run. Where something could not be verified, it says
 so — per `CLAUDE.md`, silence reads as confidence.
 
 - **Buyer agent (hot tier):** [`0x0633a193017939Bb1eB242982397224c66948e2F`](https://testnet.arcscan.app/address/0x0633a193017939Bb1eB242982397224c66948e2F)
-- **Buyer org (warm tier):** [`0xdFe3088aC34e7329006407C246C9F6D7534B2aC5`](https://testnet.arcscan.app/address/0xdFe3088aC34e7329006407C246C9F6D7534B2aC5)
+- **Buyer org (warm tier):** [`0x3De96375140717193f52c220Df5Ec460971cbE84`](https://testnet.arcscan.app/address/0x3De96375140717193f52c220Df5Ec460971cbE84)
+  — **Correction (2026-09-07, MOV-228):** this used to be
+  `0xdFe3088aC34e7329006407C246C9F6D7534B2aC5`, a plain key in `.env`. It is now a
+  **Privy server wallet** owned by a 1-of-2 operations key quorum, capped by a
+  mandate policy that a separate 2-of-2 board quorum owns. Everything else on this
+  page is unchanged — the `depositFor` mechanism, the eleven settled payments, the
+  batching, and the agent's nonce staying 0 — because MOV-228 replaced the key and
+  not the mechanism. See `docs/privy-mandate.md`. The old address still holds the
+  transactions linked below; they were made by the key it replaced
 - **Seller payout:** `0x0Adca6e14bA956201D221feC767e4f24194bf5F2` — the `addr(60)`
   record on `liquidity.turnstile.eth`
 - **Mandate funded by:** [`0xe031e97c80b6aefc3e8b851fdab7d33d8cdef2ed47037f1ecff4abc5a0cffc1c`](https://testnet.arcscan.app/tx/0xe031e97c80b6aefc3e8b851fdab7d33d8cdef2ed47037f1ecff4abc5a0cffc1c)

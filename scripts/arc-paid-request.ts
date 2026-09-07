@@ -27,16 +27,15 @@
 // it cannot create one itself by design.
 
 import { decodePaymentRequiredHeader, decodePaymentResponseHeader } from '@x402/core/http';
-import { GatewayClient } from '@circle-fin/x402-batching/client';
-import type { Address, Hex } from 'viem';
+import type { Address } from 'viem';
 
 import { createPaidFetch } from '../buyer/watchdog/pay.ts';
-import type { Mandate } from '../buyer/watchdog/pay.ts';
+import type { SpendingLimits } from '../buyer/watchdog/pay.ts';
 import { createArcSigner } from '../buyer/watchdog/arc-signer.ts';
 import { createHederaSigner } from '../buyer/watchdog/hedera-signer.ts';
 import { CircleGateway, createArcRail } from '../rails/arc-usdc/index.ts';
-import { GATEWAY_CHAIN_NAME, arcscanAddressUrl, arcscanTransactionUrl } from '../rails/arc-usdc/config.ts';
-import { formatUsdc, readArcWallet, sameBalance } from '../rails/arc-usdc/wallet.ts';
+import { arcscanAddressUrl, arcscanTransactionUrl } from '../rails/arc-usdc/config.ts';
+import { formatUsdc, gatewayBalance, readArcWallet, sameBalance } from '../rails/arc-usdc/wallet.ts';
 import { createHederaRail } from '../rails/hedera-x402/index.ts';
 import { hashscanTransactionUrl } from '../rails/hedera-x402/config.ts';
 import { RailRegistry } from '../rails/registry.ts';
@@ -57,22 +56,25 @@ const rule = (title: string) => console.log(`\n${'='.repeat(72)}\n${title}\n${'=
 
 const agentAddress = process.env['ARC_AGENT_ADDRESS'] as Address | undefined;
 if (!agentAddress) throw new Error('set ARC_AGENT_ADDRESS (see .env.example)');
-const orgKey = process.env['ARC_ORG_PRIVATE_KEY'];
-if (!orgKey) throw new Error('set ARC_ORG_PRIVATE_KEY — it is how this script reads the agent\'s Gateway balance without giving the agent a wallet client');
-
-// The org's client, used here only to *read*. The agent deliberately never gets
-// a `GatewayClient`: constructing one is harmless, but having one in scope is
-// how a later edit accidentally sends a transaction from the wallet whose whole
-// point is that it never does.
-const reader = new GatewayClient({ chain: GATEWAY_CHAIN_NAME, privateKey: orgKey as Hex });
 const gateway = new CircleGateway();
 
+// **Correction (2026-09-07, MOV-228):** this script used to require
+// `ARC_ORG_PRIVATE_KEY`, purely to construct a `GatewayClient` that could read
+// the agent's Gateway balance — the SDK's constructor demands a private key even
+// for a read. After MOV-228 the org *has* no private key here (the warm tier is
+// a Privy server wallet whose secret lives in an enclave), so that requirement
+// would have made the demo take depend on a key the design had just removed.
+//
+// `gatewayBalance()` reads Circle's `/v1/balances` directly. It needs no key and
+// no auth header — verified 2026-09-07 — and it keeps the property the old
+// comment here was protecting: the agent still never gets a client that could
+// send anything, because no such object is constructed anywhere in this file.
 async function agentState() {
-  const [chain, balances] = await Promise.all([
+  const [chain, balance] = await Promise.all([
     readArcWallet(agentAddress!),
-    reader.getBalances(agentAddress!).catch(() => null),
+    gatewayBalance(agentAddress!).catch(() => null),
   ]);
-  return { chain, gatewayAvailable: balances?.gateway.formattedAvailable ?? '(none)' };
+  return { chain, gatewayAvailable: balance?.available ?? '(none)' };
 }
 
 const arcSigner = await createArcSigner();
@@ -123,7 +125,7 @@ try {
     console.log(JSON.stringify(challenge.accepts.find(a => a.network === arcSigner.network), null, 2));
 
     rule('2. THE SAME QUERY, PAID ON ARC');
-    const arcMandate: Mandate = { preferredRails: ['arc-usdc'], maxPerPaymentUsd: 0.5 };
+    const arcMandate: SpendingLimits = { preferredRails: ['arc-usdc'], maxPerPaymentUsd: 0.5 };
     const started = Date.now();
     const paid = await createPaidFetch({ mandate: arcMandate, signers })(resource);
     console.log(`HTTP ${paid.status} in ${((Date.now() - started) / 1000).toFixed(1)}s`);
@@ -142,7 +144,7 @@ try {
       // Same URL, same seller, same code path. Only the mandate changed, which is
       // the buyer's decision and not the seller's. `seller/service/` contains no
       // branch on either chain: `no-chain-code.test.ts` fails the build if it does.
-      const hederaMandate: Mandate = { preferredRails: ['hedera-x402'], maxPerPaymentUsd: 0.5 };
+      const hederaMandate: SpendingLimits = { preferredRails: ['hedera-x402'], maxPerPaymentUsd: 0.5 };
       const hederaPaid = await createPaidFetch({ mandate: hederaMandate, signers })(resource);
       console.log(`HTTP ${hederaPaid.status}`);
       if (hederaPaid.ok) {
@@ -192,7 +194,7 @@ try {
 
     await withServer(nanoApp, async nanoUrl => {
       const nanoResource = `${nanoUrl}/analyze/${pool}`;
-      const nanoMandate: Mandate = { preferredRails: ['arc-usdc'], maxPerPaymentUsd: 0.01 };
+      const nanoMandate: SpendingLimits = { preferredRails: ['arc-usdc'], maxPerPaymentUsd: 0.01 };
       const pay = createPaidFetch({ mandate: nanoMandate, signers });
 
       console.log(`$${nanoPrice.toFixed(6)} each = ${nanoPrice * 1e6} USDC atomic units per query.`);
