@@ -16,7 +16,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["graph/sink/**/*.ts", "seller/**/*.ts", "rails/**/*.ts", "buyer/**/*.ts", "mcp-turnstile/**/*.ts"],
+  "include": ["graph/sink/**/*.ts", "seller/**/*.ts", "rails/**/*.ts", "buyer/**/*.ts", "mcp-turnstile/**/*.ts", "uniswap-mcp/**/*.ts"],
   "///exclude": "seller/cre/analyst-verdict is the CRE workflow. It compiles to WASM against a pinned @chainlink/cre-sdk in its own node_modules, and the SDK's export map only resolves under moduleResolution 'bundler' — under this file's 'nodenext' every SDK import fails, and its own package.json has no \"type\": \"module\", so verbatimModuleSyntax rejects the ES syntax too. It has its own tsconfig and is typechecked by `npm run typecheck:cre`. Everything else under seller/cre/ (verdict.ts, attestation.ts, evidence-server.ts, settle-cli.ts) is ordinary repo code and stays in here.",
   "exclude": ["seller/cre/analyst-verdict/**"]
 }

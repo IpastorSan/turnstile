@@ -88,9 +88,9 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 
 **Uniswap ($3,000)**
 - [ ] Public repo, open source
-- [ ] **`FEEDBACK.md`** in the repo
-- [ ] **Submitted** the form at https://developers.uniswap.org/hackathon-feedback **with the link to FEEDBACK.md**
-- [ ] README points at the relevant contracts and lines of code
+- [x] **`FEEDBACK.md`** in the repo — MOV-216 (Trading API 401-behind-validation, the QuoterV2 `view` quirk, a 301-to-404) and MOV-226 (the v4 quoting guide's ethers v6/v5 contradiction, the same bug in `Uniswap/uniswap-ai`, V4Quoter dropping `initializedTicksCrossed`, plus what worked well). Owner: MOV-226.
+- [ ] **Submitted** the form at https://developers.uniswap.org/hackathon-feedback **with the link to FEEDBACK.md** — **BLOCKED ON IGNACIO, not on an agent.** It is a browser-only React form (no login, but no POST endpoint either) whose required fields include his email, his Telegram handle, and a Uniswap Labs ToS agreement. No agent can supply those. Submit it **after** the repo visibility flip, or the FEEDBACK.md link 404s for the reviewer. See `docs/uniswap-contributions.md`.
+- [x] README points at the relevant contracts and lines of code — `README.md` has a **Uniswap contributions** section linking all three, and `docs/uniswap-contributions.md` gives the code path and the evidence for every claim. Owner: MOV-226.
 
 **Chainlink ($2,000)**
 - [x] CRE Workflow using Confidential Workflows for a **meaningful** part of the app — MOV-227. It *is* the premium tier: `seller/service/premium.ts` has no other source of an attested verdict.
@@ -546,3 +546,38 @@ accurate for any database that has not had the ingest run.
 - **ERC-8004/HCS-14 identity, HTS custom fees and Scheduled Transactions are not
   attempted.** Only the HCS audit trail of those four extra-point items is done.
 - **`arc-usdc` is untouched by this issue** and still settles nothing.
+
+### MOV-226 — Uniswap contributions: uniswap-mcp, SKILL, FEEDBACK.md, upstream PR (2026-09-07)
+
+Three separable contributions; `docs/uniswap-contributions.md` is the account
+judges should read.
+
+- **`uniswap-mcp/`** — standalone MCP server + `SKILL.md` over the Uniswap
+  stack. Five tools (token metadata, factory pool discovery, per-pool v3/v4
+  quotes, depth-at-size ladders, Messari AMM subgraph queries). **Nothing in the
+  directory imports anything outside it**, so it can be copied out and run with
+  no Turnstile context, and it needs **no API key**. 60 offline tests; 198 green
+  repo-wide; `tsc --noEmit` clean. Verified end to end against mainnet by
+  driving the real server over stdio (`test/live-smoke.ts`).
+- **The subgraph, framed as a Uniswap contribution** — `graph/subgraph/`,
+  already deployed. One Messari-conformant document across four AMMs by four
+  teams on two chains.
+- **Upstream PR** — `Uniswap/uniswap-ai`, branch
+  `IpastorSan:fix/quoter-static-call-ethers-v6`, prose only, 5 files, +42/−10,
+  `markdownlint-cli2` and their pinned `prettier@2.8.8` clean. Their v4 quoting
+  skill mandates ethers v5's `callStatic`, which v6 removed and viem never had,
+  in a file whose every other snippet is viem and whose install line has no
+  ethers; the eval rubrics grade for it too.
+
+**Two things need Ignacio and cannot be done by an agent:**
+
+1. **The feedback form** (see the item above). Required for the prize.
+2. **Opening the PR.** `gh pr create` is blocked by the Uniswap org's OAuth App
+   access restrictions — proven not to be a token-scope problem, because the
+   same token opened a PR on our own fork as a control. The branch is pushed;
+   the PR needs one click in a browser at
+   <https://github.com/Uniswap/uniswap-ai/compare/main...IpastorSan:uniswap-ai:fix/quoter-static-call-ethers-v6?expand=1>
+   with the body from `docs/uniswap-ai-pr-body.md`.
+
+**Not done, deliberately:** no v4 hook. Scope decision recorded in the issue —
+the marginal prize value does not justify the Solidity time.
