@@ -84,7 +84,16 @@ Must not move value, and must be safe to call twice.
 every requirement currently on offer for it. It is optional and a rail that
 ignores it still works, but it is how you bind a challenge to its resource. The
 service cannot do that for you: the binding lives in your `extra`, which the
-service must not read. `rails/stub-rail.ts` shows the three-line version.
+service must not read.
+
+`rails/stub-rail.ts` shows the shape, with a warning worth repeating here: the
+requirement it compares is the *payer's* copy, so a payer can delete
+`extra.resource` and skip the check. A stub signs nothing and has no honest way
+to detect that. **On a real rail the requirement must be covered by the payer's
+signature**, which is what makes the comparison load-bearing rather than
+advisory. The tier-downgrade attack is blocked either way by the amount check in
+`seller/service/x402.ts` — which is why that check lives in the service and is
+not delegated to rails.
 
 ### `settle(payload)`
 

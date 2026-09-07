@@ -119,6 +119,18 @@ export function createStubRail(config: StubRailConfig): PaymentRail {
       }
       // The binding the service cannot check for us, because it lives in `extra`:
       // a challenge minted for the $0.07 route must not buy the $0.35 one.
+      //
+      // **A real rail must not copy this shape.** The value being compared here
+      // is the payer's own copy of `accepted`, so a payer can simply delete
+      // `extra.resource` and skip the check — which this stub allows, because a
+      // stub signs nothing and has no honest way to tell a tampered requirement
+      // from an untampered one. On a real rail the requirement is covered by the
+      // payer's signature, so the comparison is meaningful; that is what makes
+      // this check load-bearing there and advisory here.
+      //
+      // The downgrade attack itself is still blocked either way, by the
+      // amount check in `seller/service/x402.ts` — which is exactly why that
+      // check lives in the service rather than being delegated to rails.
       if (context) {
         const boundTo = payload.accepted.extra['resource'];
         if (typeof boundTo === 'string' && boundTo !== context.resource) {
