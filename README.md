@@ -165,7 +165,7 @@ gated.
 | `graph/substreams/` | Rust. Authored ERC-8004 agent-registry normalization module |
 | `seller/` | x402-gated service, Liquidity Analyst, CRE confidential workflow, Ledger-sealed secrets |
 | `rails/` | `PaymentRail.ts` seam + Hedera x402 and Arc USDC implementations |
-| `buyer/` | Mandate policy, Privy org wallet, the watchdog agent |
+| `buyer/` | `org/` the Privy org wallet and its key quorums, `mandate/` what the agent may spend, `watchdog/` the agent |
 | `mcp-turnstile/` | MCP server + `SKILL.md` — the reusable-infrastructure artifact |
 | `uniswap-mcp/` | Standalone MCP server + `SKILL.md` over the Uniswap stack. No repo imports, no API key |
 | `identity/` | World Selfie Check, nullifier ↔ cold key binding |

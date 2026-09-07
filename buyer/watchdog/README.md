@@ -13,9 +13,20 @@ const pay = createPaidFetch({
   signers: [hederaSigner, arcSigner],
 });
 
+// or, from a real mandate issued by the warm tier (MOV-228):
+const pay = paidFetchForMandate(mandate, [hederaSigner, arcSigner], { ledger });
+
 const res = await pay('https://seller.example/analyze/0x88e6...');
 const { verdict } = await res.json();
 ```
+
+**Correction (2026-09-07, MOV-228):** the `Mandate` type this file used to
+describe is now called `SpendingLimits`, and the real mandate — spend cap,
+per-query ceiling, rail preference, seller allowlist, `verified_operator_only` —
+lives in `buyer/mandate/mandate.ts`. `SpendingLimits` is that object's projection
+onto one 402 challenge, built by `mandateSpendingLimits()`. Nothing about the
+enforcement changed; the example above still works, and two new optional fields
+(a seller allowlist and a remaining-spend check) were added.
 
 It is `@x402/fetch`'s wrapper with the two decisions that are ours rather than
 the SDK's wired in:
@@ -80,7 +91,8 @@ and the seller's `extra.usdPerUnit` is ignored, because a seller quoting
 - The watchdog loop itself — poll pools, decide when a verdict is worth buying.
 - ~~Real signers, with MOV-220~~ — done, `hedera-signer.ts`.
   ~~Still to come with MOV-225 (Arc)~~ — done, `arc-signer.ts`.
-- Mandate issuance and the Privy warm tier. **Correction (2026-09-07, MOV-225):**
-  the warm tier is now load-bearing rather than merely absent — `scripts/arc-setup.ts`
-  calls `depositFor()` from a plain key where a Privy org wallet with a quorum
-  belongs. MOV-228 replaces the key, not the mechanism.
+- ~~Mandate issuance and the Privy warm tier.~~ **Done (2026-09-07, MOV-228)** —
+  `buyer/org/` and `buyer/mandate/`. `scripts/arc-setup.ts` now calls
+  `depositFor()` from a Privy server wallet owned by a key quorum and capped by a
+  Privy policy; MOV-225's note here predicted MOV-228 would replace the key and
+  not the mechanism, and that is what happened. See `docs/privy-mandate.md`.

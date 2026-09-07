@@ -105,10 +105,10 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] ⚠️ **Not** a live deployment, and not claimed as one. `cre account access` (2026-09-07): "Deployment access is not yet enabled for your organization", and Confidential Workflows is separately in private beta. The simulator runs the write path but returns a zero tx hash. `VerdictConsumer` is deployed and Etherscan-verified on Sepolia at `0xfE95CD0f710DDC5ceED0e93c4e25412Dc3d8eEeA` gated on the real CRE Forwarder, waiting for the DON. Owner: whoever gets deploy access should run `cre workflow deploy`, then `setExpectedAuthor` + `setExpectedWorkflowId`.
 
 **Privy ($5,000)**
-- [ ] Privy **core**; ≥1 Privy wallet; **≥1 Privy control** (policies, signers, key quorums, intents)
-- [ ] B2B: org use case + ≥1 functional workflow (payment, approval, treasury op, wallet admin)
-- [ ] Financial flow: ≥1 functional flow on a **generally available** feature
-- [ ] Working demo + source + explanation of how Privy enables it
+- [x] Privy **core**; ≥1 Privy wallet; **≥1 Privy control** (policies, signers, key quorums, intents) — MOV-228. The warm tier of the three-tier key hierarchy *is* Privy: the org wallet `w0cxyoh1lnc1lqfyi9tb5yej` (`0x3De96375140717193f52c220Df5Ec460971cbE84`) is the only thing that can fund the buyer agent. **Three** controls, not one: a **policy** capping `depositFor.value` and pinning `depositFor.depositor`, a 1-of-2 **key quorum** owning the wallet, and a separate 2-of-2 **key quorum** owning the policy. Plus two human operators with pre-generated **embedded wallets**. `docs/privy-mandate.md`
+- [x] B2B: org use case + ≥1 functional workflow (payment, approval, treasury op, wallet admin) — MOV-228. Two workflows, both live: (1) **treasury operation** — one operator approves, the org wallet signs `approve` + `depositFor`, on chain at [`0x3c526daf…20de`](https://testnet.arcscan.app/tx/0x3c526daf25216ac831ba21f828458e4bdd7562227b012b399b3e05f0869320de) and [`0x681ba1cd…7ec3`](https://testnet.arcscan.app/tx/0x681ba1cdbe5b46c6dcd6a7f906265b678099c501e425d62b114793d65c297ec3); (2) **approval** — raising the mandate's spend cap is refused with one operator's signature (`401`) and succeeds with two. `npm run privy:mandate`
+- [x] Financial flow: ≥1 functional flow on a **generally available** feature — MOV-228. `eth_signTransaction` on a Privy server wallet, under a policy, moving real USDC on Arc testnet. No Privy Cards, mocked or otherwise; nothing used here is a preview feature
+- [x] Working demo + source + explanation of how Privy enables it — MOV-228. `npm run privy:setup` then `npm run privy:mandate` is the demo take; `buyer/org/` and `buyer/mandate/` are the source; `docs/privy-mandate.md` is the explanation, including six rough edges in Privy's API and a what-was-and-was-not-verified table
 
 **Bazantic ($1,000)**
 - [ ] Account + an **x402/MPP Gateway** for our project
