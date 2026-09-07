@@ -18,6 +18,14 @@ jobs:
         with:
           node-version: '22'
 
+      # The lockfile is lockfileVersion 3 written by npm 11. Node 22 ships npm 10,
+      # which resolves the transitive tree differently and fails `npm ci` with a wall
+      # of "Missing: <pkg> from lock file" — nothing is actually wrong with the lock.
+      # Pin npm rather than the Node version, so CI keeps testing the declared floor
+      # (engines.node >= 22.18, the version that runs .ts without a flag).
+      - name: Pin npm to the version that wrote the lockfile
+        run: npm install -g npm@11
+
       - name: Shell scripts parse
         run: |
           for f in $(git ls-files '*.sh'); do
