@@ -170,3 +170,29 @@ Claims to avoid:
   sentence instead.
 - Anything implying the MCP server does the reasoning. It does not, and saying
   so undersells the part that is actually ours.
+
+## Substreams and Graph Market — moved here from `FEEDBACK.md` (2026-09-07)
+
+Originally filed by MOV-222 in `FEEDBACK.md`, which is **Uniswap-only** and is read by
+Uniswap judges against their track. This is Graph feedback and belongs here. Content
+unchanged.
+
+- **Concurrent stream limit is 2, and the error only appears at the third.**
+  Sinking three chains in parallel fails one of them with
+  `ResourceExhausted: Concurrent stream limit exceeded (active sessions: 2/2)`.
+  The limit is not documented anywhere we found before hitting it, and it is not
+  in `substreams --help`. A sink that fans out per chain — the obvious shape —
+  silently loses a chain unless it checks exit codes.
+- **`substreams run` refuses a store as an output module**, so a store can only
+  be exercised through a map that reads it, and that map then has to backfill
+  the store from its `initialBlock` before it emits anything:
+  `this request needs to process 37,200 blocks (37,000 of them to prepare the
+  stores)`. For a consumer that wants a recent window, the pure map module plus
+  a fold in the sink is dramatically cheaper. Worth saying so in the docs — the
+  composable-store story reads as strictly better than the map, and for this
+  access pattern it is not.
+
+Both are worth repeating in the Graph submission: the undocumented concurrency ceiling
+is the kind of thing that silently loses a chain in a fan-out sink, and the store-vs-map
+cost asymmetry contradicts how the composable-store story reads in the docs.
+
