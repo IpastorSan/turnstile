@@ -89,7 +89,7 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 **Uniswap ($3,000)**
 - [ ] Public repo, open source
 - [x] **`FEEDBACK.md`** in the repo — MOV-216 (Trading API 401-behind-validation, the QuoterV2 `view` quirk, a 301-to-404) and MOV-226 (the v4 quoting guide's ethers v6/v5 contradiction, the same bug in `Uniswap/uniswap-ai`, V4Quoter dropping `initializedTicksCrossed`, plus what worked well). Owner: MOV-226.
-- [ ] **Submitted** the form at https://developers.uniswap.org/hackathon-feedback **with the link to FEEDBACK.md** — **BLOCKED ON IGNACIO, not on an agent.** It is a browser-only React form (no login, but no POST endpoint either) whose required fields include his email, his Telegram handle, and a Uniswap Labs ToS agreement. No agent can supply those. Submit it **after** the repo visibility flip, or the FEEDBACK.md link 404s for the reviewer. See `docs/uniswap-contributions.md`.
+- [ ] **Submitted** the form at https://developers.uniswap.org/hackathon-feedback **with the link to FEEDBACK.md** — **BLOCKED ON IGNACIO, not on an agent.** It is a browser-only React form (no login, but no POST endpoint either) whose required fields include his email, his Telegram handle, and a Uniswap Labs ToS agreement. **It is downstream of two other steps** — `dev`→`main` and the visibility flip — sequenced under [Before submitting](#before-submitting--blocks-all-12-submissions). Paste-ready answers, including the exact permalink: `docs/uniswap-feedback-form-answers.md`.
 - [x] README points at the relevant contracts and lines of code — `README.md` has a **Uniswap contributions** section linking all three, and `docs/uniswap-contributions.md` gives the code path and the evidence for every claim. Owner: MOV-226.
 
 **Chainlink ($2,000)**
@@ -185,6 +185,47 @@ and nothing else on this list survives forgetting it.
 - [ ] **Before submitting: `gh repo edit IpastorSan/turnstile --visibility public`** — every sponsor requires a public repo; a private repo fails all 12 submissions.
 - [ ] Confirm it took: `gh repo view IpastorSan/turnstile --json visibility`
 - [ ] Open the repo URL in a logged-out browser before pasting it into any submission form.
+
+#### The Uniswap feedback form is downstream of the flip — do these in order
+
+The form at <https://developers.uniswap.org/hackathon-feedback> must carry a link
+to `FEEDBACK.md`, and **both steps below change what the reviewer sees when they
+click it.** These were two independent rows on this list until MOV-226 coupled
+them; nothing encoded the dependency, which is exactly the shape of thing that
+gets done out of order at 3am.
+
+- [ ] **1. Merge `dev` → `main` (`--no-ff`) and push.** `main` is the default
+      branch, so it is what the permalink resolves to. Verified 2026-09-07:
+      `main` was **139 commits behind `dev`** and its `FEEDBACK.md` was still the
+      **34-line empty template with zero entries** — `dev`'s is 312 lines with
+      eight. A reviewer following the link today would see a stub, which is worse
+      than a dead link: a 404 reads as "not public yet", an empty template reads
+      as "they did not do the work".
+- [ ] **2. Flip visibility** — the two rows immediately above this block.
+- [ ] **3. Verify both, in a logged-out browser or private window:**
+      ```bash
+      curl -s -o /dev/null -w '%{http_code}\n' \
+        https://github.com/IpastorSan/turnstile/blob/main/FEEDBACK.md   # want 200
+      git show main:FEEDBACK.md | grep -c '^### 2026'                   # want >= 10, not 0
+      ```
+      The second is the one that matters. A `200` only proves the repo is public;
+      it does not prove `main` carries the feedback.
+- [ ] **4. Submit the form**, using the paste-ready answers in
+      [`docs/uniswap-feedback-form-answers.md`](./docs/uniswap-feedback-form-answers.md).
+      The link to paste is exactly
+      `https://github.com/IpastorSan/turnstile/blob/main/FEEDBACK.md` — a
+      default-branch permalink, **not** a commit-pinned `/blob/<sha>/` URL, which
+      would freeze an append-only file and hide every later entry.
+
+**Do not submit the form before steps 1 and 2.** The one exception, stated so the
+call does not have to be made under pressure: **if the form closes when the
+hackathon does, submit it immediately after step 2 on the same day rather than
+waiting for a tidier moment.** Losing $3,000 to a closed form is far worse than
+an imperfect sequence, and it can be re-submitted once `main` is current.
+
+Only Ignacio can complete the form: its required fields include his email, his
+**Telegram handle** (which appears nowhere in this repo) and a Uniswap Labs Terms
+of Service agreement. No agent can supply those. Owner: **user**, in a browser.
 
 ### Explicitly not doing
 
