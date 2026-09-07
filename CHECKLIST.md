@@ -494,3 +494,75 @@ accurate for any database that has not had the ingest run.
 - **ERC-8004/HCS-14 identity, HTS custom fees and Scheduled Transactions are not
   attempted.** Only the HCS audit trail of those four extra-point items is done.
 - **`arc-usdc` is untouched by this issue** and still settles nothing.
+
+---
+
+## MOV-225 — the Arc rail: Circle Gateway Nanopayments
+
+Appended 2026-09-07. Append-only file: this block corrects earlier ones by
+quoting them rather than editing them.
+
+### The Arc rail is no longer a placeholder
+
+`rails/arc-usdc/` settles USDC on **Arc testnet** through **Circle Gateway
+Nanopayments** (`@circle-fin/x402-batching@3.4.0`). `info.live` is `true` and
+every challenge carries `extra.turnstileSettlement: "live"`.
+
+**Correction (2026-09-07, MOV-225) to the MOV-219 block above.** Its "Not
+claimed, so nobody ticks it by mistake" list said the Arc rail's network id was a
+**deliberate placeholder** (`eip155:0-PLACEHOLDER-arc`) and that "Arc's CAIP-2
+identifier is unverified". Both were true when written and both are now
+resolved. Arc testnet is **`eip155:5042002`**, verified two independent ways on
+2026-09-07: `eth_chainId` on `https://rpc.testnet.arc.network` returns
+`0x4cef52`, and Circle Gateway's `/v1/x402/supported` advertises a kind on
+`eip155:5042002`. The asset placeholder is resolved too — USDC on Arc testnet is
+`0x3600000000000000000000000000000000000000`, six decimals.
+
+**Correction (2026-09-07, MOV-225) to the MOV-220 correction above.** It says
+"The **Arc half** of that list is unchanged and still accurate — `arc-usdc` is
+still a placeholder on a deliberately fake network id, and MOV-225 owns it." That
+was accurate when written; it is now false in both halves. Both rails are live,
+and `/health` reports `settlementLive: true` for both.
+
+**Correction (2026-09-07, MOV-225) to the MOV-220 block's closing line.** It
+ends "**`arc-usdc` is untouched by this issue** and still settles nothing." True
+of MOV-220; superseded here. Everything else in the MOV-220 block stands
+unchanged — the Hedera transaction, the HCS topic and the HashScan caveat are
+not affected by this issue.
+
+### The "holds zero native token via a Paymaster" claim was wrong everywhere
+
+`CLAUDE.md`, `README.md` and `docs/architecture.md` all carried a Hot-tier row
+reading *"Nothing. Spends within the mandate, holds zero native token
+(Paymaster)."* **All three are corrected in this branch**, each with a dated
+note in place rather than a silent edit.
+
+It is not a wording problem. **USDC is Arc's native gas token**, so
+`eth_getBalance(a)` and `USDC.balanceOf(a)` are two views of one balance at two
+precisions. Measured on a live Arc address, 2026-09-07:
+
+```
+eth_getBalance   285144556003000000   (18 dp) = 0.285144556003 USDC
+USDC.balanceOf              285144   ( 6 dp) = 0.285144       USDC
+```
+
+Zero native is zero USDC, which cannot pay anyone. There is no Paymaster in
+Turnstile and there never was one.
+
+The replacement claim is stronger and falsifiable: the hot wallet **signs
+offchain and never submits a transaction**, so it pays exactly zero gas, and the
+proof is that `eth_getTransactionCount(agent)` stays **0** across every settled
+payment.
+
+### Item 10 — the Arc Discord question is partly answered by the product
+
+Item 10 in the Day-1 table asks whether Arc's "deployment-ready by 30 Sep"
+accepts a testnet + mainnet config. **Still unanswered by Arc** — nobody has
+replied. What is now known is that the config difference is small enough to be
+mechanical: `@circle-fin/x402-batching` covers Arc mainnet and Arc testnet
+through the same `CHAIN_CONFIGS` table, differing in chain id, Gateway host
+(`gateway-api.circle.com` vs `gateway-api-testnet.circle.com`) and GatewayWallet
+address. `rails/arc-usdc/config.ts` holds all three as named constants. Arc
+mainnet has **no public RPC** (Circle's own SDK comment says partners must supply
+a private one), which is a real obstacle to the Launch track and is not something
+we can solve ourselves.
