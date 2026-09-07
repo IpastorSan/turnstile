@@ -11,7 +11,11 @@ so — per `CLAUDE.md`, silence reads as confidence.
   record on `liquidity.turnstile.eth`
 - **Mandate funded by:** [`0xe031e97c80b6aefc3e8b851fdab7d33d8cdef2ed47037f1ecff4abc5a0cffc1c`](https://testnet.arcscan.app/tx/0xe031e97c80b6aefc3e8b851fdab7d33d8cdef2ed47037f1ecff4abc5a0cffc1c)
   — `depositFor(0.25 USDC, agent)`, paid for by the **org**, not the agent
-- **Seven payments settled**, one at $0.07 and six at $0.000500
+- **Seven payments settled**, one at $0.07 and six at $0.000500 — **all seven in
+  one on-chain transaction**:
+  [`0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1`](https://testnet.arcscan.app/tx/0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1)
+  (block 60940635, 22 payments in total including other Gateway users', 0.133111
+  USDC moved, gas paid by Circle's batcher)
 
 Reproduce it:
 
@@ -75,8 +79,9 @@ holds both and says which is which.
 | The same query settles over both rails | **Verified** — one run, one URL, Arc and Hedera both returned 200 with the same verdict |
 | Gateway cannot settle below the signed amount | **Verified** — see [Partial settlement](#partial-settlement-the-answer-for-mov-227) |
 | Gateway's `/verify` does **not** check the payer's balance | **Verified** — an unfunded authorization returned `{"isValid":true}` and then failed `/settle` with `insufficient_balance` |
-| Batching: many authorizations share one transaction | **Verified on other users' traffic**, not yet on our own — see [The batch](#the-batch-what-landed-and-what-had-not) |
-| **Our own** seven payments have a batch transaction hash | **NOT verified at the time of writing.** They were credited and stuck at `status: received`. See below |
+| Batching: many authorizations share one transaction | **Verified on our own payments.** All seven settled in `0xd6e77a59…a0c1`, alongside fifteen other Gateway users' payments — 22 in one transaction |
+| The batch transaction's gas is paid by Circle, not the payer | **Verified** — the transaction's `from` is Circle's batcher `0xc73ef0d8…a884` and its `to` is the GatewayWallet. No payer appears as a sender |
+| The agent's nonce is still 0 **after** the batch mined | **Verified** — `eth_getTransactionCount` and `eth_getBalance` both still `0` |
 | Anything on Arc **mainnet** | **Not attempted.** Testnet only, and Arc mainnet has no public RPC |
 
 ---
@@ -214,7 +219,7 @@ rails, same registry, same 402 machinery, different price.
 
 ---
 
-## The batch: what landed, and what had not
+## The batch: 22 payments, one transaction
 
 **Batching is real and observable on Arc testnet.** Sampling 100 consecutive
 Gateway transfers on `eip155:5042002` on 2026-09-07:
@@ -242,31 +247,61 @@ Thirteen payments, one transaction, and the `from` is **Circle's batcher** rathe
 than any payer. That is the zero-gas property visible from the other side. One of
 the thirteen was for `1308` atomic units — $0.001308, a genuine nanopayment.
 
-### Our own payments: credited, not yet mined
+### Our own seven payments
 
-**Stated plainly rather than glossed.** At the end of the run, all seven of our
-authorizations were `status: received` with `txHash: null`, and stayed that way
-for more than ten minutes of polling.
+All seven settled in **one** transaction:
 
-This was **not specific to us**. Circle's batcher had stalled across the whole
-chain: its most recent completion was at `16:57:03Z`, our payments were made at
-`16:58:50Z`, and seventeen transfers from every Gateway user on Arc testnet were
-queued behind the same stall. An earlier window that same afternoon ran ~2
-minutes end to end.
+```
+7 payment(s) settled in 1 on-chain transaction(s):
+  0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1
+    7 of these payments, 0.073000 USDC
+```
 
-So the honest statement of what this rail demonstrates is:
+| | |
+|---|---|
+| Transaction | [`0xd6e77a59…a0c1`](https://testnet.arcscan.app/tx/0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1) |
+| Block | 60940635, `status: success`, `gasUsed: 155848` |
+| From | `0xc73ef0d80c6c5e7d632d8ff8f651ffca8654a884` — **Circle's batcher** |
+| To | `0x0077777d7eba4688bdef3e311b846f25870a19b9` — the GatewayWallet |
+| Payments in it | **22** (ours and fifteen other Gateway users'), 0.133111 USDC |
+| Ours | 7 — the $0.07 tier payment and all six $0.000500 nanopayments |
 
-- the payments **settled** — Gateway returned `success: true`, credited the
-  seller and debited the payer's Gateway balance. From the seller's point of
-  view the money is theirs;
+Six sub-cent payments and one seven-cent payment, mined together with fifteen
+strangers' payments, for one transaction's worth of gas that **none of us paid**.
+That is the mechanism, end to end.
+
+And after the batch mined, the agent is unchanged:
+
+```
+agent nonce now: 0
+agent native now: 0n
+```
+
+### The latency is Circle's, and it varies — plan a demo around that
+
+This took **~13 minutes**, not the ~2 minutes an earlier window that afternoon
+showed. The first `arc:pay` run polled for six minutes and exited with all seven
+authorizations still at `status: received`.
+
+That was **not specific to us**. Circle's batcher had stalled across the whole
+chain — its most recent completion was `16:57:03Z`, our payments landed at
+`16:58:50Z`, and twenty-two transfers from every Gateway user on Arc testnet were
+queued behind the same stall. It cleared at `17:12:16Z` and took the whole queue
+with it, which is why our batch has 22 payments in it rather than the 12–13 that
+was typical earlier.
+
+So, stated as a property rather than a number:
+
+- the payments **settle** at `/settle` — Gateway returns `success: true`, credits
+  the seller and debits the payer. From the seller's point of view the money is
+  theirs at that moment, and the answer is delivered;
 - the **batch transaction is Circle's to submit**, and its latency is not ours to
-  promise. It was ~2 minutes in one window and >10 minutes in another;
-- `npm run arc:receipts -- --ours` resolves the authorizations into their batch
-  transaction whenever it lands, which is why that script exists separately.
+  promise. Observed between ~2 and ~13 minutes on one afternoon;
+- `npm run arc:receipts -- --ours` resolves authorizations into their batch
+  transaction whenever it lands. That is why it is a separate script.
 
-**For a demo:** run `arc:pay`, then run `arc:receipts` at the end. Do not script
-the take around the batch appearing inside a fixed window — it might, and it
-might not, and that is Circle's scheduler rather than a bug.
+**For a demo:** run `arc:pay`, then `arc:receipts -- --ours --watch` as a second
+step. Do not script the take around the batch appearing inside a fixed window.
 
 ---
 

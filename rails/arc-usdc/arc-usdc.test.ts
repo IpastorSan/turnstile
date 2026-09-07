@@ -15,6 +15,7 @@ import type { PaymentPayload, PaymentRequirement } from '../PaymentRail.ts';
 import { GATEWAY_WALLET, NETWORK, USDC_ASSET, isAuthorizationId, isBatchTransactionHash } from './config.ts';
 import { toVerifyFailureReason } from './gateway.ts';
 import { createArcRail } from './index.ts';
+import { formatUsdc, sameBalance } from './wallet.ts';
 import {
   PENDING_TRANSFER, SAMPLE_AUTHORIZATION_ID, SAMPLE_BATCH_TX, SETTLED_TRANSFER,
   fakeGateway, offlineRailOptions,
@@ -341,4 +342,42 @@ test('the two identifiers this rail hands around are distinguishable by shape', 
   assert.ok(!isAuthorizationId(SAMPLE_BATCH_TX));
   assert.ok(!isAuthorizationId('stub:arc-usdc:000001'));
   assert.ok(!isBatchTransactionHash('0xnothex'));
+});
+
+test('the native and ERC-20 views of an Arc balance are one balance, truncated', () => {
+  // This is the arithmetic behind the correction in `CLAUDE.md`, `README.md` and
+  // `docs/architecture.md`. Pinned as a test because it is the claim those three
+  // files now rest on, and "USDC is the gas token" is exactly the kind of thing
+  // that gets re-asserted from memory by the next reader.
+  //
+  // The measured pair, from a live Arc address on 2026-09-07.
+  assert.equal(sameBalance({ native: 285144556003000000n, usdc: 285144n }), true);
+
+  // The ERC-20 view truncates rather than rounds. One nanopayment's worth, less
+  // one wei: 0.000999999999999 USDC shows as 0.000999, not 0.001000. A
+  // `sameBalance` written with rounding would pass the case above and fail here,
+  // which is why both are present.
+  assert.equal(sameBalance({ native: 999_999_999_999n, usdc: 0n }), true);
+  assert.equal(sameBalance({ native: 999_999_999_999n, usdc: 1n }), false);
+  assert.equal(sameBalance({ native: 1_000_000_000_000n, usdc: 1n }), true);
+
+  // The state the zero-gas proof depends on: nothing on chain, either way.
+  assert.equal(sameBalance({ native: 0n, usdc: 0n }), true);
+
+  // And a wallet that holds native but no USDC is not a state this chain has.
+  // If this ever passes, USDC has stopped being the gas token and the three
+  // corrected documents need revisiting.
+  assert.equal(sameBalance({ native: 5_000_000_000_000_000_000n, usdc: 0n }), false);
+});
+
+test('formatUsdc prints atomic units without going through a float', () => {
+  // A nanopayment is 500 atomic units. `500 / 1e6` is fine in IEEE 754 and
+  // `1308 / 1e6` is not exactly 0.001308, so this formats through integers —
+  // the same reason `usdToAtomic` exists on the other side.
+  assert.equal(formatUsdc(500n), '0.000500');
+  assert.equal(formatUsdc('1308'), '0.001308');
+  assert.equal(formatUsdc(70000n), '0.070000');
+  assert.equal(formatUsdc(250000n), '0.250000');
+  assert.equal(formatUsdc(0n), '0.000000');
+  assert.equal(formatUsdc(1n), '0.000001');
 });

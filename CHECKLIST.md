@@ -72,6 +72,7 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 **Arc — Agentic ($1,667) + Launch ($3,500)**
 - [x] **A live agentic payment on Arc** — done (MOV-225). USDC on Arc testnet (`eip155:5042002`) through **Circle Gateway Nanopayments**, `@circle-fin/x402-batching@3.4.0`, facilitator `https://gateway-api-testnet.circle.com` with no API key. Seven payments settled 2026-09-07 — one at $0.07 and six at $0.000500 — from agent `0x0633a193017939Bb1eB242982397224c66948e2F`, whose **nonce stayed 0 throughout**: it signs EIP-3009 authorizations offchain and never submits a transaction, so it paid exactly zero gas. Transcript and verified/unverified table in `docs/arc-nanopayments.md`
 - [x] **The same query settles over both rails** — done (MOV-225). One run, one URL: Arc returned authorization `fa4ca648-863c-4f61-9a1e-2953eb789f7f`, Hedera returned `0.0.7162784@1788800327.098234984`, same verdict both times. `seller/service/no-chain-code.test.ts` fails the build if any file on the payment path names a chain, so this is enforced rather than asserted
+- [x] **Nanopayments, batched, with the transaction as evidence** — done (MOV-225). Six $0.000500 queries and the $0.07 query settled in **one** Arc transaction, [`0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1`](https://testnet.arcscan.app/tx/0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1) — block 60940635, 22 payments in it including other Gateway users', 0.133111 USDC, `from` = Circle's batcher `0xc73ef0d8…a884`, `to` = the GatewayWallet. The batch took ~13 minutes to mine because Circle's batcher had stalled chain-wide; an earlier window ran ~2 minutes. **Do not script a demo around a fixed window** — run `npm run arc:receipts -- --ours --watch` as a second step
 - [ ] **State explicitly which bounty** each submission targets
 - [x] Working **frontend and backend** — done (MOV-230). Next.js 16 app in `web/`: market and seller pages server-rendered, plus `/api/sellers`, `/api/offer/:name` and `/api/health` as real routes over the discovery store and live Sepolia. Not a static export. **Still not deployed** — see `docs/deploy.md`
 - [x] **Architecture diagram** (§2.1 + §2.2) — done (MOV-230). `docs/architecture.svg` + `.png`, embedded in `README.md`, walked through in `docs/architecture.md`. Panel A the cold/warm/hot key tiers, Panel B discovery → offer → 402 → rail → answer
@@ -525,6 +526,16 @@ resolved. Arc testnet is **`eip155:5042002`**, verified two independent ways on
 still a placeholder on a deliberately fake network id, and MOV-225 owns it." That
 was accurate when written; it is now false in both halves. Both rails are live,
 and `/health` reports `settlementLive: true` for both.
+
+### Settled, and the batch transaction
+
+Seven payments, one transaction:
+[`0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1`](https://testnet.arcscan.app/tx/0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1).
+22 payments in it in total, 0.133111 USDC, gas paid by Circle's batcher rather
+than by any payer. The agent's nonce was 0 before, during and after.
+
+Full transcript, the verified/not-verified table, and six rough edges in Circle's
+SDK and API: **`docs/arc-nanopayments.md`**.
 
 **Correction (2026-09-07, MOV-225) to the MOV-220 block's closing line.** It
 ends "**`arc-usdc` is untouched by this issue** and still settles nothing." True
