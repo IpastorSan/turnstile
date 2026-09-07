@@ -2,7 +2,7 @@
   "name": "turnstile",
   "private": true,
   "type": "module",
-  "description": "Turnstile \u2014 the JS/TS half: Substreams sink, discovery API, x402 seller service, MCP server.",
+  "description": "Turnstile — the JS/TS half: Substreams sink, discovery API, x402 seller service, MCP server.",
   "license": "MIT",
   "comment": "No build step: Node runs the .ts files directly (type stripping, on by default since 22.18), and node:sqlite is built in. viem is used for ENS reads only.",
   "engines": {
@@ -26,9 +26,11 @@
     "ingest-receipts": "node graph/sink/ingest-receipts.ts"
   },
   "dependencies": {
+    "@circle-fin/x402-batching": "^3.4.0",
     "@hiero-ledger/sdk": "2.85.0",
     "@modelcontextprotocol/sdk": "^1.20.0",
     "@x402/core": "^2.25.0",
+    "@x402/evm": "^2.25.0",
     "@x402/fetch": "^2.25.0",
     "@x402/hedera": "^2.25.0",
     "express": "^5.2.1",
