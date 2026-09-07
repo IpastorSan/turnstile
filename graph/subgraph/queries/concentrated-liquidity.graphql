@@ -1,0 +1,19 @@
+query ConcentratedLiquidity {
+  liquidityPools(first: 1, orderBy: cumulativeVolumeUSD, orderDirection: desc) {
+    name
+    tick
+    activeLiquidity
+    totalLiquidity
+    positionCount
+    openPositionCount
+    positions(first: 2, orderBy: liquidityUSD, orderDirection: desc) {
+      account { id }
+      liquidity
+      liquidityUSD
+      cumulativeDepositUSD
+      tickLower { index prices liquidityGross }
+      tickUpper { index prices liquidityGross }
+    }
+  }
+  _meta { block { number } }
+}

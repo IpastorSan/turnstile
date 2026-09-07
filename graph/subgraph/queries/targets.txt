@@ -1,0 +1,9 @@
+# Subgraphs this query has actually been run against, unchanged.
+# <label> <gateway subgraph id> <messari schemaVersion>
+#
+# Every one of these is a different team's codebase indexing a different AMM.
+# The only thing they share is the Messari DEX AMM schema -- which is the point.
+uniswap-v3-arbitrum    FQ6JYszEKApsBpAmiHesRsd9Ygc6mzmpNRANeVQFYoVX  4.0.1
+sushiswap-v3-ethereum  2tGWMrDha4164KkFAfkU3rDCtuxGb4q1emXmFdLLzJ8x  4.0.0
+sushiswap-v2-ethereum  77jZ9KWeyi3CJ96zkkj5s1CojKPHt6XJKjLFzsDCd8Fd  1.3.2
+curve-ethereum         3fy93eAT56UJsRCEht8iFhfi6wjHWXtZ9dnnbQmvFopF  1.3.0
