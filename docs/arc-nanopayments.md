@@ -18,7 +18,11 @@ so — per `CLAUDE.md`, silence reads as confidence.
   USDC moved, gas paid by Circle's batcher). The second run's four were in
   [`0xe50b8be63a2fe102c70de3b62a43251fbfcac1d8ca93f9f1760dd3c7a7985c39`](https://testnet.arcscan.app/tx/0xe50b8be63a2fe102c70de3b62a43251fbfcac1d8ca93f9f1760dd3c7a7985c39)
   (block 60942503)
-- **The agent's nonce is 0**, before and after all eleven
+- **The agent's nonce is 0**, before and after all eleven — `eth_getTransactionCount`
+  and `eth_getBalance` both `0` at **block 60943091, 2026-09-07T17:33:02Z**
+- **The seller was credited 0.144500 USDC** — in a Gateway balance, **not** in the
+  payout wallet, which still reads `0` on chain. See
+  [Where the seller's money actually is](#where-the-sellers-money-actually-is)
 
 Reproduce it:
 
@@ -84,7 +88,8 @@ holds both and says which is which.
 | Gateway's `/verify` does **not** check the payer's balance | **Verified** — an unfunded authorization returned `{"isValid":true}` and then failed `/settle` with `insufficient_balance` |
 | Batching: many authorizations share one transaction | **Verified on our own payments.** All seven settled in `0xd6e77a59…a0c1`, alongside fifteen other Gateway users' payments — 22 in one transaction |
 | The batch transaction's gas is paid by Circle, not the payer | **Verified** — the transaction's `from` is Circle's batcher `0xc73ef0d8…a884` and its `to` is the GatewayWallet. No payer appears as a sender |
-| The agent's nonce is still 0 **after** the batch mined | **Verified** — `eth_getTransactionCount` and `eth_getBalance` both still `0` |
+| The agent's nonce is still 0 **after** the batch mined | **Verified** — `eth_getTransactionCount` and `eth_getBalance` both still `0` at block 60943091, 2026-09-07T17:33:02Z |
+| The seller was actually paid | **Verified** — 0.144500 USDC in the seller's **Gateway** balance, reconciling exactly with what the buyer spent and with 11 completed transfers. **Not** in the payout wallet, which reads 0 on chain — see [Where the seller's money actually is](#where-the-sellers-money-actually-is) |
 | Anything on Arc **mainnet** | **Not attempted.** Testnet only, and Arc mainnet has no public RPC |
 
 ---
@@ -96,14 +101,29 @@ tier as holding *"zero native token (Paymaster)"*. That is incoherent here, and
 all three are corrected.
 
 `eth_getBalance(a)` and `USDC.balanceOf(a)` are **two views of one balance at two
-precisions**. Measured against a live Arc address on 2026-09-07:
+precisions**. Measured on **our own** org wallet, one block before it funded the
+mandate — our wallet rather than a stranger's, so a judge can check it against a
+transaction they can also see:
 
 ```
-eth_getBalance   285144556003000000   (18 dp) = 0.285144556003 USDC
-USDC.balanceOf              285144   ( 6 dp) = 0.285144       USDC
+0xdFe3088aC34e7329006407C246C9F6D7534B2aC5
+eth_getBalance   20000000000000000000   (18 dp) = 20.000000 USDC
+USDC.balanceOf              20000000   ( 6 dp) = 20.000000 USDC
+                 block 60938781, 2026-09-07T16:56:10Z
 ```
 
-The ERC-20 view is the truncated one. So a wallet holding zero native token holds
+That pair is round, so here is one that is not — a third-party address caught
+mid-cent, which is what shows the truncation rather than merely being consistent
+with it:
+
+```
+0xda793c0649db26ed95ffbf9595ffc3f734a0bc57
+eth_getBalance     285144556003000000   (18 dp) = 0.285144556003 USDC
+USDC.balanceOf                 285144   ( 6 dp) = 0.285144       USDC
+                   block 60936874, 2026-09-07T16:20Z
+```
+
+The ERC-20 view is the truncated one: `0.285144556003` shows as `0.285144`. So a wallet holding zero native token holds
 zero USDC and cannot pay anybody. There is no Paymaster in Turnstile.
 
 `rails/arc-usdc/wallet.ts` has `sameBalance()`, which checks the identity rather
@@ -122,6 +142,15 @@ agent 0x0633a193017939Bb1eB242982397224c66948e2F
   on chain       0.000000 -> 0.000000 USDC
   native         0 -> 0 wei
   gateway        0.25 -> 0.177 USDC
+```
+
+Re-read at a pinned block after all eleven payments had settled:
+
+```
+eth_getTransactionCount  0
+eth_getBalance           0
+USDC.balanceOf           0
+                         block 60943091, 2026-09-07T17:33:02Z
 ```
 
 Seven payments went out. The wallet's on-chain balance was zero the whole time,
@@ -349,6 +378,52 @@ step. Do not script the take around the batch appearing inside a fixed window.
 
 ---
 
+## Where the seller's money actually is
+
+**A judge who checks `USDC.balanceOf` on the payout address will see zero, and
+will be right.** This is the single most misreadable thing about the rail, so it
+is here rather than in a footnote.
+
+```
+0x0Adca6e14bA956201D221feC767e4f24194bf5F2   (the addr(60) payout record)
+  eth_getBalance   0
+  USDC.balanceOf   0
+  nonce            0
+                   block 60943126, 2026-09-07T17:33:21Z
+```
+
+Nothing is missing. Circle Gateway credits a seller's **Gateway balance**, not
+their wallet — the batch transaction settles into the GatewayWallet contract's
+accounting, and turning that into on-chain USDC is a separate `withdraw()` the
+seller makes when it suits them (and pays gas for). Read the real balance from
+Gateway rather than from the chain:
+
+```bash
+curl -s https://gateway-api-testnet.circle.com/v1/balances \
+  -H 'content-type: application/json' \
+  -d '{"token":"USDC","sources":[{"depositor":"0x0Adca6e14bA956201D221feC767e4f24194bf5F2","domain":26}]}'
+```
+
+```json
+{"token":"USDC","balances":[
+  {"domain":26,"depositor":"0x0Adca6e14bA956201D221feC767e4f24194bf5F2",
+   "balance":"0.144500","pendingBatch":"0"}]}
+```
+
+**0.144500 USDC**, read 2026-09-07T17:34Z. It reconciles exactly, three ways:
+
+| | |
+|---|---|
+| What the buyer spent | Gateway balance 0.250000 → 0.105500 = **0.144500** |
+| What the seller was credited | **0.144500** |
+| Transfers to the payout address | **11**, all `completed`, summing to 144500 atomic units |
+
+Those eleven split **7 / 4** across the two batch transactions above, which is
+the same 7-and-4 the payment runs produced. Nothing is unaccounted for.
+
+`domain: 26` is Arc's Gateway domain — the third identifier for this chain, after
+the CAIP-2 id and the Circle chain name, and the one the balances API wants.
+
 ## Partial settlement: the answer for MOV-227
 
 **No. Arc cannot settle below the authorized amount, and this is not a
@@ -428,10 +503,21 @@ Recorded here rather than in `FEEDBACK.md` (Uniswap) or `WORLD-FEEDBACK.md`
    covered by the payer's signature, so it is advisory data presented as
    mandatory.
 
-5. **`pageSize` over 100 is a 400, not a clamp.** `GET /v1/x402/transfers?pageSize=200`
+5. **A third name for the same chain.** The x402 wire wants `eip155:5042002`, the
+   SDK wants `arcTestnet`, and the `/v1/balances` API wants `domain: 26`. Three
+   identifiers for one chain, none derivable from the others without a lookup
+   table, and getting one wrong fails in a different way each time.
+
+6. **A paid seller's on-chain balance stays zero, and nothing says so.** Gateway
+   credits a seller's Gateway balance; the payout wallet is untouched until the
+   seller withdraws. Correct, and completely invisible from a block explorer — the
+   obvious check ("did they get paid?") returns the wrong answer. Worth a sentence
+   in the x402 integration guide.
+
+7. **`pageSize` over 100 is a 400, not a clamp.** `GET /v1/x402/transfers?pageSize=200`
    returns `Page size cannot exceed 100` rather than returning 100.
 
-6. **The testnet faucet has no machine path.** `faucet.circle.com` is
+8. **The testnet faucet has no machine path.** `faucet.circle.com` is
    reCAPTCHA-gated (threshold 0.7), `faucet.circle.com/mcp` 307s to `/`, and
    `POST https://api.circle.com/v1/faucet/drips` answers **403 Forbidden** to a
    Circle Mint sandbox API key. So an automated testnet integration cannot fund
