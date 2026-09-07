@@ -228,6 +228,30 @@ now with a quorum on top of it.
 
 ---
 
+## Two things about the live app, said plainly
+
+**The policy's cap is $1, not $0.25.** The transcript above is a real run, and it
+really raised the cap — so `npm run privy:setup -- --status` reads
+`Turnstile mandate — $1 cap` today. Nothing is inconsistent: the scripts read the
+cap back off the policy rather than off a literal, so the refusal beat works at
+whatever the current number is (it proposes 4×). There is deliberately **no
+lowering path** in `raiseSpendCap` — lowering a cap is a different operation with
+different risk and should not be smuggled through the raise — so resetting means
+`npm run privy:setup -- --force`, which stands up a fresh org at $0.25.
+
+**The Privy app also contains probe artifacts.** Working out the policy-condition
+syntax meant creating throwaway quorums, policies and wallets against the live
+API; `GET /v1/wallets` lists 17, and one of them is also called
+"Turnstile buyer org". The real one is **`w0cxyoh1lnc1lqfyi9tb5yej` /
+`0x3De96375140717193f52c220Df5Ec460971cbE84`**, which is what `.env` names and
+what the transactions above were signed by. The throwaways cannot be cleaned up:
+their owner quorums were built from keys generated in-process and discarded, and
+deleting a wallet needs its owner's signature. `GET /v1/policies` and
+`GET /v1/key_quorums` return `405`, so the orphaned policies and quorums cannot
+even be listed.
+
+---
+
 ## What was verified, and what was not
 
 | Claim | Status |
