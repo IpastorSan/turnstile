@@ -24,3 +24,9 @@ docs/manual-steps.md
 
 # Discovery store — rebuilt from the chain by graph/sink/, never committed
 graph/sink/data/
+
+# Next.js build metadata (MOV-230). The web app's own generated files; the
+# committed discovery snapshot under web/data/ is NOT one of these and is
+# tracked on purpose — a deployment needs real data to serve.
+*.tsbuildinfo
+next-env.d.ts
