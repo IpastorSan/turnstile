@@ -381,7 +381,7 @@ nested object.
 
 | Seam | Issue | State |
 | --- | --- | --- |
-| `settlement_receipt` | MOV-220 | Table exists, empty. Ranking falls back and labels itself. |
+| `settlement_receipt` | MOV-220 | Table exists, empty. Ranking falls back and labels itself. **Correction (2026-09-07, MOV-229):** the table is still empty and the ranking is still a labelled placeholder, so this row is accurate — but the *receipts* are not missing. Twelve exist on HCS topic `0.0.10408013` and every one verifies against the ledger; `npm run ingest-receipts` lands them here and the ranking flips to `settled_volume` on its own. What is outstanding is the ingest, not the evidence. |
 | `world_verification` | MOV-223 | Table exists, empty. Every agent reports `'unknown'` — deliberately not `'unverified'`, which would be a claim we have not earned. Blocked on World Sandbox approval. |
 | `x402_quote` | — | Implemented and run; zero live quotes exist to store yet. |
 
@@ -391,6 +391,24 @@ nested object.
   `https://mcp-eu.turnstile.xyz/...` does not answer; MOV-219/220 land the real
   service. The ENS record is real, the price is real, the thing at the other end
   is not up yet.
+
+  **Still true, re-verified 2026-09-07 (MOV-229):** `curl` gets no DNS record for
+  `mcp-eu.turnstile.xyz`. The `get_offer` MCP tool now surfaces this as a
+  first-class result rather than a footnote — it reports the $0.07 price *and*
+  `purchasable: false` naming the DNS failure, so an agent cannot mistake a
+  published price for a payable quote. `mcp-turnstile/examples/transcript.md`
+  shows it happening.
+
+- **`x402_quote` was still empty when this was written; it has since been run.**
+  **Correction (2026-09-07, MOV-229):** all 14 agents in the store that advertise
+  `x402Support` *and* publish an HTTP endpoint were probed. **Zero returned a
+  402** — twelve HTTP errors, one 200, one DNS failure — and six of the fourteen
+  publish `https://github.com/agntcy/oasf/`, a link to a specification rather
+  than a service. Reproduce with
+  `node graph/sink/probe-x402.ts --db /tmp/probe.db --limit 20` over a copy of
+  `web/data/discovery.db`. The quotes were not written back into the tracked
+  snapshot, so `x402_quote` in it remains empty by choice rather than by
+  omission.
 - **The store is a sample, not a backfill.** 197 agents from four block ranges,
   not the ~85,000 on Base. A full backfill is a matter of runtime and stream
   quota, not of code: `sink.ts` resumes and the cursor is per-network.

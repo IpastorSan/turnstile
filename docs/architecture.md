@@ -118,8 +118,24 @@ runs as unreachable document origins come back.)*
   a placeholder host. The ENS record is real and readable; the service behind it
   is MOV-219/220 and is not deployed. The seller page says so on the page rather
   than only here.
-- **Steps 04–06 have never been executed end to end.** There is no settlement
+- ~~**Steps 04–06 have never been executed end to end.** There is no settlement
   receipt anywhere in the system, which is also why discovery's ranking is a
-  labelled placeholder rather than settled volume.
+  labelled placeholder rather than settled volume.~~
+
+  **Correction (2026-09-07, MOV-229):** the first sentence is wrong and the
+  second is half wrong. Steps 04–06 *have* run end to end, more than once —
+  MOV-220 settled real HBAR through Blocky402, and
+  `mcp-turnstile/examples/discover-pay-reason.ts` does the whole discovery →
+  quote → payment → audit loop from an MCP client. There are settlement receipts:
+  twelve on HCS topic `0.0.10408013` as of 2026-09-07, every one of them
+  cross-checked against the ledger by the `receipts` MCP tool (`verify: true`).
+  Read them yourself with no key:
+  `curl -s https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.10408013/messages`.
+
+  What is still true: **discovery's ranking is still a labelled placeholder.**
+  The receipts exist on chain but have not been ingested into the SQLite store,
+  so `settlement_receipt` is empty and `find_sellers` still reports
+  `ranking.placeholder: true`. `npm run ingest-receipts` closes that gap and the
+  ranking flips to `settled_volume` on its own.
 - **The warm and hot tiers are drawn from the design, not from running code.**
   Panel A describes where each vendor sits; only the cold tier is deployed.
