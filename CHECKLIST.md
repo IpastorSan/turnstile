@@ -19,8 +19,8 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 | 1 | Request World ID **Sandbox access** — https://forms.gle/mqbaiwMvX5MzmKdY8. Human-approved form, unknown turnaround, blocks all World work | World |
 | 2 | Create **Subgraph Studio** account + Gateway API key | The Graph |
 | 2b | Create **thegraph.market** account + JWT (Dashboard → Create New Key) for Substreams streaming | The Graph |
-| 3 | Create free **CRE account** at app.chain.link/cre/discover — required for *any* CLI command including `simulate`. Self-serve, no queue | Chainlink |
-| 4 | Install CRE CLI: `curl -sSL https://app.chain.link/cre/install.sh \| bash`, plus Bun | Chainlink |
+| 3 | ✅ **Free CRE account** — done (MOV-227). `cre login` writes `~/.cre/cre.yaml`; `cre whoami` confirms org `org_Js0Ll47RXcQ17Uk6`, **Deploy Access: Not enabled**. Confirmed self-serve, no queue, and confirmed sufficient for `simulate`. **`CRE_API_KEY` is NOT the credential** — the key in `.env` is a Data Streams one and breaks every command; see `docs/accounts.md` | Chainlink |
+| 4 | ✅ **CRE CLI + Bun** — done (MOV-227). `cre` v1.32.0 from the `smartcontractkit/cre-cli` GitHub release at `~/.local/bin/cre`; Bun 1.3.14 already present | Chainlink |
 | 5 | `npm i -g @ledgerhq/wallet-cli`; run `wallet-cli genuine-check` and `ring init` **with the device attached** — this is the only step that needs hardware | Ledger |
 | 6 | Create **portal.hedera.com** account + ECDSA testnet accounts (1,000 HBAR/24h × up to 5) | Hedera |
 | 7 | Create **bazantic.com** account | Bazantic |
@@ -93,12 +93,13 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] README points at the relevant contracts and lines of code
 
 **Chainlink ($2,000)**
-- [ ] CRE Workflow using Confidential Workflows for a **meaningful** part of the app
-- [ ] Registers and uses `cre.handlerInTee`
-- [ ] Processes ≥1 real sensitive input inside the enclave
-- [ ] A placeholder handler or isolated example **explicitly does not qualify**
-- [ ] Evidence: `cre workflow simulate my-workflow --target staging-settings --non-interactive --trigger-index 0` terminal output, or live deployment
-- [ ] Use **CRE**, not Functions or Automation (deprecated)
+- [x] CRE Workflow using Confidential Workflows for a **meaningful** part of the app — MOV-227. It *is* the premium tier: `seller/service/premium.ts` has no other source of an attested verdict.
+- [x] Registers and uses `cre.handlerInTee` — `seller/cre/analyst-verdict/workflow.ts`, constrained to `{ tee: 'nitro', regions: ['us-west-2'] }` rather than `{}`
+- [x] Processes ≥1 real sensitive input inside the enclave — **two**. A Vault DON secret carrying the seller's calibration (9 threshold overrides, the method itself), and a 9,218-byte evidence bundle fetched over confidential HTTP behind a second Vault-held bearer token. Pointed at an endpoint expecting a different token the workflow aborts with `evidence fetch failed with status 401`, so both are load-bearing.
+- [x] A placeholder handler or isolated example **explicitly does not qualify** — the enclave runs MOV-216's real 970-line scorer over real Uniswap data, and the sealed calibration changes the verdict: public says ACCEPTABLE on USDC/WETH 0.05%, the enclave says CAUTION.
+- [x] Evidence: `cre workflow simulate` terminal output — `docs/cre-confidential-workflow.md`, three full runs including the negative case.
+- [x] Use **CRE**, not Functions or Automation (deprecated) — `@chainlink/cre-sdk@1.18.0`, `cre` CLI v1.32.0. Neither Functions nor Automation appears anywhere.
+- [ ] ⚠️ **Not** a live deployment, and not claimed as one. `cre account access` (2026-09-07): "Deployment access is not yet enabled for your organization", and Confidential Workflows is separately in private beta. The simulator runs the write path but returns a zero tx hash. `VerdictConsumer` is deployed and Etherscan-verified on Sepolia at `0xfE95CD0f710DDC5ceED0e93c4e25412Dc3d8eEeA` gated on the real CRE Forwarder, waiting for the DON. Owner: whoever gets deploy access should run `cre workflow deploy`, then `setExpectedAuthor` + `setExpectedWorkflowId`.
 
 **Privy ($5,000)**
 - [ ] Privy **core**; ≥1 Privy wallet; **≥1 Privy control** (policies, signers, key quorums, intents)

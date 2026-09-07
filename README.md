@@ -68,11 +68,48 @@ contrast is the product, so the market page gives "no knowable price" three
 distinct states — posted on chain, askable but unanswered, nothing published —
 instead of a blank cell. See [`docs/discovery-api.md`](./docs/discovery-api.md).
 
+## Sell the answer, keep the method
+
+The tagline is a mechanism, not a slogan. The Liquidity Analyst
+([`seller/analyst/`](./seller/analyst)) answers one question — *is this pool
+safe to LP?* — and if we published it, we would have published the answer to
+every future query along with it.
+
+So the scoring runs inside an attested AWS Nitro enclave, through a **Chainlink
+CRE confidential workflow** ([`seller/cre/`](./seller/cre)):
+
+```
+seller's calibration ──Vault DON secret──┐
+                                          ├─▶ [ enclave: assess() ] ──┐
+evidence bundle ──confidential HTTP───────┘                           │
+ (9,218 bytes; the endpoint 401s without the sealed token)            │
+                                             usingTheDons() ◀─────────┘
+                                                   ▼  one-way door
+                       rating · confidence · failMask · warnMask · keccak256(evidence)
+                                                   ▼  writeReport
+                                       VerdictConsumer, Sepolia
+```
+
+The buyer gets a verdict they can **verify** and cannot **reproduce**. The hash
+is what makes it verifiable: hash the evidence bundle you paid for, ask the
+chain whether the attested verdict commits to those exact bytes. Someone who has
+not paid learns nothing from a hash.
+
+What stays public is the *shape* of the judgement — seven named signals, which
+are structural, how one structural failure forces `AVOID` — because that is what
+makes a verdict auditable rather than an oracle. What stays sealed is the
+*calibration*, which is what live data actually buys.
+
+Read [`docs/cre-confidential-workflow.md`](./docs/cre-confidential-workflow.md)
+for the terminal output, the on-chain addresses, and an explicit list of what has
+**not** been exercised — real attestation among it, because deployment access is
+gated.
+
 ## Repository layout
 
 | Path | What lives here |
 |---|---|
-| `contracts/` | Foundry. ENSv2 subname registry + registrar (Sepolia) |
+| `contracts/` | Foundry. ENSv2 subname registry + registrar, and `VerdictConsumer` — where the enclave's verdict settles (Sepolia) |
 | `graph/subgraph/` | Messari DEX AMM Extended v4.0.1 conformant subgraph |
 | `graph/substreams/` | Rust. Authored ERC-8004 agent-registry normalization module |
 | `seller/` | x402-gated service, Liquidity Analyst, CRE confidential workflow, Ledger-sealed secrets |

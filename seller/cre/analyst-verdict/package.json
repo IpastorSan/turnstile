@@ -1,0 +1,19 @@
+{
+  "name": "turnstile-analyst-verdict-workflow",
+  "version": "1.0.0",
+  "main": "dist/main.js",
+  "private": true,
+  "comment": "The SDK version is pinned exactly, not caret-ranged. The CRE TypeScript API visibly shifts between releases — `handlerInTee`, the TeeRuntime overloads and the report helpers all moved recently — so a floating range would silently break a workflow that is only ever exercised by `cre workflow simulate`.",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@chainlink/cre-sdk": "1.18.0",
+    "viem": "2.34.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

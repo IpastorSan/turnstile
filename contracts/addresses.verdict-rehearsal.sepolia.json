@@ -1,0 +1,24 @@
+{
+  "//": "REHEARSAL ONLY — its forwarder is the seller's own key, so anything it holds was delivered by us, NOT by the CRE Forwarder and NOT signed by the DON after enclave attestation. It exists because `cre workflow deploy` is gated and the simulator returns a zero tx hash for the chain write, so this is the only way to exercise the encoding, the contract and the evidence commitment against real chain. Do not cite a verdict here as attested. The production consumer is in addresses.verdict.sepolia.json and would reject this write.",
+  "chainId": 11155111,
+  "verdictConsumer": "0xEE72d3d0E4b090eBB8Db6abc26547bcd1fc9C5F2",
+  "forwarder": "0x0Adca6e14bA956201D221feC767e4f24194bf5F2",
+  "owner": "0x0Adca6e14bA956201D221feC767e4f24194bf5F2",
+  "salt": "96293937405159646465613390699042409531721953212427156251225192689484409912081",
+  "settledVerdict": {
+    "pool": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
+    "poolName": "Uniswap v3 USDC/WETH 0.05%",
+    "rating": "CAUTION",
+    "confidenceBp": 7500,
+    "failMask": 0,
+    "warnMask": 12,
+    "warnMaskMeans": ["depth-vs-tvl", "slippage-curve"],
+    "assessedAt": 1788789738,
+    "evidenceHash": "0x60caa3841046ee545a5a91881ba92e5ce201a49048f3d3ec08ad5369c2bd02c2",
+    "evidenceBytes": 9218,
+    "tx": "0x8ee33bb38563ed88836eaf6e2b7011c1350ef64390f7307691da24bd45e909b8",
+    "block": 11654749,
+    "explorer": "https://sepolia.etherscan.io/tx/0x8ee33bb38563ed88836eaf6e2b7011c1350ef64390f7307691da24bd45e909b8",
+    "note": "Byte-identical to what the enclave produced in `cre workflow simulate` — same evidence hash, same rating, same confidence, same masks. That match is the determinism claim being exercised rather than asserted."
+  }
+}

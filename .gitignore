@@ -8,6 +8,8 @@
 
 # Dependencies / build output
 node_modules/
+# `cre workflow simulate` writes this next to the workflow while bundling to WASM
+.cre_build_tmp.js
 out/
 target/
 dist/

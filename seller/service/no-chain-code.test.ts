@@ -50,6 +50,13 @@ const NOT_ON_THE_PAYMENT_PATH = new Set([
   'discovery-cli.ts',
   'discovery.test.ts',
   'no-chain-code.test.ts',
+  // MOV-227. `premium-cli.ts` is a composition root, exactly like `server.ts`:
+  // it names the VerdictConsumer once, on the command line, and hands
+  // `premium.ts` an `AttestationReader` that has no chain vocabulary in it.
+  // `premium.ts` itself is NOT exempt and is scanned like everything else —
+  // this guard is what moved the whole on-chain half into
+  // `seller/cre/attestation.ts`, which is where it belonged.
+  'premium-cli.ts',
 ]);
 
 /**

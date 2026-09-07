@@ -102,6 +102,34 @@ export const THRESHOLDS = {
   lagStaleSeconds: 48 * 3600,
 } as const;
 
+/**
+ * The same shape as `THRESHOLDS`, with the literal types widened.
+ *
+ * The block above is the *reference* calibration, and it is public — this repo
+ * is MIT and the CRE workflow binary that runs in the enclave is not itself
+ * confidential. The seller's own calibration is not: MOV-227 releases it into
+ * the attested enclave as a Vault DON secret, so the numbers that decide the
+ * verdict are known to the enclave and to nobody else — not to the buyer, and
+ * not to the node operators running the workflow.
+ *
+ * That is the split the whole business model rests on. The *shape* of the
+ * judgement — which seven signals, which are structural, how they combine — is
+ * open, because that is what makes a verdict auditable. The *calibration* is
+ * the edge, and calibration is exactly what live data buys you: `activeHourFailShare`
+ * is 0.2 rather than 0.1 only because a real TRUMP/WETH run said so.
+ */
+export type Calibration = { [K in keyof typeof THRESHOLDS]: number };
+
+/**
+ * Fold a partial override onto the reference calibration. Pure, and total: a
+ * `null` override is the reference set, so a workflow that cannot reach its
+ * Vault still produces a verdict — it just produces the public one, and says
+ * so.
+ */
+export function calibrationFrom(overrides?: Partial<Calibration> | null): Calibration {
+  return { ...THRESHOLDS, ...(overrides ?? {}) };
+}
+
 // --- Small helpers ---------------------------------------------------------
 
 const SECONDS_PER_YEAR = 365 * 24 * 3600;
@@ -148,14 +176,14 @@ function referenceRate(depth: DepthProfile): number | null {
 }
 
 /** The largest notional that fills within the slippage ceiling. */
-function usableDepthUSD(depth: DepthProfile): number | null {
+function usableDepthUSD(depth: DepthProfile, cal: Calibration): number | null {
   const reference = referenceRate(depth);
   if (reference === null) return null;
   let best: number | null = null;
   for (const rung of depth.rungs) {
     const slip = slippageOf(rung, reference);
     if (slip === null) continue;
-    if (slip <= THRESHOLDS.usableDepthSlippageCeiling) best = rung.notionalUSD;
+    if (slip <= cal.usableDepthSlippageCeiling) best = rung.notionalUSD;
   }
   return best;
 }
@@ -222,7 +250,7 @@ function historyWindow(pool: PoolFacts, hours: number): HistoryWindow {
 // Each returns exactly one Signal. They do not know about each other and they
 // do not know the final rating; composing them is `assess`'s job.
 
-function inventoryBalance(pool: PoolFacts): Signal {
+function inventoryBalance(pool: PoolFacts, cal: Calibration): Signal {
   const priced = pool.tokens.filter((t) => t.balanceUSD !== null);
   const evidence: Record<string, string> = {
     'claimed TVL': usd(pool.totalValueLockedUSD),
@@ -262,7 +290,7 @@ function inventoryBalance(pool: PoolFacts): Signal {
   const share = total > 0 ? (thin.balanceUSD ?? 0) / total : 0;
   evidence['thin side share'] = pct(share, 6);
 
-  if (share < THRESHOLDS.oneSidedFailShare) {
+  if (share < cal.oneSidedFailShare) {
     return {
       id: 'inventory-balance',
       label: 'Inventory balance',
@@ -282,7 +310,7 @@ function inventoryBalance(pool: PoolFacts): Signal {
     };
   }
 
-  if (share < THRESHOLDS.oneSidedWarnShare) {
+  if (share < cal.oneSidedWarnShare) {
     return {
       id: 'inventory-balance',
       label: 'Inventory balance',
@@ -310,7 +338,7 @@ function inventoryBalance(pool: PoolFacts): Signal {
   };
 }
 
-function executableDepth(depth: DepthProfile | null): Signal {
+function executableDepth(depth: DepthProfile | null, cal: Calibration): Signal {
   const base = { id: 'executable-depth', label: 'Executable depth', structural: true } as const;
 
   if (depth === null) {
@@ -343,13 +371,13 @@ function executableDepth(depth: DepthProfile | null): Signal {
           `${depth.tokenOutSymbol}, slippage ${pct(slip, 3)}` + ticksPhrase(rung.ticksCrossed);
   }
 
-  const smallest = rungAtOrAbove(depth, THRESHOLDS.minimumViableNotionalUSD);
+  const smallest = rungAtOrAbove(depth, cal.minimumViableNotionalUSD);
   if (reference === null || (smallest !== null && smallest.amountOut === null)) {
     return {
       ...base,
       verdict: 'fail',
       headline:
-        `The pool cannot fill a ${usd(THRESHOLDS.minimumViableNotionalUSD)} trade — the quote ` +
+        `The pool cannot fill a ${usd(cal.minimumViableNotionalUSD)} trade — the quote ` +
         `reverted at the smallest size asked for.`,
       evidence,
       reasoning:
@@ -361,10 +389,10 @@ function executableDepth(depth: DepthProfile | null): Signal {
 
   const retail = rungAtOrAbove(depth, 10_000);
   const retailSlip = retail ? slippageOf(retail, reference) : null;
-  const usable = usableDepthUSD(depth);
+  const usable = usableDepthUSD(depth, cal);
   evidence['usable depth (<=1% slippage)'] = usable === null ? 'none' : usd(usable);
 
-  if (retailSlip !== null && retailSlip > THRESHOLDS.retailSlippageFail) {
+  if (retailSlip !== null && retailSlip > cal.retailSlippageFail) {
     return {
       ...base,
       verdict: 'fail',
@@ -377,7 +405,7 @@ function executableDepth(depth: DepthProfile | null): Signal {
     };
   }
 
-  if (retailSlip !== null && retailSlip > THRESHOLDS.retailSlippageWarn) {
+  if (retailSlip !== null && retailSlip > cal.retailSlippageWarn) {
     return {
       ...base,
       verdict: 'warn',
@@ -404,9 +432,9 @@ function executableDepth(depth: DepthProfile | null): Signal {
   };
 }
 
-function depthVersusTvl(pool: PoolFacts, depth: DepthProfile | null): Signal {
+function depthVersusTvl(pool: PoolFacts, depth: DepthProfile | null, cal: Calibration): Signal {
   const base = { id: 'depth-vs-tvl', label: 'Depth against claimed TVL', structural: true } as const;
-  const usable = depth ? usableDepthUSD(depth) : null;
+  const usable = depth ? usableDepthUSD(depth, cal) : null;
 
   if (depth === null) {
     return {
@@ -429,7 +457,7 @@ function depthVersusTvl(pool: PoolFacts, depth: DepthProfile | null): Signal {
     'usable / claimed': pct(share, 4),
   };
 
-  if (usable === null || (share !== null && share < THRESHOLDS.depthToTvlFailShare)) {
+  if (usable === null || (share !== null && share < cal.depthToTvlFailShare)) {
     return {
       ...base,
       verdict: 'fail',
@@ -444,7 +472,7 @@ function depthVersusTvl(pool: PoolFacts, depth: DepthProfile | null): Signal {
     };
   }
 
-  if (share !== null && share < THRESHOLDS.depthToTvlWarnShare) {
+  if (share !== null && share < cal.depthToTvlWarnShare) {
     return {
       ...base,
       verdict: 'warn',
@@ -468,7 +496,7 @@ function depthVersusTvl(pool: PoolFacts, depth: DepthProfile | null): Signal {
   };
 }
 
-function slippageCurve(depth: DepthProfile | null): Signal {
+function slippageCurve(depth: DepthProfile | null, cal: Calibration): Signal {
   const base = { id: 'slippage-curve', label: 'Slippage curve', structural: false } as const;
   if (depth === null || depth.rungs.length < 3) {
     return {
@@ -529,8 +557,8 @@ function slippageCurve(depth: DepthProfile | null): Signal {
     const previous = points[i - 1]!;
     const current = points[i]!;
     if (
-      previous.slip <= THRESHOLDS.usableDepthSlippageCeiling
-      && current.slip >= THRESHOLDS.retailSlippageFail * 5
+      previous.slip <= cal.usableDepthSlippageCeiling
+      && current.slip >= cal.retailSlippageFail * 5
     ) {
       cliff = {
         from: previous.notionalUSD,
@@ -541,7 +569,7 @@ function slippageCurve(depth: DepthProfile | null): Signal {
     }
     if (previous.slip <= 0) continue;
     const multiple = current.slip / previous.slip;
-    if (multiple > THRESHOLDS.slippageCliffMultiple) {
+    if (multiple > cal.slippageCliffMultiple) {
       cliff = {
         from: previous.notionalUSD,
         to: current.notionalUSD,
@@ -580,9 +608,9 @@ function slippageCurve(depth: DepthProfile | null): Signal {
   };
 }
 
-function feeReturn(pool: PoolFacts): Signal {
+function feeReturn(pool: PoolFacts, cal: Calibration): Signal {
   const base = { id: 'fee-return', label: 'Fee return to LPs', structural: false } as const;
-  const window = historyWindow(pool, THRESHOLDS.activityWindowHours);
+  const window = historyWindow(pool, cal.activityWindowHours);
 
   if (pool.hourly.length === 0 || pool.totalValueLockedUSD <= 0) {
     return {
@@ -624,7 +652,7 @@ function feeReturn(pool: PoolFacts): Signal {
     'fee tier': pool.feeTierPct === null ? 'unknown' : `${pool.feeTierPct}%`,
   };
 
-  if (apy > THRESHOLDS.feeApyWarnHigh) {
+  if (apy > cal.feeApyWarnHigh) {
     return {
       ...base,
       verdict: 'warn',
@@ -637,7 +665,7 @@ function feeReturn(pool: PoolFacts): Signal {
     };
   }
 
-  if (apy < THRESHOLDS.feeApyWarnLow) {
+  if (apy < cal.feeApyWarnLow) {
     return {
       ...base,
       verdict: 'warn',
@@ -661,9 +689,9 @@ function feeReturn(pool: PoolFacts): Signal {
   };
 }
 
-function activityContinuity(pool: PoolFacts): Signal {
+function activityContinuity(pool: PoolFacts, cal: Calibration): Signal {
   const base = { id: 'activity-continuity', label: 'Trading continuity', structural: true } as const;
-  const window = historyWindow(pool, THRESHOLDS.activityWindowHours);
+  const window = historyWindow(pool, cal.activityWindowHours);
 
   if (pool.hourly.length === 0) {
     return {
@@ -683,10 +711,10 @@ function activityContinuity(pool: PoolFacts): Signal {
       ...base,
       verdict: 'fail',
       headline:
-        `Nothing traded in the ${THRESHOLDS.activityWindowHours} hours before the subgraph head, ` +
+        `Nothing traded in the ${cal.activityWindowHours} hours before the subgraph head, ` +
         `though the pool does have older history.`,
       evidence: {
-        'window': `${THRESHOLDS.activityWindowHours}h ending at the subgraph head`,
+        'window': `${cal.activityWindowHours}h ending at the subgraph head`,
         'snapshots in window': '0',
         'most recent snapshot': `hour ${Math.max(...pool.hourly.map((h) => h.hour))}`,
         'total snapshots held': String(pool.hourly.length),
@@ -707,7 +735,7 @@ function activityContinuity(pool: PoolFacts): Signal {
     'quietest traded hour': usd(Math.min(...volumes)),
   };
 
-  if (share <= THRESHOLDS.activeHourFailShare) {
+  if (share <= cal.activeHourFailShare) {
     return {
       ...base,
       verdict: 'fail',
@@ -722,7 +750,7 @@ function activityContinuity(pool: PoolFacts): Signal {
     };
   }
 
-  if (share < THRESHOLDS.activeHourWarnShare) {
+  if (share < cal.activeHourWarnShare) {
     return {
       ...base,
       verdict: 'warn',
@@ -746,7 +774,7 @@ function activityContinuity(pool: PoolFacts): Signal {
   };
 }
 
-function lpConcentration(pool: PoolFacts): Signal {
+function lpConcentration(pool: PoolFacts, cal: Calibration): Signal {
   const base = { id: 'lp-concentration', label: 'LP concentration', structural: false } as const;
   const evidence: Record<string, string> = {
     'open positions': String(pool.openPositionCount),
@@ -766,7 +794,7 @@ function lpConcentration(pool: PoolFacts): Signal {
     };
   }
 
-  if (pool.openPositionCount <= THRESHOLDS.lpCountFail) {
+  if (pool.openPositionCount <= cal.lpCountFail) {
     return {
       ...base,
       verdict: 'fail',
@@ -779,7 +807,7 @@ function lpConcentration(pool: PoolFacts): Signal {
     };
   }
 
-  if (pool.openPositionCount <= THRESHOLDS.lpCountWarn) {
+  if (pool.openPositionCount <= cal.lpCountWarn) {
     return {
       ...base,
       verdict: 'warn',
@@ -804,7 +832,12 @@ function lpConcentration(pool: PoolFacts): Signal {
 
 // --- Composition -----------------------------------------------------------
 
-function confidenceOf(input: AnalystInput, signals: Signal[], lagSeconds: number): number {
+function confidenceOf(
+  input: AnalystInput,
+  signals: Signal[],
+  lagSeconds: number,
+  cal: Calibration,
+): number {
   let confidence = 1;
   const unknowns = signals.filter((s) => s.verdict === 'unknown').length;
   confidence -= unknowns * 0.12;
@@ -818,11 +851,11 @@ function confidenceOf(input: AnalystInput, signals: Signal[], lagSeconds: number
     confidence -= 0.05;
   }
 
-  const hours = Math.min(input.pool.hourly.length, THRESHOLDS.activityWindowHours);
-  confidence -= (1 - hours / THRESHOLDS.activityWindowHours) * 0.25;
+  const hours = Math.min(input.pool.hourly.length, cal.activityWindowHours);
+  confidence -= (1 - hours / cal.activityWindowHours) * 0.25;
 
-  if (lagSeconds > THRESHOLDS.lagStaleSeconds) confidence -= 0.2;
-  else if (lagSeconds > THRESHOLDS.lagWarnSeconds) confidence -= 0.08;
+  if (lagSeconds > cal.lagStaleSeconds) confidence -= 0.2;
+  else if (lagSeconds > cal.lagWarnSeconds) confidence -= 0.08;
 
   return Math.max(0, Math.min(1, Number(confidence.toFixed(2))));
 }
@@ -850,6 +883,7 @@ function summarize(
   signals: Signal[],
   lagSeconds: number,
   hasDepth: boolean,
+  cal: Calibration,
 ): string {
   const fails = signals.filter((s) => s.verdict === 'fail');
   const warns = signals.filter((s) => s.verdict === 'warn');
@@ -888,13 +922,13 @@ function summarize(
     );
   }
 
-  if (lagSeconds > THRESHOLDS.lagStaleSeconds) {
+  if (lagSeconds > cal.lagStaleSeconds) {
     parts.push(
       `The subgraph is ${duration(lagSeconds)} behind the chain head, so the historical half of ` +
         `this verdict describes the pool as it was, not as it is. Where the live quote and the ` +
         `history disagree, believe the quote.`,
     );
-  } else if (lagSeconds > THRESHOLDS.lagWarnSeconds) {
+  } else if (lagSeconds > cal.lagWarnSeconds) {
     parts.push(`History is ${duration(lagSeconds)} behind the chain head.`);
   }
 
@@ -905,29 +939,37 @@ function summarize(
 /**
  * The whole judgement, from facts to verdict. Pure: same input, same output,
  * on any machine, inside or outside an enclave.
+ *
+ * `calibration` overrides the reference thresholds. Omit it and you get the
+ * public verdict; pass the seller's set — which in production only ever exists
+ * inside a TEE, released there by the Vault DON — and you get the one that is
+ * worth paying for. Either way the function stays pure, which is the property
+ * that makes an attested verdict mean anything: the same input and the same
+ * calibration provably yield the same output.
  */
-export function assess(input: AnalystInput): Verdict {
+export function assess(input: AnalystInput, calibration?: Partial<Calibration> | null): Verdict {
+  const cal = calibrationFrom(calibration);
   const { pool, depth, now } = input;
   const lagSeconds = Math.max(0, now - pool.source.blockTimestamp);
 
   const signals: Signal[] = [
-    inventoryBalance(pool),
-    executableDepth(depth),
-    depthVersusTvl(pool, depth),
-    slippageCurve(depth),
-    feeReturn(pool),
-    activityContinuity(pool),
-    lpConcentration(pool),
+    inventoryBalance(pool, cal),
+    executableDepth(depth, cal),
+    depthVersusTvl(pool, depth, cal),
+    slippageCurve(depth, cal),
+    feeReturn(pool, cal),
+    activityContinuity(pool, cal),
+    lpConcentration(pool, cal),
   ];
 
   const rating = ratingOf(signals);
-  const confidence = confidenceOf(input, signals, lagSeconds);
+  const confidence = confidenceOf(input, signals, lagSeconds, cal);
 
   const caveats: string[] = [];
   for (const signal of signals) {
     if (signal.verdict === 'unknown') caveats.push(`${signal.label}: ${signal.headline}`);
   }
-  if (lagSeconds > THRESHOLDS.lagWarnSeconds) {
+  if (lagSeconds > cal.lagWarnSeconds) {
     caveats.push(
       `Subgraph head is block ${pool.source.blockNumber}, ${duration(lagSeconds)} behind the ` +
         `chain head. Every historical figure above is as of that block.`,
@@ -954,7 +996,7 @@ export function assess(input: AnalystInput): Verdict {
     poolAddress: pool.address,
     rating,
     confidence,
-    summary: summarize(pool, rating, confidence, signals, lagSeconds, depth !== null),
+    summary: summarize(pool, rating, confidence, signals, lagSeconds, depth !== null, cal),
     signals,
     provenance: {
       subgraph: pool.source.label,

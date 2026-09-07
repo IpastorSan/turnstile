@@ -115,7 +115,8 @@ scoring.test.ts     15 tests, most pinning a bug that live data found
 filesystem, no randomness, no module state. It imports `types.ts` and nothing
 else, and takes `now` as a field on its input.
 
-**MOV-227 moves this file into a Chainlink TEE enclave.** An attested verdict is
+**MOV-227 moved this file into a Chainlink TEE enclave** (2026-09-07 — see
+`docs/cre-confidential-workflow.md` and `seller/cre/`). An attested verdict is
 only worth something if the same input provably produces the same output, so the
 purity is the deliverable. The seam is explicit:
 
@@ -128,13 +129,42 @@ gatherInput(...)  ->  AnalystInput  ->  assess(...)  ->  Verdict
 scores. Nothing in `analyst.ts` changes. If you find yourself wanting
 `Date.now()` inside `scoring.ts`, add a field to `AnalystInput` instead.
 
-Two measurements MOV-227 will want, taken on a real run against USDC/WETH 0.05%
+Two measurements MOV-227 wanted, taken on a real run against USDC/WETH 0.05%
 with 48 hours of snapshots (2026-09-07):
 
 - a complete `AnalystInput` serializes to **9,210 bytes** — small enough to pass
   as a single enclave argument, with no need to stream or to fetch from inside;
 - `assess(input)` and `assess(JSON.parse(JSON.stringify(input)))` produce
   byte-identical verdicts, so the round trip through the boundary is lossless.
+
+**Correction (2026-09-07, MOV-227):** both held, with one refinement worth
+recording. The 9,210-byte figure is per-capture, not fixed — the bundle
+`seller/cre/fixtures/usdc-weth-500.json`, taken a few hours later, is **9,218
+bytes**. Nothing depends on the exact number, but the on-chain verdict commits
+to `keccak256` of the bytes *as served*, so a re-capture is a different
+commitment and a buyer checking an old hash against a new bundle will see a
+mismatch. `verdict.test.ts` pins both halves: the JSON round trip is stable, and
+a reformat is a different bundle.
+
+### `assess()` takes a second argument now
+
+**Correction (2026-09-07, MOV-227):** this section previously implied `THRESHOLDS`
+is fixed. It is now the *reference* calibration, and `assess(input, calibration)`
+folds an override onto it:
+
+```ts
+export type Calibration = { [K in keyof typeof THRESHOLDS]: number };
+export function assess(input: AnalystInput, calibration?: Partial<Calibration> | null): Verdict;
+```
+
+Nothing else changed — omitting the argument reproduces the old behaviour
+exactly, which is why all the existing tests passed unedited, and the function
+is still pure. The reason for the change is that the workflow binary running in
+the enclave is **not confidential**: the DON supplies it, so a threshold
+compiled into it is a published threshold. The seller's real calibration
+therefore arrives as a Vault DON secret, released only into the attested
+enclave. The public set stays here, and stays public, because the *shape* of the
+judgement is what makes a verdict auditable.
 
 ---
 
