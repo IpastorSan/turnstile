@@ -3,6 +3,7 @@ package:
   name: erc8004_agent_registry
   version: v0.1.0
   url: https://github.com/IpastorSan/turnstile
+  description: Normalized ERC-8004 agent-registry feed. One pipeline, reused across every EVM chain that hosts an Identity Registry.
 imports: {}
 
 protobuf:
