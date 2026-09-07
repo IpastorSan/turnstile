@@ -31,7 +31,7 @@ import { GatewayClient } from '@circle-fin/x402-batching/client';
 import type { Address, Hex } from 'viem';
 
 import { createPaidFetch } from '../buyer/watchdog/pay.ts';
-import type { Mandate } from '../buyer/watchdog/pay.ts';
+import type { SpendingLimits } from '../buyer/watchdog/pay.ts';
 import { createArcSigner } from '../buyer/watchdog/arc-signer.ts';
 import { createHederaSigner } from '../buyer/watchdog/hedera-signer.ts';
 import { CircleGateway, createArcRail } from '../rails/arc-usdc/index.ts';
@@ -123,7 +123,7 @@ try {
     console.log(JSON.stringify(challenge.accepts.find(a => a.network === arcSigner.network), null, 2));
 
     rule('2. THE SAME QUERY, PAID ON ARC');
-    const arcMandate: Mandate = { preferredRails: ['arc-usdc'], maxPerPaymentUsd: 0.5 };
+    const arcMandate: SpendingLimits = { preferredRails: ['arc-usdc'], maxPerPaymentUsd: 0.5 };
     const started = Date.now();
     const paid = await createPaidFetch({ mandate: arcMandate, signers })(resource);
     console.log(`HTTP ${paid.status} in ${((Date.now() - started) / 1000).toFixed(1)}s`);
@@ -142,7 +142,7 @@ try {
       // Same URL, same seller, same code path. Only the mandate changed, which is
       // the buyer's decision and not the seller's. `seller/service/` contains no
       // branch on either chain: `no-chain-code.test.ts` fails the build if it does.
-      const hederaMandate: Mandate = { preferredRails: ['hedera-x402'], maxPerPaymentUsd: 0.5 };
+      const hederaMandate: SpendingLimits = { preferredRails: ['hedera-x402'], maxPerPaymentUsd: 0.5 };
       const hederaPaid = await createPaidFetch({ mandate: hederaMandate, signers })(resource);
       console.log(`HTTP ${hederaPaid.status}`);
       if (hederaPaid.ok) {
@@ -192,7 +192,7 @@ try {
 
     await withServer(nanoApp, async nanoUrl => {
       const nanoResource = `${nanoUrl}/analyze/${pool}`;
-      const nanoMandate: Mandate = { preferredRails: ['arc-usdc'], maxPerPaymentUsd: 0.01 };
+      const nanoMandate: SpendingLimits = { preferredRails: ['arc-usdc'], maxPerPaymentUsd: 0.01 };
       const pay = createPaidFetch({ mandate: nanoMandate, signers });
 
       console.log(`$${nanoPrice.toFixed(6)} each = ${nanoPrice * 1e6} USDC atomic units per query.`);
