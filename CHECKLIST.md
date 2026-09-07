@@ -128,7 +128,20 @@ trace, and the DB opened read-write. Those were caught by running the bundle in 
 directory. A real platform can still surface its own. Deploy, confirm it serves all 197 agents
 and reads Sepolia live, delete it. Preview URLs are unguessable, so exposure is ~zero.
 
-**Sept 14 — real deploy, stays up.** Then Bazantic registration the same day, which needs the
+**Sept 14 — real deploy, stays up.** Then, **on camera**, the **hot key** updates
+`agent-endpoint[mcp]` to point at it.
+
+That record currently resolves to `https://mcp-eu.turnstile.xyz/…`, which **has no DNS
+record** (MOV-229, re-verified 2026-09-07). The seller service is real and runs from the repo;
+the hosted address does not exist. A judge who reads only the ENS record finds nothing to pay,
+so this is a live gap in the ENS submission rather than a cosmetic one.
+
+Fixing it *is* the demo beat: the hot key may move where the service lives and may **not**
+touch the payout address, so the transaction that repairs the gap is the same one that
+demonstrates the cold/hot split. Pair it with the rejected `setAddr` from the hot key and the
+ENS story tells itself in two transactions.
+
+Then Then Bazantic registration the same day, which needs the
 public `--spec-url` and `--endpoint` plus a browser session (`baz login`). See
 `docs/bazantic-gateway.md`.
 
