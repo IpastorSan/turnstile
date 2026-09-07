@@ -261,10 +261,15 @@ scheme for every subgraph you might want to ask.
 
 Two further things verified against the live hosted server on 2026-09-07:
 
-- **It answers identically with and without `Authorization: Bearer`.** We send
-  `GRAPH_GATEWAY_API_KEY` because the documented contract asks for it and a
-  self-hosted instance needs it, but we do not claim the hosted endpoint
-  authenticates us: tested both ways, same data, no 401.
+- **On authentication, the accurate sentence is:** the hosted server validates
+  an API key when one is supplied and rejects a bad one, but serves requests
+  that supply none. Our client sends `GRAPH_GATEWAY_API_KEY`; a self-hosted
+  `subgraph-mcp` requires it; the hosted endpoint accepted requests without it
+  when tested. Five requests differing only in the header — real key, no header,
+  empty bearer, well-formed-but-wrong key, malformed key — are tabulated in
+  [`docs/graph-notes.md`](../../docs/graph-notes.md). Do not shorten this to
+  "authenticated with our gateway key": an absent key returns the same data, so
+  the claim would not survive a judge repeating the test.
 - The SDK's `SSEClientTransport` sends `requestInit` headers on the POST leg
   only. The SSE `GET` that opens the session needs its own `fetch` override or
   it goes out unauthenticated — invisible against the hosted server, fatal
@@ -325,11 +330,18 @@ the scarce one — makes an empty pool look bottomless. Override with
   `call` + manual decode anyway, because a chain-agnostic `PublicClient` (which
   we need: the analyst is pointed at mainnet or Arbitrum from a flag) collapses
   `readContract`'s return type to `never`.
-- **The Uniswap Trading API needs a key we do not have.** `POST
-  /v1/quote` answers `401 Unauthenticated api key or session`. The provider is
-  wired and unverified end to end; set `UNISWAP_API_KEY` and `fetchDepth`'s
-  `auto` mode prefers it. See `FEEDBACK.md` for why it took two tries to find
-  that out.
+- **`fetchDepth`'s `auto` mode is QuoterV2, and stays QuoterV2 even when
+  `UNISWAP_API_KEY` is set.** Ask for `trading-api` by name. A credential
+  appearing in the environment is not a reason to change what is being measured,
+  and it would: the Trading API returns a best route rather than this pool and
+  carries no `initializedTicksCrossed`, so `slippage-curve` would silently lose
+  the evidence it is built on. A verdict that changes because someone exported a
+  variable is not a verdict.
+- **The Trading API provider is unverified end to end.** It needs a key we do
+  not have — `POST /v1/quote` answers `401 Unauthenticated api key or session` —
+  so its request shape is built from the endpoint's own validation errors, which
+  is a real source but not the same as a successful response. See `FEEDBACK.md`
+  for why it took two tries to find that out.
 
 ## Test
 

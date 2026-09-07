@@ -60,6 +60,10 @@ verdict.ts             The narrow waist: what may cross the boundary, and its en
                        Imported by the workflow (inside the TEE) and by premium.ts.
 verdict.test.ts        13 tests. Pins the bit order, the round trip, and the
                        determinism claim the whole attestation rests on.
+attestation.ts         Reads a settled verdict and grades how much it is worth.
+                       Lives here rather than in seller/service/ because that
+                       directory must not name a chain — see its header.
+attestation.test.ts    8 tests, all about refusing to overclaim.
 evidence-server.ts     The seller's side: serves an AnalystInput behind a bearer
                        token the Vault releases into the enclave. 401 otherwise.
 settle-cli.ts          Rehearsal settlement — READ ITS HEADER before quoting it.
@@ -124,7 +128,7 @@ lying.
 ## Test
 
 ```bash
-npm test                  # includes seller/cre/verdict.test.ts
+npm test                  # includes verdict.test.ts and attestation.test.ts
 npm run typecheck         # the repo
 npm run typecheck:cre     # the workflow, against the real SDK
 ```

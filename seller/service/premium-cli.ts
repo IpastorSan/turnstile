@@ -13,11 +13,11 @@
 // |---|---|
 // | `--pool <address>` | the pool, when gathering fresh evidence |
 // | `--evidence <file>` | score a pinned bundle instead — required to match a settled verdict |
-// | `--consumer <address>` | where to look for the attested verdict |
+// | `--consumer <address>` | where to look for the attested verdict (or TURNSTILE_VERDICT_CONSUMER) |
 // | `--public` | score with the public thresholds, ignoring TURNSTILE_CALIBRATION |
 // | `--json` | machine-readable |
 
-import type { Address } from 'viem';
+import { onChainAttestations } from '../cre/attestation.ts';
 import type { Calibration } from '../analyst/scoring.ts';
 import { answerPremium } from './premium.ts';
 
@@ -36,11 +36,16 @@ if (!pool && !evidenceFile) {
 const raw = process.argv.includes('--public') ? undefined : process.env.TURNSTILE_CALIBRATION;
 const calibration = raw ? (JSON.parse(raw) as Partial<Calibration>) : null;
 
+// The CLI is the composition root for the on-chain half, the same way
+// `server.ts` is for the rails: it names the consumer once, here, and
+// `premium.ts` never learns what one is.
+const consumer = arg('--consumer') ?? process.env.TURNSTILE_VERDICT_CONSUMER;
+
 const answer = await answerPremium({
   pool: pool ?? '',
   evidenceFile,
   calibration,
-  consumer: arg('--consumer') as Address | undefined,
+  attestations: consumer ? onChainAttestations({ consumer: consumer as `0x${string}` }) : undefined,
 });
 
 if (process.argv.includes('--json')) {

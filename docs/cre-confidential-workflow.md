@@ -288,8 +288,20 @@ node seller/service/premium-cli.ts \
 ```
 
 `answerPremium()` returns the full verdict plus a pointer to the settled record,
-with the buyer's verification already run. The field worth arguing about is
-`AttestationStrength`, which has four values rather than being a boolean:
+with the buyer's verification already run.
+
+The on-chain half deliberately does **not** live in `seller/service/`. MOV-219's
+`no-chain-code.test.ts` asserts that nothing on the payment path names a chain,
+a vendor, an asset or a chain library, and it caught the first version of
+`premium.ts` on the merge. The guard was right: the service composes rails, and
+the moment it knows what Sepolia is, the abstraction that lets two rails share
+it is gone. So everything that knows about `VerdictConsumer`, the Forwarder and
+an RPC endpoint moved to `seller/cre/attestation.ts`, and `premium.ts` takes an
+`AttestationReader` — `(pool, evidenceHash, answerRating) => Attestation`. Same
+boundary, second kind of chain dependency.
+
+The field worth arguing about is `AttestationStrength`, which has four values
+rather than being a boolean:
 
 | Value | Means |
 |---|---|

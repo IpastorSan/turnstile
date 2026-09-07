@@ -6,32 +6,39 @@
 // is paid by the trades that actually route through the pool and those depend
 // on depth at the moment they arrive, not on cumulative volume.
 //
-// Two providers behind one shape:
+// ## `quoter-v2` is the primary provider, chosen on the merits
 //
-//   `quoter-v2`   — Uniswap's on-chain quoting API. QuoterV2's
-//                   `quoteExactInputSingle` simulated through `eth_call`.
-//                   No key. Per-pool, so it measures *this* pool rather than a
-//                   best route across many. Reports `initializedTicksCrossed`,
-//                   which is the single most informative number here: it says
-//                   how far the trade had to walk through the tick map.
-//   `trading-api` — Uniswap's hosted Trading API. Needs `UNISWAP_API_KEY`.
+// Uniswap's **on-chain quoting API** — QuoterV2's `quoteExactInputSingle`,
+// simulated through `eth_call` — is what the analyst quotes with, because it is
+// the right instrument for the question:
 //
-// ## Why `quoter-v2` is the default (2026-09-07)
+//   - **It is per-pool.** An LP deposits into one pool and is paid by the flow
+//     that routes through that pool. "What does this specific pool do under
+//     size" is the LP's question. A routed quote that splits across three pools
+//     answers "what would I get", which is the trader's question, and tells you
+//     nothing about the one pool you were considering.
+//   - **It reports `initializedTicksCrossed`.** This is the single most
+//     informative number anywhere in the analyst. It turns "the quote got
+//     worse" into "the trade walked through 125 initialized ticks", which is a
+//     mechanical, comparable measure of how far liquidity is actually spread.
+//     The `slippage-curve` signal is built on it, and no routed-quote response
+//     carries an equivalent.
+//   - **It needs no key**, so the analyst is reusable infrastructure that
+//     anyone can run.
 //
-// We do not have a Uniswap Trading API key. `POST
-// https://trade-api.gateway.uniswap.org/v1/quote` with a fully valid body
+// `trading-api` — Uniswap's hosted Trading API — is the second provider, wired
+// behind `UNISWAP_API_KEY` so a key drops in without a rewrite. It is opt-in
+// rather than automatic: switching to it *loses* `initializedTicksCrossed` and
+// changes the measurement from one pool to a best route, which would quietly
+// degrade the verdict. See `fetchDepth` below.
+//
+// Note for anyone who tries the Trading API: it needs a key we do not have.
+// `POST https://trade-api.gateway.uniswap.org/v1/quote` with a fully valid body
 // answers `401 {"errorCode":"Unauthorized","detail":"Unauthenticated api key or
-// session"}`. See `FEEDBACK.md` for the part that cost us time: the endpoint
-// validates the request body *before* it checks auth, so a request with one
-// field wrong returns a 400 field error and only a completely correct request
-// reveals that you were never authenticated at all.
-//
-// That is not purely a fallback, though. For the LP-safety question QuoterV2 is
-// the better instrument: the Trading API answers "what is the best execution
-// across all of Uniswap", which is a router's question, and we need "what will
-// *this* pool do", which is an LP's. A routed quote that splits across three
-// pools tells you nothing about the one you were thinking of depositing into.
-// The Trading API provider stays wired so a key drops in without a rewrite.
+// session"}` (2026-09-07), and `FEEDBACK.md` records the part that cost time —
+// the endpoint validates the request body *before* it checks auth, so a request
+// with one field wrong returns a helpful 400 field error and only a completely
+// correct request reveals that you were never authenticated at all.
 
 import { createPublicClient, http, encodeFunctionData, decodeFunctionResult, parseAbi } from 'viem';
 import type { PublicClient } from 'viem';
@@ -213,8 +220,9 @@ export async function fetchDepthFromQuoter(
 export class UniswapApiKeyMissing extends Error {
   constructor() {
     super(
-      'UNISWAP_API_KEY is unset. The Uniswap Trading API answers 401 '
-      + '"Unauthenticated api key or session" without one; use the quoter provider instead.',
+      'UNISWAP_API_KEY is unset, and the Uniswap Trading API answers 401 '
+      + '"Unauthenticated api key or session" without one. This provider is opt-in; '
+      + 'the analyst quotes with QuoterV2 unless you ask for this one by name.',
     );
     this.name = 'UniswapApiKeyMissing';
   }
@@ -314,18 +322,23 @@ export async function fetchDepthFromTradingApi(
 export type DepthProvider = 'quoter-v2' | 'trading-api' | 'auto';
 
 /**
- * Pick a provider. `auto` prefers the Trading API when a key exists — it is
- * Uniswap's own answer and should win when it is available — and falls back to
- * the on-chain quoter otherwise.
+ * Pick a provider. `auto` — the default — is QuoterV2.
+ *
+ * Deliberately NOT "use the Trading API whenever a key happens to be set". The
+ * presence of a credential in the environment is not a reason to change what is
+ * being measured, and it would: the Trading API returns a best route across
+ * pools rather than this pool, and carries no `initializedTicksCrossed`, so the
+ * `slippage-curve` signal would silently lose the evidence it is built on. A
+ * verdict that changes because someone exported a variable is not a verdict.
+ *
+ * Ask for `trading-api` by name when you want it.
  */
 export async function fetchDepth(
   request: DepthRequest,
   options: { provider?: DepthProvider; quoter?: QuoterOptions; apiKey?: string } = {},
 ): Promise<DepthProfile> {
-  const provider = options.provider ?? 'auto';
-  const apiKey = options.apiKey ?? process.env.UNISWAP_API_KEY;
-  if (provider === 'trading-api' || (provider === 'auto' && apiKey)) {
-    return fetchDepthFromTradingApi(request, { apiKey });
+  if ((options.provider ?? 'auto') === 'trading-api') {
+    return fetchDepthFromTradingApi(request, { apiKey: options.apiKey });
   }
   return fetchDepthFromQuoter(request, options.quoter);
 }

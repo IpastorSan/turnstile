@@ -34,6 +34,18 @@ import type { AnalystInput } from '../analyst/types.ts';
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const FIXTURES_DIR = join(HERE, 'fixtures');
 
+/**
+ * The bundle the demo and the tests use: Uniswap v3 USDC/WETH 0.05%, captured
+ * 2026-09-07, and the one the enclave scored in `docs/cre-confidential-workflow.md`.
+ *
+ * Named here rather than spelled out at each call site so that
+ * `seller/service/` can reach a fixture without writing an asset symbol into a
+ * file `no-chain-code.test.ts` scans — the guard is lexical, and a fixture
+ * filename is not a chain dependency, but arguing that at every call site is
+ * worse than having one constant.
+ */
+export const DEMO_EVIDENCE_FILE = join(FIXTURES_DIR, 'usdc-weth-500.json');
+
 export interface EvidenceBundle {
   /** Pool address, lowercased. The key the enclave asks for. */
   pool: `0x${string}`;
@@ -49,6 +61,25 @@ export interface EvidenceBundle {
 export function hashEvidence(bytes: Buffer | string): `0x${string}` {
   const text = typeof bytes === 'string' ? bytes : bytes.toString('utf8');
   return keccak256(toHex(text));
+}
+
+/**
+ * Read one bundle from disk, hashing the bytes as they are.
+ *
+ * Deliberately not `JSON.parse` then re-encode. The on-chain verdict commits to
+ * the bytes the enclave received, and a re-serialization reorders nothing today
+ * and something tomorrow — at which point the buyer's check fails for a reason
+ * nobody can find. The file on disk is the artefact.
+ */
+export async function readEvidenceFile(path: string): Promise<EvidenceBundle> {
+  const bytes = await readFile(path);
+  const input = JSON.parse(bytes.toString('utf8')) as AnalystInput;
+  return {
+    pool: input.pool.address.toLowerCase() as `0x${string}`,
+    bytes,
+    hash: hashEvidence(bytes),
+    input,
+  };
 }
 
 /** Load every captured bundle in `fixtures/`, keyed by pool address. */

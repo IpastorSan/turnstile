@@ -2,7 +2,7 @@
   "name": "turnstile",
   "private": true,
   "type": "module",
-  "description": "Turnstile — the JS/TS half: Substreams sink, discovery API, MCP server.",
+  "description": "Turnstile \u2014 the JS/TS half: Substreams sink, discovery API, x402 seller service, MCP server.",
   "license": "MIT",
   "comment": "No build step: Node runs the .ts files directly (type stripping, on by default since 22.18), and node:sqlite is built in. viem is used for ENS reads only.",
   "engines": {
@@ -19,14 +19,19 @@
     "evidence": "node seller/cre/evidence-server.ts",
     "settle": "node seller/cre/settle-cli.ts",
     "premium": "node seller/service/premium-cli.ts",
-    "test": "node --test \"graph/**/*.test.ts\" \"seller/**/*.test.ts\" \"mcp-turnstile/**/*.test.ts\""
+    "test": "node --test \"graph/**/*.test.ts\" \"seller/**/*.test.ts\" \"rails/**/*.test.ts\" \"buyer/**/*.test.ts\" \"mcp-turnstile/**/*.test.ts\"",
+    "serve": "node seller/service/server.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.0",
+    "@x402/core": "^2.25.0",
+    "@x402/fetch": "^2.25.0",
+    "express": "^5.2.1",
     "viem": "^2.40.0",
     "zod": "^3.25.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^24.0.0",
     "typescript": "^5.9.0"
   }
