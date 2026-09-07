@@ -385,3 +385,119 @@ queries/                       the cross-protocol documents + targets
 scripts/run-query.sh           runs a document across every target
 samples/                       captured live responses
 ```
+
+---
+
+## Corrections and additions from MOV-216 (2026-09-07)
+
+Found while building `seller/analyst/`, which consumes this subgraph in anger.
+Appended rather than edited in place, per `CLAUDE.md`.
+
+### The deploy succeeded; the "Status" note above is obsolete
+
+**Correction (2026-09-07, MOV-216):** the blockquote under *Build and deploy*
+says the final deploy step returns `Subgraph not found` and that the subgraph
+"has to be created once in the Studio UI". That was true when written and is no
+longer. The subgraph is deployed and answering, at the endpoint given in the
+*Deployed* section above:
+
+```
+$ curl -s -X POST https://api.studio.thegraph.com/query/1758854/turnstile-uniswap-v-3-messari/v0.1.0 \
+    -H 'content-type: application/json' \
+    --data '{"query":"{ _meta{ block{number timestamp} hasIndexingErrors } }"}'
+{"data":{"_meta":{"block":{"number":25835635,"timestamp":1787702135},"hasIndexingErrors":false}}}
+```
+
+**Still true:** the *explanation* in that note is correct and worth keeping — a
+Studio deploy key can deploy to a subgraph but cannot create one, and
+`createSubgraph` wants a wallet signature. That is why the slug had to be made
+in the UI first. Only the "this is currently blocked" framing has expired.
+
+### It is still syncing, and by a lot. Date every figure you take from it
+
+**Verified 2026-09-07 13:44 UTC**, against the live endpoint and a mainnet RPC:
+
+| | |
+|---|---|
+| Subgraph head | block 25,835,635 — `2026-08-25T23:55:35Z` |
+| Chain head | block 25,925,853 — `2026-09-07T13:44:23Z` |
+| Behind by | 90,218 blocks — **12.6 days** |
+| `hasIndexingErrors` | `false` |
+
+Nothing is wrong; a two-week backfill takes time. But it means **every figure
+this subgraph returns is roughly two weeks old**, and the *First verification*
+table above is a snapshot of a deployment that was 181 blocks in and is now
+~25,000 blocks in — the numbers in it have moved by two orders of magnitude and
+will keep moving until the sync catches up. Treat that table as a record of a
+moment, not as current state.
+
+Consumers should read `_meta.block.timestamp` and say how stale the answer is.
+`seller/analyst/` does: every verdict prints the head block and the lag beside
+it, and lag lowers the verdict's confidence rather than being swallowed.
+
+### `LiquidityPool*Snapshot` rows are sparse, not zero-filled
+
+The *Modelling decisions* section says the currently open interval has no
+snapshot yet. True, and there is a second half that is easier to get wrong:
+
+**A snapshot row exists only for an interval in which an event occurred.** An
+hour in which the pool saw no swap, mint or burn produces no
+`LiquidityPoolHourlySnapshot` at all — not a row of zeroes. The series is
+sparse, and its `hour` field is the only way to tell a quiet hour from a missing
+one.
+
+This is a consequence of writing snapshots at rollover, so it applies to any
+Messari-conformant subgraph, not only ours. It matters because the obvious
+consumer code is wrong:
+
+```graphql
+liquidityPoolHourlySnapshots(first: 24, orderBy: timestamp, orderDirection: desc) { ... }
+```
+
+That returns "the last 24 snapshots", which is not "the last 24 hours". On
+Uniswap v3 TRUMP/WETH 0.3% it returns three rows spanning 25 hours — and any
+metric that divides by the row count reports a pool with three trades in a day
+as trading 100% of the time. We shipped that bug and caught it by running
+against live data. Window by `hour` against `_meta.block.timestamp`, and use
+`LiquidityPool.createdTimestamp` as the floor for a young pool.
+
+### Ranking by `totalValueLockedUSD` puts impersonator pools on top
+
+The top three pools by TVL on this subgraph, as of the block above:
+
+| TVL | Pool | Cumulative volume |
+|---|---|---|
+| $1,945.56B | Uniswap v3 USDT/USDT 1% | $0.00 |
+| $3.20B | Uniswap v3 TRUMP/WETH 0.3% | $1.53 |
+| $1.24B | Uniswap v3 USDT/WETH 1% | $4.93 |
+
+None of them is a real venue. The first is a scam token at
+`0x83cff3334e2d00d98416ad72fc383b77a242e169` that uses the symbol `USDT` with 18
+decimals, paired against the real 6-decimal USDT at
+`0xdac17f958d2ee523a2206206994597c13d831ec7`; it holds 2e12 of the fake token
+and zero of the real one. The second holds 1.5 billion TRUMP and 0.00063 WETH.
+
+The arithmetic is not wrong and the handlers are behaving as designed. The
+mechanism is that **a pricing anchor propagates to whatever is paired with it**:
+`pricing.ts` prices any token that sits opposite a stablecoin or WETH, so a
+worthless token paired with real USDT inherits a plausible-looking price, and
+that price multiplied by an enormous balance is an enormous TVL. Messari's
+schema has no field for "we do not believe this price", so there is nowhere
+honest to put the doubt.
+
+Two things follow, and neither is a bug in this subgraph:
+
+1. **Do not rank by TVL alone.** `seller/analyst/` exists partly for this: it
+   ranks by TVL, then asks each pool whether a trade can actually execute
+   against it. All three pools above come back `AVOID`, the top one at
+   14% confidence because almost nothing about it can be established.
+2. **A price derived from a pool is not evidence about that pool.** Checking a
+   pool's own TVL against its own derived price is circular. The check has to
+   come from outside the index — for us, a live QuoterV2 quote.
+
+A future improvement worth considering: a minimum liquidity threshold on the
+*anchor side* before a pair is allowed to price its counterpart, which would
+leave these tokens unpriced rather than confidently mispriced. That is a real
+schema-conformance question, not an obvious win, because the standard's
+`lastPriceUSD` is non-nullable — leaving it at zero is its own kind of lie.
+Recording the trade-off here rather than silently picking one.
