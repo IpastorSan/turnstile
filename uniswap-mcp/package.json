@@ -12,6 +12,7 @@
     "server.ts",
     "src",
     "tools",
+    "tsconfig.json",
     "SKILL.md",
     "README.md"
   ],
