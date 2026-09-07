@@ -132,7 +132,7 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] **Bazantic gateway + Recipe** (MOV-231). Owner: user, in a browser. Needs `baz login`
       (browser-approval only, no API-key path exists) and **two public HTTPS URLs** for
       `--spec-url` and `--endpoint`, which the public deployment provides. Paste-ready material
-      is in `docs/bazantic-gateway.md`; the spec is `docs/openapi.turnstile.json`. Recipes are
+      is in `docs/bazantic-gateway.md`; the spec is `seller/service/openapi.yaml`. Recipes are
       web-app only — not in the CLI at all. Record `IpastorSan` as the attribution handle.
       **This is cut-line #1 — drop it rather than let it delay anything else.**
 

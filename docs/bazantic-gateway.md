@@ -227,10 +227,12 @@ sponsor of the ETHGlobal Online Hackathon".
 >    and use `provenance.subgraphLagSeconds` to see how stale the history was.
 >
 > **What it looks like on real data.** Uniswap v3 USDC/WETH 0.05%
-> (`0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640`) returns **ACCEPTABLE at 75%
-> confidence** — and only **0.944%** of its claimed TVL is reachable within 1%
-> slippage. $1.00M fills inside 1% (0.385% slippage, 9 initialized ticks crossed);
-> $10.00M costs 4.837% and crosses 125. In concentrated liquidity a small ratio is
+> (`0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640`), at mainnet block 25,925,794 on
+> 2026-09-07, returned **ACCEPTABLE at 75% confidence** — and only **0.944%** of
+> its claimed TVL was reachable within 1% slippage. $1.00M filled inside 1%
+> (0.385% slippage, 9 initialized ticks crossed); $10.00M cost 4.837% and crossed
+> 125. **Re-derive these live rather than quoting them** — see the note on drift
+> below. In concentrated liquidity a small ratio is
 > normal, since most capital sits outside the active range by design — but it does
 > mean the headline number overstates fee-earning capital by two orders of magnitude,
 > and an LP sizing a position off TVL will be disappointed.
@@ -251,10 +253,17 @@ sponsor of the ETHGlobal Online Hackathon".
 
 ### The interdependence, stated plainly for the judges
 
-The headline number — 0.944% — is a quotient with one operand from each service.
-Remove The Graph and there is no denominator; remove Uniswap and there is no
-numerator. The prize asks that "the final result depend meaningfully on both
-services", and here the dependence is arithmetic rather than rhetorical.
+The headline number — 0.944% at mainnet block 25,925,794 — is a quotient with one
+operand from each service. Remove The Graph and there is no denominator; remove
+Uniswap and there is no numerator. The prize asks that "the final result depend
+meaningfully on both services", and here the dependence is arithmetic rather than
+rhetorical.
+
+**Derive it on camera rather than quoting it.** It is a live figure and it drifts
+(see below), so a number recited in a Recipe or a video is wrong by the time a
+judge re-runs it — and worse, it makes the one claim the prize turns on look
+fabricated. Showing the two operands arrive from two services and the division
+happen is also a better demonstration of interdependence than any number.
 
 ---
 
@@ -268,8 +277,8 @@ Suggested take, ~3 minutes:
 3. `baz gateway list --json` → the `endpointUrl`.
 4. The Recipe open in the Bazantic UI.
 5. The flow running end to end: the subgraph query returning claimed TVL, then
-   `analyzePoolAttested` paying its 402 and returning the ladder, then the 0.944%
-   falling out of the two.
+   `analyzePoolAttested` paying its 402 and returning the ladder, then the ratio
+   falling out of the two **computed on camera, not read from these notes**.
 6. `baz curl` against the gateway paying a 402 live, and `getReceipt` resolving the
    transaction afterwards — this is the part that shows the money is real.
 
@@ -304,8 +313,20 @@ on Hedera testnet, with HCS receipts on topic `0.0.10408013`. See
   "The Graph's own Bazantic service, if one is listed" — check the catalogue when
   the browser is open. This is the single most likely reason the Recipe as written
   needs reshaping.
-- **`$105.9M` claimed TVL** for USDC/WETH 0.05%, quoted in the MOV-231 brief, does
-  not appear anywhere in this repo. It is consistent with what is recorded — $1.00M
-  reachable at 0.944% implies $105.9M — so it is used above only as that derivation,
-  never as an independently sourced figure. Confirm it from the live run before
-  putting it in submission copy.
+- **Every live figure above.** They were true at their stated block and are not
+  constants.
+
+  > **Correction (2026-09-07, MOV-231):** an earlier revision of this file treated
+  > `$105.9M` claimed TVL as a figure merely awaiting confirmation. It is not — it
+  > came from a MOV-216 report that never landed in a file, and chasing it showed
+  > the number is not stable enough to quote at all. The same pool read **$106.68M,
+  > $105.9M and $105.72M within three hours** on 2026-09-07, and the reachable-
+  > within-1% ratio moved **0.944% → 0.946%**.
+  >
+  > Still true: the derivation is sound — $1.00M reachable at 0.944% does imply
+  > ≈$105.9M, which is why the brief's number was plausible. What changed is the
+  > conclusion. Per the `CHECKLIST.md` gate on live figures, every number in
+  > submission copy carries its capture timestamp and block, or is derived live on
+  > camera. The figures in this file and in `seller/service/openapi.yaml` are now
+  > anchored to mainnet block 25,925,794 (2026-09-07); the Recipe copy and the
+  > demo script prefer live derivation.
