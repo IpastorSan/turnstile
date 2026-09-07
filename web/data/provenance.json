@@ -1,0 +1,54 @@
+{
+  "capturedAt": "2026-09-07T13:24:05.529Z",
+  "source": "graph/sink/data/discovery.db",
+  "how": "ERC-8004 Identity Registry events streamed via Substreams (graph/sink/sink.ts), registration documents resolved off-module (resolve-cards.ts), Turnstile sellers hydrated from their ENSv2 resolver (hydrate-sellers.ts).",
+  "registries": {
+    "mainnet": "0x8004a169fb4a3325136eb29fa0ceb6d2e539a432",
+    "base": "0x8004a169fb4a3325136eb29fa0ceb6d2e539a432",
+    "sepolia": "0x8004a818bfb912233c491871b3d84c89a494bd9e"
+  },
+  "totalAgents": 197,
+  "chains": [
+    {
+      "network": "base",
+      "chainId": 8453,
+      "agents": 119
+    },
+    {
+      "network": "sepolia",
+      "chainId": 11155111,
+      "agents": 40
+    },
+    {
+      "network": "mainnet",
+      "chainId": 1,
+      "agents": 38
+    }
+  ],
+  "blockRanges": [
+    {
+      "network": "base",
+      "fromBlock": 41700594,
+      "toBlock": 41715968
+    },
+    {
+      "network": "mainnet",
+      "fromBlock": 25000037,
+      "toBlock": 25014505
+    },
+    {
+      "network": "sepolia",
+      "fromBlock": 10000745,
+      "toBlock": 11653714
+    }
+  ],
+  "documentStates": {
+    "failed": 25,
+    "in_module": 15,
+    "no_uri": 30,
+    "not_fetchable": 1,
+    "off_module": 126
+  },
+  "turnstileSellers": 1,
+  "note": "Prices are not frozen here in any meaningful sense: only one agent in the whole store has a readable price, and the seller page reads that price live from Sepolia rather than from this file."
+}
