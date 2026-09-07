@@ -16,7 +16,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import { DEFAULT_DB_PATH, openDb } from '../../graph/sink/db.ts';
+import { openStore } from '../store.ts';
 import { findSellers } from '../../seller/service/discovery.ts';
 import type { FindSellersQuery, FindSellersResult } from '../../seller/service/discovery.ts';
 
@@ -67,9 +67,13 @@ export const FIND_SELLERS_DESCRIPTION =
   'turnstile:price record. Everyone else only reveals a price in a live HTTP 402 response. Each ' +
   'result therefore carries priceSource: turnstile | x402 | document | ask_x402 | none. ' +
   '"ask_x402" means the agent takes payment but has not been quoted yet — it is not a free service.\n\n' +
-  'Ranking is by settled volume where settlement receipts exist. They do not yet (MOV-220), so ' +
-  'results come back ordered by registration recency with ranking.placeholder = true. Do not read ' +
-  'that order as reputation.';
+  'Ranking is by settled volume where settlement receipts exist. In the store that ships with this ' +
+  'repo they do not, so results come back ordered by registration recency with ' +
+  'ranking.placeholder = true. Do not read that order as reputation.\n\n' +
+  'The receipts themselves DO exist — read them with the `receipts` tool, which pulls them off a ' +
+  'public Hedera consensus topic. What is missing is only the ingest into this store: ' +
+  '`npm run ingest-receipts` fills settlement_receipt, and the ranking then flips to settled_volume ' +
+  'with placeholder = false. Until someone runs it, this tool says placeholder rather than pretending.';
 
 /** Shaped for an agent reading the result, not for a human reading a table. */
 export function summarize(result: FindSellersResult): string {
@@ -97,15 +101,30 @@ export function summarize(result: FindSellersResult): string {
       `capabilities are unknown, not absent.`,
     );
   }
+
+  // The single most important thing for an agent about to spend money, and the
+  // one it is most likely to skip past: almost nothing here has a price.
+  const priced = result.sellers.filter((s) => s.price?.comparable).length;
+  lines.push(
+    `${priced} of the ${result.sellers.length} returned carry a price that can be compared to a budget. ` +
+    'None of these numbers is payable as it stands — a price here is either published in advance or ' +
+    'cached from an earlier probe. Pass a seller\'s agentUid to get_offer to turn it into a live quote, ' +
+    'and read that quote\'s `purchasable` before calling purchase.',
+  );
   return lines.join('\n');
 }
 
 export interface FindSellersToolOptions {
-  dbPath?: string;
+  /**
+   * Required, and deliberately without a default: a default path is a path that
+   * can be wrong silently, and `openDb` creates a missing file. `store.ts`
+   * resolves it once at startup and fails loudly if it cannot.
+   */
+  dbPath: string;
 }
 
-export function registerFindSellers(server: McpServer, options: FindSellersToolOptions = {}): void {
-  const dbPath = options.dbPath ?? DEFAULT_DB_PATH;
+export function registerFindSellers(server: McpServer, options: FindSellersToolOptions): void {
+  const { dbPath } = options;
 
   server.registerTool(
     'find_sellers',
@@ -126,11 +145,7 @@ export function registerFindSellers(server: McpServer, options: FindSellersToolO
         offset: args.offset,
       };
 
-      // Opened per call rather than held: the sink writes to the same file, and
-      // a long-lived reader in WAL mode pins the snapshot it started with, so a
-      // server that stayed connected would keep serving a directory that had
-      // stopped being current.
-      const db = openDb(dbPath);
+      const db = openStore(dbPath);
       let result: FindSellersResult;
       try {
         result = findSellers(db, query);
