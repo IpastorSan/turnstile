@@ -84,6 +84,20 @@ transaction needs gas it does not have.
 **What is unchanged:** every other row, and the invariant below the table. Only
 the mechanism named in the Hot row was wrong.
 
+**Update (2026-09-07, MOV-228):** the Warm row is now **running code**, not a
+plan. The `depositFor(amount, agent)` caller described above used to be a plain
+key at `0xdFe3088aC34e7329006407C246C9F6D7534B2aC5`; it is now a **Privy server
+wallet** at `0x3De96375140717193f52c220Df5Ec460971cbE84`, owned by a 1-of-2
+operations key quorum and governed by a mandate policy owned by a *separate*
+2-of-2 board quorum. Nothing in the row's wording changed because nothing about
+the mechanism changed — MOV-228 replaced the key holder, not the mechanism.
+
+What it adds is the last piece of the invariant below: the key that **funds** the
+agent cannot raise its own cap either. Widening the mandate is a `PATCH` that
+Privy refuses with one signature and accepts with two, verified live —
+`docs/privy-mandate.md` has the transcript, the two on-chain transactions, and
+six rough edges in Privy's API.
+
 
 The invariant the whole design defends: **the key that spends can never raise
 its own limit.** If a change would let the hot tier widen its own mandate,

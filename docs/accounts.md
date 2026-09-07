@@ -18,7 +18,12 @@ Values live in `.env` (gitignored). `.env.example` carries the names only.
 | `BLOCKY402_URL` | — | MOV-220 | `https://api.testnet.blocky402.com`. Not a credential; a default |
 | `HEDERA_HBAR_USD` | — | MOV-220 | Optional. Pins the HBAR/USD rate instead of reading the network exchange rate |
 | `CIRCLE_API_KEY` | Circle console | MOV-225 | Testnet |
-| `PRIVY_APP_ID` / `PRIVY_APP_SECRET` | Privy dashboard | MOV-228 | |
+| `PRIVY_APP_ID` / `PRIVY_APP_SECRET` | Privy dashboard | MOV-228 | Basic auth for every call. **Not sufficient on its own** to change the mandate — that needs operator signatures |
+| `PRIVY_OPERATOR_ALICE_KEY` / `PRIVY_OPERATOR_BOB_KEY` | `scripts/privy-org-setup.ts` | MOV-228 | base64 PKCS#8 P-256. The approval keys. In production these belong on operators' own devices, not in a shared `.env` |
+| `PRIVY_OPS_QUORUM_ID` | `scripts/privy-org-setup.ts` | MOV-228 | `ywnbe62desoz63antrbsu5qs`, 1 of 2 — owns the org wallet |
+| `PRIVY_BOARD_QUORUM_ID` | `scripts/privy-org-setup.ts` | MOV-228 | `cvwpn2cxf6z8fxs8fa9gl78x`, 2 of 2 — owns the mandate policy |
+| `PRIVY_MANDATE_POLICY_ID` | `scripts/privy-org-setup.ts` | MOV-228 | `crykqflf5ffiho8taei8uu7s`. Raising its cap needs the board quorum |
+| `PRIVY_ORG_WALLET_ID` / `PRIVY_ORG_WALLET_ADDRESS` | `scripts/privy-org-setup.ts` | MOV-228 | `w0cxyoh1lnc1lqfyi9tb5yej` → `0x3De96375140717193f52c220Df5Ec460971cbE84`. The warm tier |
 | `WORLD_APP_ID` | World Developer Portal | MOV-223 | `app_8094ddfd…` |
 | `WORLD_SANDBOX_KEY` | World Sandbox | MOV-223 | **Pending human approval** — the only queue-gated credential |
 | `SEPOLIA_RPC_URL` | Alchemy | MOV-217, MOV-218 | |

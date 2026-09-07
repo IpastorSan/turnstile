@@ -81,8 +81,8 @@ permissions, not by a policy document. See
 | Tier | State on 2026-09-07 |
 |---|---|
 | Cold | **Live.** `liquidity.turnstile.eth` on Sepolia, resolver `0xb1B4Da2C49814c8CbF975E7a48fbB014EA0b075B`, operator proof `ledger-key-ring` published as a resolver record. |
-| Warm | **Not built.** MOV-228 (Privy) has not been started. `/mandate` in the web app is a labelled placeholder. |
-| Hot | **Built (MOV-225), and it is the Arc rail's buyer half.** `buyer/watchdog/arc-signer.ts` is the spending wallet: it signs EIP-3009 authorizations against Circle Gateway and submits nothing, so its nonce stays 0. Funded by the warm tier through `depositFor`. **Correction (2026-09-07, MOV-225):** this row previously read "Not built. The Arc/Circle spending wallet lands with the rails work." — that was accurate when written and the rails work has now landed. The **Warm** row above is unchanged and still accurate: MOV-228 (Privy) is not started, and the `depositFor` caller is a plain key today rather than an org wallet with a quorum. |
+| Warm | **Live (MOV-228).** A Privy server wallet at `0x3De96375140717193f52c220Df5Ec460971cbE84` (Privy id `w0cxyoh1lnc1lqfyi9tb5yej`), owned by a 1-of-2 operations key quorum and governed by a mandate policy owned by a separate 2-of-2 board quorum. It signed the `depositFor()` that funds the agent, on chain. **Correction (2026-09-07, MOV-228):** this row previously read "Not built. MOV-228 (Privy) has not been started. `/mandate` in the web app is a labelled placeholder." The first two sentences are now wrong; the third is unchanged and still true — the web app's `/mandate` page is still a placeholder, and the mandate lives in `buyer/mandate/` and in the Privy policy, not in the UI. See `docs/privy-mandate.md`. |
+| Hot | **Built (MOV-225), and it is the Arc rail's buyer half.** `buyer/watchdog/arc-signer.ts` is the spending wallet: it signs EIP-3009 authorizations against Circle Gateway and submits nothing, so its nonce stays 0. Funded by the warm tier through `depositFor`. **Correction (2026-09-07, MOV-225):** this row previously read "Not built. The Arc/Circle spending wallet lands with the rails work." — that was accurate when written and the rails work has now landed. **Correction (2026-09-07, MOV-228):** MOV-225's note added here that "the `depositFor` caller is a plain key today rather than an org wallet with a quorum" — that is no longer true, and the Warm row above now says what replaced it. Everything else in this row is unchanged: the hot wallet's nonce is still 0, verified by `buyer/watchdog/hot-wallet.test.ts` after MOV-228's changes. |
 
 ---
 
@@ -185,8 +185,15 @@ runs as unreachable document origins come back.)*
   **Correction (2026-09-07, MOV-225):** the **hot** tier is running code —
   `buyer/watchdog/arc-signer.ts` signs the authorizations that bought real
   answers, and its nonce is 0 on Arc testnet, which is the diagram's claim about
-  it made checkable. The **warm** tier is still not Privy: `scripts/arc-setup.ts`
+  it made checkable. ~~The **warm** tier is still not Privy: `scripts/arc-setup.ts`
   calls `depositFor()` from a plain key where an org wallet with a quorum belongs.
   So the *position* in Panel A is real and the *vendor* is not, and MOV-228
-  replaces the key rather than the mechanism. Only the cold tier is deployed in
-  the sense of being on a public network under a device-held key.
+  replaces the key rather than the mechanism.~~
+
+  **Correction (2026-09-07, MOV-228):** the struck sentences above are now wrong.
+  The **warm** tier *is* Privy: `scripts/arc-setup.ts` calls `depositFor()` from a
+  Privy server wallet owned by a key quorum and capped by a Privy policy, and the
+  two transactions it signed are linked in `docs/privy-mandate.md`. MOV-228 did
+  replace the key rather than the mechanism, exactly as predicted. What is still
+  true from MOV-225's note: only the **cold** tier is deployed under a
+  device-held key, and Panel A's *positions* were always real.
