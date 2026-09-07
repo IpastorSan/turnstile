@@ -4,11 +4,37 @@ MOV-219, captured 2026-09-07 from a real run of `seller/service/` against the tw
 placeholder rails. Reproduce with `npm run serve` and `curl`, or read
 `seller/service/x402.test.ts`, which asserts everything below.
 
-**Both rails are placeholders and settle nothing.** The 402 flow, the header
-encoding and the receipts are real; no value moves. That is stated on the wire
-(`extra.turnstileSettlement: "stub"`) and at `/health`
+> **Correction (2026-09-07, MOV-220): the Hedera half of this document is now
+> history.** This file said "**both rails are placeholders and settle nothing**".
+> That was true when it was written and is no longer. `hedera-x402` settles real
+> value on Hedera testnet through Blocky402: `info.live` is `true`, its
+> challenges carry `extra.turnstileSettlement: "live"`, and `/health` reports
+> `settlementLive: true`.
+>
+> Three values in the transcript below are superseded, and one of them was
+> **wrong**, not merely a placeholder:
+>
+> | Shown below | Actually | |
+> |---|---|---|
+> | `"network": "eip155:296"` | `"hedera:testnet"` | wrong — the facilitator rejects `eip155:296` |
+> | `"asset": "PLACEHOLDER-hedera-testnet-usdc"` | `"0.0.0"` (native HBAR, 8 decimals) | |
+> | `"amount": "70000"` | `"84367844"` tinybars | HBAR is not a dollar; the rail prices through an FX rate |
+>
+> **Everything else in this document is unchanged and still correct** — the
+> header table, the v1/v2 differences, the two-rail `accepts[]`, the tier
+> pricing, `extra.resource`, the receipt lookup, and the whole Interoperability
+> section. `arc-usdc` is still a placeholder (MOV-225).
+>
+> For the live Hedera flow, the setup, and the on-chain transaction, read
+> **`docs/payment-flow.md`**. The transcript below is kept as the MOV-219
+> record rather than rewritten, because it is what the service did before any
+> rail settled and that is worth being able to see.
+
+**Both rails were placeholders when this was captured, and settled nothing.** The
+402 flow, the header encoding and the receipts are real; no value moved. That was
+stated on the wire (`extra.turnstileSettlement: "stub"`) and at `/health`
 (`settlementLive: false`) rather than left for someone to discover. MOV-220
-brings Hedera/Blocky402, MOV-225 brings Arc.
+brought Hedera/Blocky402; MOV-225 brings Arc.
 
 ---
 
@@ -187,7 +213,11 @@ is told.
 **The receipt is retrievable.** `GET /receipts/stub:hedera-x402:000001` returns
 the settlement. That lookup is `PaymentRail.receipt(id)`, and it is what
 discovery's `settledVolume` ranking needs before it can stop calling itself a
-placeholder.
+placeholder. **Correction (2026-09-07, MOV-220):** it no longer needs to wait —
+`rails/hedera-x402/hcs.ts` writes an HCS receipt per settled payment and
+`graph/sink/ingest-receipts.ts` reads the topic into `settlement_receipt`, so
+discovery ranks by settled volume as soon as one payment has landed. On the live
+rail the id is a Hedera transaction id, not `stub:…`.
 
 **The premium body carries `analystInput`.** `scoring.ts` is a pure function of
 it, so the buyer can re-derive the verdict and get the same bytes. On a real pool
