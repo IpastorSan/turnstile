@@ -52,3 +52,30 @@ Selfie Check into a running app.
 ## What was broken
 
 ## What was hard to test
+
+## The Graph — Subgraph Studio (MOV-215, 2026-09-07)
+
+Not World, but this file is the catch-all for "confusing, missing, broken or
+hard to test", and these cost real time.
+
+- **A Studio deploy key cannot create the subgraph it deploys to.** `graph deploy`
+  builds, uploads every file to IPFS, prints a build CID, and only then fails
+  with `Subgraph not found`. Everything expensive happens before the check that
+  was always going to fail. `graph create --node https://api.studio.thegraph.com/deploy/`
+  answers `Method not found` — Studio's JSON-RPC exposes `subgraph_deploy` and
+  nothing else. Creation is a `createSubgraph` mutation on
+  `api.studio.thegraph.com/graphql`, which rejects a deploy key with
+  `Please login first` and wants a wallet signature instead. So a CI-shaped
+  "provision and deploy from a key" flow is not possible; a human has to click
+  once in the UI first. Failing fast, or documenting it on the deploy page,
+  would have saved the whole IPFS upload.
+- **graph-cli >= 0.90 rejects a bare `@entity`.** Every published Messari
+  schema uses bare `@entity`, so the standard's own file does not compile
+  against current tooling without a mechanical edit. The error is at least
+  clear and suggests the fix.
+- **A non-archive RPC stalls a local graph-node silently.** With
+  `ethereum-rpc.publicnode.com`, indexing stopped at
+  `Scanning blocks [N, N]` and emitted no error, warning or retry log for
+  minutes. The cause was `eth_call` into ~300-block-old state returning
+  "Archive requests require a personal token", which graph-node never surfaced.
+  A single WARN naming the failing provider would have made it obvious.

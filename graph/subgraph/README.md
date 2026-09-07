@@ -284,6 +284,39 @@ the same as copying an implementation, and this is the difference showing.
 
 ---
 
+## Does it actually index?
+
+Yes — verified by running it, not by it compiling. A local `graph-node` indexed
+200 real mainnet blocks against an archive RPC and reached chainhead
+`healthy`, `hasIndexingErrors: false`, with every entity family populated:
+
+| | |
+|---|---|
+| Pools | 28 — the 8 curated, plus 20 discovered live through the position manager |
+| Swaps / Deposits / Withdraws | populated, with USD amounts on both sides |
+| Ticks | populated, `prices` varying correctly with index |
+| Positions / PositionSnapshots | 34 cumulative, 21 open, ERC-721 typed |
+| Usage + pool hourly snapshots | written on each rollover |
+| `FinancialsDailySnapshot` | empty — 200 blocks does not cross a UTC midnight |
+
+Spot-checks that mattered: the USDC/WETH 0.05% pool came back at tick `198129`
+holding 77.05M USDC and 11,403 WETH for $105.4M TVL, and the ETH price the
+subgraph derived from the sqrt price agrees with the price implied by the tick
+to within a few tenths of a percent.
+
+Indexing it is also what found the one real bug in this code — usage metrics
+reported `dailyActiveUsers: 456` against `cumulativeUniqueUsers: 442`, because
+an LP first seen through the position manager was never counted as a user. The
+fix is `countUniqueUser()`, and after re-indexing from scratch
+`cumulativeUniqueTraders + cumulativeUniqueLPs == cumulativeUniqueUsers` and
+`dailyActiveUsers <= cumulativeUniqueUsers` both hold.
+
+This local run is a **test**, not a data source — nothing in this repo's
+submission reads from it. Reproduce it with a `graph-node` pointed at an
+archive-capable mainnet RPC (a non-archive endpoint stalls silently on the
+first `eth_call` into historical state, which is worth knowing) and a copy of
+`subgraph.yaml` with a recent `startBlock`.
+
 ## Build and deploy
 
 ```bash
