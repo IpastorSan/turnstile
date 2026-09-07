@@ -21,7 +21,7 @@ dataSources:
     source:
       address: "0x1f98431c8ad98523631ae4a59f267346ea31f984"
       abi: UniswapV3Factory
-      startBlock: 25910000
+      startBlock: 25810000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -56,7 +56,7 @@ dataSources:
     source:
       address: "0xc36442b4a4522e871399cd717abdd847ab11fe88"
       abi: NonfungiblePositionManager
-      startBlock: 25910000
+      startBlock: 25810000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -101,7 +101,7 @@ dataSources:
     source:
       address: "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640"
       abi: UniswapV3Pool
-      startBlock: 25910000
+      startBlock: 25810000
     mapping: &poolMapping
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -151,7 +151,7 @@ dataSources:
     source:
       address: "0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8"
       abi: UniswapV3Pool
-      startBlock: 25910000
+      startBlock: 25810000
     mapping: *poolMapping
 
   # WBTC / WETH 0.30%
@@ -161,7 +161,7 @@ dataSources:
     source:
       address: "0xcbcdf9626bc03e24f779434178a73a0b4bad62ed"
       abi: UniswapV3Pool
-      startBlock: 25910000
+      startBlock: 25810000
     mapping: *poolMapping
 
   # WETH / USDT 0.05%
@@ -171,7 +171,7 @@ dataSources:
     source:
       address: "0x11b815efb8f581194ae79006d24e0d814b7697f6"
       abi: UniswapV3Pool
-      startBlock: 25910000
+      startBlock: 25810000
     mapping: *poolMapping
 
   # WETH / USDT 0.30%
@@ -181,7 +181,7 @@ dataSources:
     source:
       address: "0x4e68ccd3e89f51c3074ca5072bbac773960dfa36"
       abi: UniswapV3Pool
-      startBlock: 25910000
+      startBlock: 25810000
     mapping: *poolMapping
 
   # USDC / USDT 0.01%
@@ -191,7 +191,7 @@ dataSources:
     source:
       address: "0x3416cf6c708da44db2624d63ea0aaef7113527c6"
       abi: UniswapV3Pool
-      startBlock: 25910000
+      startBlock: 25810000
     mapping: *poolMapping
 
   # DAI / USDC 0.01%
@@ -201,7 +201,7 @@ dataSources:
     source:
       address: "0x5777d92f208679db4b9778590fa3cab3ac9e2168"
       abi: UniswapV3Pool
-      startBlock: 25910000
+      startBlock: 25810000
     mapping: *poolMapping
 
   # DAI / WETH 0.30%
@@ -211,7 +211,7 @@ dataSources:
     source:
       address: "0xc2e9f25be6257c210d7adf0d4cd6e3e881ba25f8"
       abi: UniswapV3Pool
-      startBlock: 25910000
+      startBlock: 25810000
     mapping: *poolMapping
 
 templates:
