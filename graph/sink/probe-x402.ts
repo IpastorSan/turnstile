@@ -112,7 +112,29 @@ async function attempt(
  * URIs in the directory are the second kind, so a GET-only probe would report
  * "no price" for agents that do in fact have one.
  */
-export async function probeEndpoint(url: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<ProbeResult> {
+export interface ProbeOptions {
+  /**
+   * Probe a private or loopback address anyway.
+   *
+   * Off by default, and the default is the important half: this function's usual
+   * input is a URL a stranger put in an on-chain registration, and following one
+   * of those to `http://169.254.169.254/` is a server-side request forgery with
+   * extra steps.
+   *
+   * A URL an operator typed is not that input. `mcp-turnstile` sets this when —
+   * and only when — the caller named the URL itself rather than reading it out
+   * of the directory, because a seller running on `127.0.0.1` during a demo is
+   * an ordinary thing to want to quote and the guard would otherwise make the
+   * tool useless for it. The distinction is provenance, not the address.
+   */
+  allowPrivateHosts?: boolean;
+}
+
+export async function probeEndpoint(
+  url: string,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  options: ProbeOptions = {},
+): Promise<ProbeResult> {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -122,7 +144,7 @@ export async function probeEndpoint(url: string, timeoutMs = DEFAULT_TIMEOUT_MS)
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     return { status: 'network_error', error: `protocol ${parsed.protocol}` };
   }
-  if (await isBlockedHost(parsed.hostname)) {
+  if (!options.allowPrivateHosts && await isBlockedHost(parsed.hostname)) {
     return { status: 'blocked_host', error: `refusing private host ${parsed.hostname}` };
   }
 
