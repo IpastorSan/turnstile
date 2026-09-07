@@ -114,6 +114,8 @@ export interface HederaRailOptions {
   rateOptions?: RateOptions;
   receiptTopic?: HcsReceiptTopic;
   receiptTopicOptions?: HcsReceiptTopicOptions;
+  /** Used by `receipt()` for its mirror-node fallback. Injectable for tests. */
+  mirrorNodeFetch?: typeof globalThis.fetch;
 }
 
 /** In-memory settlement log, plus the replay guard. Survives one process. */
@@ -158,6 +160,7 @@ export function createHederaRail(options: HederaRailOptions = {}): PaymentRail {
   const rate = options.rate ?? new HbarRate(options.rateOptions);
   const receiptTopic = options.receiptTopic ?? new HcsReceiptTopic(options.receiptTopicOptions);
   const book = new SettlementBook();
+  const mirrorNodeFetch = options.mirrorNodeFetch ?? globalThis.fetch;
 
   const info: RailInfo = {
     id: RAIL_ID,
@@ -352,12 +355,16 @@ export function createHederaRail(options: HederaRailOptions = {}): PaymentRail {
     async receipt(id: string): Promise<Receipt | null> {
       const local = book.find(id);
       if (local) return local;
-      if (!id.includes('@') && !id.includes('-')) return null;
+      // `0.0.7162784@1788791330.918068236` or the mirror node's dashed form.
+      // Checking the shape here rather than letting the mirror node 404 keeps a
+      // stub receipt id — `stub:hedera-x402:000001` — from being looked up as
+      // though it might be real.
+      if (!/^\d+\.\d+\.\d+[@-]\d+[.-]\d+$/.test(id)) return null;
 
       const url = `${MIRROR_NODE_URL}/api/v1/transactions/${toMirrorNodeTransactionId(id)}`;
       let body: { transactions?: { transaction_id: string; result: string; consensus_timestamp: string; transfers?: { account: string; amount: number }[] }[] };
       try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+        const res = await mirrorNodeFetch(url, { signal: AbortSignal.timeout(15_000) });
         if (!res.ok) return null;
         body = await res.json() as typeof body;
       } catch {

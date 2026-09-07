@@ -9,6 +9,10 @@ import assert from 'node:assert/strict';
 
 import { createArcRail } from './arc-usdc/index.ts';
 import { createHederaRail } from './hedera-x402/index.ts';
+// The Hedera rail reads its facilitator and its exchange rate over HTTP. A unit
+// suite that hit the network for that would be slow, offline-hostile, and would
+// go red when Blocky402 has a bad afternoon rather than when we broke something.
+import { fakeFacilitatorFetch, offlineRailOptions } from './hedera-x402/testing.ts';
 import { PaymentRailError, usdToAtomic } from './PaymentRail.ts';
 import type { PaymentPayload, PaymentRail, PaymentRequirement } from './PaymentRail.ts';
 import { RailRegistry } from './registry.ts';
@@ -146,18 +150,27 @@ test('verify says why it refused, not merely that it did', async () => {
   assert.equal(diverted.reason, 'wrong_recipient');
 });
 
-test('every advertised rail says out loud that it settles nothing yet', async () => {
-  // MOV-219 ships two placeholders. A service that advertises a rail and settles
-  // nothing, without saying so, looks identical from outside to one that works —
-  // which is exactly the failure a demo must not walk into.
-  for (const make of [createHederaRail, createArcRail]) {
-    const placeholder = make();
-    assert.equal(placeholder.info.live, false, `${placeholder.id} claims to be live`);
+test('a rail that settles nothing says so, and one that settles says that instead', async () => {
+  // **Correction (2026-09-07, MOV-220):** this test used to assert that *both*
+  // rails were placeholders. `hedera-x402` now settles for real, so the property
+  // worth pinning is no longer "everything is a stub" but the one that was
+  // underneath it all along: **what a rail says on the wire matches what it
+  // does.** A service that advertises a rail and settles nothing, without saying
+  // so, looks identical from outside to one that works — and a live rail that
+  // still calls itself a stub is the same failure pointed the other way.
+  //
+  // `arc-usdc` is still MOV-225's placeholder and is checked as one.
+  const hedera = createHederaRail(offlineRailOptions(fakeFacilitatorFetch()));
+  assert.equal(hedera.info.live, true);
+  const live = await hedera.challenge({ resource: RESOURCE, description: 'x', priceUsd: 0.07 });
+  assert.equal(live.extra['turnstileSettlement'], 'live');
+  assert.equal(live.extra['turnstileNote'], undefined);
 
-    const requirement = await placeholder.challenge({ resource: RESOURCE, description: 'x', priceUsd: 0.07 });
-    assert.equal(requirement.extra['turnstileSettlement'], 'stub');
-    assert.match(String(requirement.extra['turnstileNote']), /PLACEHOLDER/);
-  }
+  const arc = createArcRail();
+  assert.equal(arc.info.live, false, `${arc.id} claims to be live`);
+  const stub = await arc.challenge({ resource: RESOURCE, description: 'x', priceUsd: 0.07 });
+  assert.equal(stub.extra['turnstileSettlement'], 'stub');
+  assert.match(String(stub.extra['turnstileNote']), /PLACEHOLDER/);
 });
 
 test('the advertised rails reconcile with the on-chain turnstile:rails record', async () => {
@@ -171,7 +184,7 @@ test('the advertised rails reconcile with the on-chain turnstile:rails record', 
   // RailInfo.ensRailToken.
   const ON_CHAIN = 'x402,usdc-arc';
 
-  const registry = new RailRegistry([createHederaRail(), createArcRail()]);
+  const registry = new RailRegistry([createHederaRail(offlineRailOptions(fakeFacilitatorFetch())), createArcRail()]);
   const advertised = registry.describe().map(info => info.ensRailToken).sort();
   assert.deepEqual(advertised, ON_CHAIN.split(',').sort());
 
@@ -179,11 +192,11 @@ test('the advertised rails reconcile with the on-chain turnstile:rails record', 
   assert.deepEqual(registry.describe().map(info => info.id).sort(), ['arc-usdc', 'hedera-x402']);
 });
 
-test('the two placeholder rails are routable against each other', async () => {
+test('the two shipped rails are routable against each other', async () => {
   // The property MOV-220 and MOV-225 both rely on: distinct (scheme, network),
   // so a payment can be attributed. If either issue changes its network to the
   // other's, this fails rather than the money going astray.
-  const registry = new RailRegistry([createHederaRail(), createArcRail()]);
+  const registry = new RailRegistry([createHederaRail(offlineRailOptions(fakeFacilitatorFetch())), createArcRail()]);
   const { accepts, failed } = await registry.challengeAll({ resource: RESOURCE, description: 'x', priceUsd: 0.07 });
   assert.deepEqual(failed, []);
   assert.equal(accepts.length, 2);

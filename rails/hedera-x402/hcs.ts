@@ -66,7 +66,12 @@ export interface HcsSubmitResult {
 }
 
 export interface HcsReceiptTopicOptions {
-  topicId?: string;
+  /**
+   * `null` disables the topic outright, and is not the same as omitting it:
+   * omitting falls back to `HEDERA_RECEIPT_TOPIC_ID`, so a test run with `.env`
+   * sourced would write real messages to the real topic. Tests pass `null`.
+   */
+  topicId?: string | null;
   operatorId?: string;
   operatorKey?: string;
   mirrorNodeUrl?: string;
@@ -83,7 +88,7 @@ export class HcsReceiptTopic {
   private readonly doFetch: typeof globalThis.fetch;
 
   constructor(options: HcsReceiptTopicOptions = {}) {
-    this.topicId = options.topicId ?? process.env['HEDERA_RECEIPT_TOPIC_ID'] ?? null;
+    this.topicId = options.topicId !== undefined ? options.topicId : (process.env['HEDERA_RECEIPT_TOPIC_ID'] ?? null);
     this.operatorId = options.operatorId ?? process.env['HEDERA_OPERATOR_ID'] ?? null;
     this.operatorKey = options.operatorKey ?? process.env['HEDERA_OPERATOR_KEY'] ?? null;
     this.mirrorNodeUrl = (options.mirrorNodeUrl ?? process.env['HEDERA_MIRROR_NODE_URL'] ?? MIRROR_NODE_URL).replace(/\/+$/, '');
