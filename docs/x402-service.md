@@ -25,6 +25,16 @@ placeholder rails. Reproduce with `npm run serve` and `curl`, or read
 > pricing, `extra.resource`, the receipt lookup, and the whole Interoperability
 > section. `arc-usdc` is still a placeholder (MOV-225).
 >
+> **Correction (2026-09-07, MOV-225):** the sentence immediately above is now
+> false — `arc-usdc` settles USDC on Arc testnet through Circle Gateway
+> Nanopayments, `info.live` is `true` and `/health` reports `settlementLive:
+> true` for both rails. Two things in the Interoperability section deserve a
+> second look on this rail specifically: `settle()` returns an **authorization
+> id** rather than a transaction hash, because settlement is batched and
+> asynchronous; and Gateway requires a `paymentPayload.resource` that the x402
+> core `PaymentPayload` does not carry. Neither changes the wire format the rest
+> of this document describes. See `docs/arc-nanopayments.md`.
+>
 > For the live Hedera flow, the setup, and the on-chain transaction, read
 > **`docs/payment-flow.md`**. The transcript below is kept as the MOV-219
 > record rather than rewritten, because it is what the service did before any
@@ -34,7 +44,9 @@ placeholder rails. Reproduce with `npm run serve` and `curl`, or read
 402 flow, the header encoding and the receipts are real; no value moved. That was
 stated on the wire (`extra.turnstileSettlement: "stub"`) and at `/health`
 (`settlementLive: false`) rather than left for someone to discover. MOV-220
-brought Hedera/Blocky402; MOV-225 brings Arc.
+brought Hedera/Blocky402; MOV-225 brought Arc. **Both have now landed**, so this
+paragraph describes the state of the transcript below rather than the state of
+the service.
 
 ---
 

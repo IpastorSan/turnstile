@@ -21,8 +21,9 @@ That is why two settlement models this different fit down one code path:
 
 | | Hedera (MOV-220) | Arc (MOV-225) |
 |---|---|---|
-| Settles via | Blocky402, co-signing a partially-signed transaction | Circle / Arc Agent Stack facilitator |
-| Payer authorization | a transaction the payer part-signs | an authorization object |
+| Settles via | Blocky402, co-signing a partially-signed transaction | Circle Gateway, batching many authorizations into one transaction |
+| Payer authorization | a transaction the payer part-signs | an EIP-3009 authorization signed offchain |
+| What `settle()` returns | a consensus transaction id — final | an **authorization id**; the transaction hash arrives minutes later |
 | Payout account format | `0.0.10403961` | `0x0Adc…5F2` |
 
 Neither shape appears in `seller/service/`. Both live inside two `Record<string,
@@ -138,10 +139,15 @@ through Blocky402, `info.live` is `true`, and its challenges carry
 `extra.turnstileSettlement: 'live'`. See `docs/payment-flow.md` for the
 transaction. `arc-usdc` is unchanged and everything below still describes it.
 
+**Correction (2026-09-07, MOV-225):** and now neither is. Both rails settle real
+value, `info.live` is `true` on both, and both challenges carry
+`extra.turnstileSettlement: 'live'`. Everything below about *why* the placeholders
+existed is still the right explanation of the design; it is just history now.
+
 | Rail | State |
 |---|---|
 | `hedera-x402` | **live** — settles HBAR on Hedera testnet via Blocky402 (MOV-220) |
-| `arc-usdc` | placeholder — MOV-225 |
+| `arc-usdc` | **live** — settles USDC on Arc testnet via Circle Gateway Nanopayments (MOV-225). See `docs/arc-nanopayments.md` |
 
 ### What MOV-219 shipped
 
@@ -169,12 +175,16 @@ than an obviously fake one.
 resolved, and the first of them was **wrong**, not merely unverified. The
 `arc-usdc` rows are unchanged and still placeholders.
 
+**Correction (2026-09-07, MOV-225):** the sentence immediately above is now out
+of date — the `arc-usdc` rows are resolved too, and neither was wrong, only
+unverified. The payout row was already confirmed and is unchanged.
+
 | | Value as shipped | Status |
 |---|---|---|
 | `hedera-x402` network | ~~`eip155:296`~~ → **`hedera:testnet`** | **RESOLVED, and the old value was wrong.** Blocky402's `/supported` advertises Hedera under its own CAIP-2 namespace, and `@x402/hedera` accepts nothing else. A challenge on `eip155:296` is rejected with `network_mismatch` before anything is signed. Verified 2026-09-07 |
 | `hedera-x402` asset | ~~`PLACEHOLDER-hedera-testnet-usdc`~~ → **`0.0.0` (native HBAR)** | **RESOLVED.** Testnet USDC is `0.0.429274` (6 decimals) and the rail can settle it, but HTS needs association on both sides plus a faucet we do not control. HBAR needs none of it. See `docs/payment-flow.md` |
-| `arc-usdc` network | `eip155:0-PLACEHOLDER-arc` | **PLACEHOLDER**. Arc's CAIP-2 identifier is unknown to us as of 2026-09-07 |
-| `arc-usdc` asset | `PLACEHOLDER-arc-usdc` | **PLACEHOLDER**, deliberately not an address |
+| `arc-usdc` network | ~~`eip155:0-PLACEHOLDER-arc`~~ → **`eip155:5042002`** | **RESOLVED (MOV-225).** Verified 2026-09-07 two ways: `eth_chainId` on `https://rpc.testnet.arc.network` returns `0x4cef52`, and Circle Gateway's `/v1/x402/supported` advertises that CAIP-2 id. Note Arc also has a *second* name, `arcTestnet`, which is what the Circle SDK wants and which is **not** interchangeable — see `rails/arc-usdc/config.ts` |
+| `arc-usdc` asset | ~~`PLACEHOLDER-arc-usdc`~~ → **`0x3600000000000000000000000000000000000000`** | **RESOLVED (MOV-225)**, 6 decimals, off `/supported`. It is a system precompile rather than a deployed ERC-20, because **USDC is Arc's native gas token** |
 | `hedera-x402` payout | `0.0.10403961` (`HEDERA_PAYOUT_ACCOUNT`) | **Confirmed 2026-09-07** — it received a real payment |
 | `arc-usdc` payout | `0x0Adca6e14bA956201D221feC767e4f24194bf5F2` (`ARC_PAYOUT_ADDRESS`) | The `addr(60)` record on `liquidity.turnstile.eth`, read live off Sepolia 2026-09-07 |
 

@@ -20,7 +20,43 @@ actually best, and together they are one cold/warm/hot hierarchy.
 |---|---|---|---|---|
 | **Cold** | Ledger Key Ring (`wallet-cli ring`) | Seller operator identity; owns the ENSv2 name; seals upstream API keys | Once per lifecycle | Hot-key rotation, payout address change, price-ceiling raise |
 | **Warm** | Privy | Buyer **organization** wallet + mandate policy | Occasional | Issuing a mandate, raising a cap (quorum), adding an agent |
-| **Hot** | Circle / Arc Agent Stack | Buyer agent's spending wallet | Every query | Nothing. Spends *within* the mandate, holds zero native token (Paymaster) |
+| **Hot** | Circle / Arc Agent Stack | Buyer agent's spending wallet | Every query | Nothing. Spends *within* the mandate; **signs offchain and never submits a transaction**, so it pays exactly zero gas |
+
+**Correction (2026-09-07, MOV-225):** the Hot row previously read "holds zero
+native token (Paymaster)". That is **wrong on Arc, and not fixable by rewording**
+— it describes a mechanism that does not exist in this design.
+
+**Why it is wrong.** USDC *is* Arc's native gas token. `eth_getBalance(a)` and
+`USDC.balanceOf(a)` are two views of one balance at two precisions, and the
+ERC-20 view is the truncated one. Measured against a live Arc address on
+2026-09-07:
+
+```
+eth_getBalance   285144556003000000   (18 dp) = 0.285144556003 USDC
+USDC.balanceOf              285144   ( 6 dp) = 0.285144       USDC
+```
+
+So a wallet holding zero native token holds zero USDC and can pay nobody. There
+is no Paymaster anywhere in Turnstile, and there never was one — the word was
+carried over from a chain where gas and payment are different assets.
+
+**What is true, and is a stronger claim.** The hot wallet signs an EIP-3009
+authorization **offchain and never submits a transaction**, so it pays exactly
+zero gas. Circle Gateway's batcher submits, and pays. The evidence is the hot
+wallet's **nonce**: `eth_getTransactionCount` staying `0` across every settled
+payment is unforgeable on-chain proof that it never broadcast anything.
+`scripts/arc-paid-request.ts` prints it before and after every run.
+
+Its Gateway balance is funded by the **warm tier** calling
+`depositFor(amount, agent)` — the org wallet pays the deposit's gas and the
+resulting balance belongs to the agent. That is this table's own hierarchy
+expressed in one contract call: the hot key cannot deposit, cannot withdraw, and
+cannot widen its own allowance, because each of those is a transaction and a
+transaction needs gas it does not have.
+
+**What is unchanged:** every other row, and the invariant below the table. Only
+the mechanism named in the Hot row was wrong.
+
 
 The property that matters: **the key that spends can never raise its own limit.**
 
@@ -120,7 +156,7 @@ gated.
 | `identity/` | World Selfie Check, nullifier ↔ cold key binding |
 | `web/` | Next.js frontend and backend — market + seller pages, live ENS and discovery reads |
 | `docs/` | Architecture notes, submission copy, on-chain evidence |
-| `scripts/` | `wt.sh`, the worktree helper the git workflow runs on; Hedera setup and the end-to-end paid request |
+| `scripts/` | `wt.sh`, the worktree helper the git workflow runs on; the end-to-end paid request on each rail (`hedera-paid-request.ts`, `arc-paid-request.ts`) |
 
 ## Uniswap contributions
 

@@ -70,6 +70,9 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] Video **and/or** live demo link (ideally both); open source
 
 **Arc — Agentic ($1,667) + Launch ($3,500)**
+- [x] **A live agentic payment on Arc** — done (MOV-225). USDC on Arc testnet (`eip155:5042002`) through **Circle Gateway Nanopayments**, `@circle-fin/x402-batching@3.4.0`, facilitator `https://gateway-api-testnet.circle.com` with no API key. Seven payments settled 2026-09-07 — one at $0.07 and six at $0.000500 — from agent `0x0633a193017939Bb1eB242982397224c66948e2F`, whose **nonce stayed 0 throughout**: it signs EIP-3009 authorizations offchain and never submits a transaction, so it paid exactly zero gas. Transcript and verified/unverified table in `docs/arc-nanopayments.md`
+- [x] **The same query settles over both rails** — done (MOV-225). One run, one URL: Arc returned authorization `fa4ca648-863c-4f61-9a1e-2953eb789f7f`, Hedera returned `0.0.7162784@1788800327.098234984`, same verdict both times. `seller/service/no-chain-code.test.ts` fails the build if any file on the payment path names a chain, so this is enforced rather than asserted
+- [x] **Nanopayments, batched, with the transaction as evidence** — done (MOV-225). Six $0.000500 queries and the $0.07 query settled in **one** Arc transaction, [`0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1`](https://testnet.arcscan.app/tx/0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1) — block 60940635, 22 payments in it including other Gateway users', 0.133111 USDC, `from` = Circle's batcher `0xc73ef0d8…a884`, `to` = the GatewayWallet. A second run settled four more in [`0xe50b8be6…5c39`](https://testnet.arcscan.app/tx/0xe50b8be63a2fe102c70de3b62a43251fbfcac1d8ca93f9f1760dd3c7a7985c39) (block 60942503) — eleven settled payments in two transactions. Both runs' six-minute inline poll **expired before the batch landed**: Circle's batcher fires on its own schedule (2 to 15 minutes observed on one afternoon). **Do not script a demo around a fixed window** — run `npm run arc:receipts -- --ours --watch` as a second step
 - [ ] **State explicitly which bounty** each submission targets
 - [x] Working **frontend and backend** — done (MOV-230). Next.js 16 app in `web/`: market and seller pages server-rendered, plus `/api/sellers`, `/api/offer/:name` and `/api/health` as real routes over the discovery store and live Sepolia. Not a static export. **Still not deployed** — see `docs/deploy.md`
 - [x] **Architecture diagram** (§2.1 + §2.2) — done (MOV-230). `docs/architecture.svg` + `.png`, embedded in `README.md`, walked through in `docs/architecture.md`. Panel A the cold/warm/hot key tiers, Panel B discovery → offer → 402 → rail → answer
@@ -653,3 +656,84 @@ judges should read.
 
 **Not done, deliberately:** no v4 hook. Scope decision recorded in the issue —
 the marginal prize value does not justify the Solidity time.
+---
+
+## MOV-225 — the Arc rail: Circle Gateway Nanopayments
+
+Appended 2026-09-07. Append-only file: this block corrects earlier ones by
+quoting them rather than editing them.
+
+### The Arc rail is no longer a placeholder
+
+`rails/arc-usdc/` settles USDC on **Arc testnet** through **Circle Gateway
+Nanopayments** (`@circle-fin/x402-batching@3.4.0`). `info.live` is `true` and
+every challenge carries `extra.turnstileSettlement: "live"`.
+
+**Correction (2026-09-07, MOV-225) to the MOV-219 block above.** Its "Not
+claimed, so nobody ticks it by mistake" list said the Arc rail's network id was a
+**deliberate placeholder** (`eip155:0-PLACEHOLDER-arc`) and that "Arc's CAIP-2
+identifier is unverified". Both were true when written and both are now
+resolved. Arc testnet is **`eip155:5042002`**, verified two independent ways on
+2026-09-07: `eth_chainId` on `https://rpc.testnet.arc.network` returns
+`0x4cef52`, and Circle Gateway's `/v1/x402/supported` advertises a kind on
+`eip155:5042002`. The asset placeholder is resolved too — USDC on Arc testnet is
+`0x3600000000000000000000000000000000000000`, six decimals.
+
+**Correction (2026-09-07, MOV-225) to the MOV-220 correction above.** It says
+"The **Arc half** of that list is unchanged and still accurate — `arc-usdc` is
+still a placeholder on a deliberately fake network id, and MOV-225 owns it." That
+was accurate when written; it is now false in both halves. Both rails are live,
+and `/health` reports `settlementLive: true` for both.
+
+### Settled, and the batch transaction
+
+Seven payments, one transaction:
+[`0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1`](https://testnet.arcscan.app/tx/0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1).
+22 payments in it in total, 0.133111 USDC, gas paid by Circle's batcher rather
+than by any payer. The agent's nonce was 0 before, during and after.
+
+Full transcript, the verified/not-verified table, and six rough edges in Circle's
+SDK and API: **`docs/arc-nanopayments.md`**.
+
+**Correction (2026-09-07, MOV-225) to the MOV-220 block's closing line.** It
+ends "**`arc-usdc` is untouched by this issue** and still settles nothing." True
+of MOV-220; superseded here. Everything else in the MOV-220 block stands
+unchanged — the Hedera transaction, the HCS topic and the HashScan caveat are
+not affected by this issue.
+
+### The "holds zero native token via a Paymaster" claim was wrong everywhere
+
+`CLAUDE.md`, `README.md` and `docs/architecture.md` all carried a Hot-tier row
+reading *"Nothing. Spends within the mandate, holds zero native token
+(Paymaster)."* **All three are corrected in this branch**, each with a dated
+note in place rather than a silent edit.
+
+It is not a wording problem. **USDC is Arc's native gas token**, so
+`eth_getBalance(a)` and `USDC.balanceOf(a)` are two views of one balance at two
+precisions. Measured on a live Arc address, 2026-09-07:
+
+```
+eth_getBalance   285144556003000000   (18 dp) = 0.285144556003 USDC
+USDC.balanceOf              285144   ( 6 dp) = 0.285144       USDC
+```
+
+Zero native is zero USDC, which cannot pay anyone. There is no Paymaster in
+Turnstile and there never was one.
+
+The replacement claim is stronger and falsifiable: the hot wallet **signs
+offchain and never submits a transaction**, so it pays exactly zero gas, and the
+proof is that `eth_getTransactionCount(agent)` stays **0** across every settled
+payment.
+
+### Item 10 — the Arc Discord question is partly answered by the product
+
+Item 10 in the Day-1 table asks whether Arc's "deployment-ready by 30 Sep"
+accepts a testnet + mainnet config. **Still unanswered by Arc** — nobody has
+replied. What is now known is that the config difference is small enough to be
+mechanical: `@circle-fin/x402-batching` covers Arc mainnet and Arc testnet
+through the same `CHAIN_CONFIGS` table, differing in chain id, Gateway host
+(`gateway-api.circle.com` vs `gateway-api-testnet.circle.com`) and GatewayWallet
+address. `rails/arc-usdc/config.ts` holds all three as named constants. Arc
+mainnet has **no public RPC** (Circle's own SDK comment says partners must supply
+a private one), which is a real obstacle to the Launch track and is not something
+we can solve ourselves.

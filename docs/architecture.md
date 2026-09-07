@@ -23,7 +23,43 @@ actually best, and together they are one cold/warm/hot hierarchy.
 |---|---|---|---|---|
 | **Cold** | Ledger Key Ring (`wallet-cli ring`) | Seller operator identity; owns the ENSv2 name; seals upstream API keys | Once per lifecycle | Hot-key rotation, payout address change, price-ceiling raise |
 | **Warm** | Privy | Buyer **organization** wallet + mandate policy | Occasional | Issuing a mandate, raising a cap (quorum), adding an agent |
-| **Hot** | Circle / Arc Agent Stack | Buyer agent's spending wallet | Every query | Nothing. Spends *within* the mandate, holds zero native token (Paymaster) |
+| **Hot** | Circle / Arc Agent Stack | Buyer agent's spending wallet | Every query | Nothing. Spends *within* the mandate; **signs offchain and never submits a transaction**, so it pays exactly zero gas |
+
+**Correction (2026-09-07, MOV-225):** the Hot row previously read "holds zero
+native token (Paymaster)". That is **wrong on Arc, and not fixable by rewording**
+— it describes a mechanism that does not exist in this design.
+
+**Why it is wrong.** USDC *is* Arc's native gas token. `eth_getBalance(a)` and
+`USDC.balanceOf(a)` are two views of one balance at two precisions, and the
+ERC-20 view is the truncated one. Measured against a live Arc address on
+2026-09-07:
+
+```
+eth_getBalance   285144556003000000   (18 dp) = 0.285144556003 USDC
+USDC.balanceOf              285144   ( 6 dp) = 0.285144       USDC
+```
+
+So a wallet holding zero native token holds zero USDC and can pay nobody. There
+is no Paymaster anywhere in Turnstile, and there never was one — the word was
+carried over from a chain where gas and payment are different assets.
+
+**What is true, and is a stronger claim.** The hot wallet signs an EIP-3009
+authorization **offchain and never submits a transaction**, so it pays exactly
+zero gas. Circle Gateway's batcher submits, and pays. The evidence is the hot
+wallet's **nonce**: `eth_getTransactionCount` staying `0` across every settled
+payment is unforgeable on-chain proof that it never broadcast anything.
+`scripts/arc-paid-request.ts` prints it before and after every run.
+
+Its Gateway balance is funded by the **warm tier** calling
+`depositFor(amount, agent)` — the org wallet pays the deposit's gas and the
+resulting balance belongs to the agent. That is this table's own hierarchy
+expressed in one contract call: the hot key cannot deposit, cannot withdraw, and
+cannot widen its own allowance, because each of those is a transaction and a
+transaction needs gas it does not have.
+
+**What is unchanged:** every other row, and the invariant below the table. Only
+the mechanism named in the Hot row was wrong.
+
 
 ### The invariant
 
@@ -46,7 +82,7 @@ permissions, not by a policy document. See
 |---|---|
 | Cold | **Live.** `liquidity.turnstile.eth` on Sepolia, resolver `0xb1B4Da2C49814c8CbF975E7a48fbB014EA0b075B`, operator proof `ledger-key-ring` published as a resolver record. |
 | Warm | **Not built.** MOV-228 (Privy) has not been started. `/mandate` in the web app is a labelled placeholder. |
-| Hot | **Not built.** The Arc/Circle spending wallet lands with the rails work. |
+| Hot | **Built (MOV-225), and it is the Arc rail's buyer half.** `buyer/watchdog/arc-signer.ts` is the spending wallet: it signs EIP-3009 authorizations against Circle Gateway and submits nothing, so its nonce stays 0. Funded by the warm tier through `depositFor`. **Correction (2026-09-07, MOV-225):** this row previously read "Not built. The Arc/Circle spending wallet lands with the rails work." — that was accurate when written and the rails work has now landed. The **Warm** row above is unchanged and still accurate: MOV-228 (Privy) is not started, and the `depositFor` caller is a plain key today rather than an org wallet with a quorum. |
 
 ---
 
@@ -121,7 +157,6 @@ runs as unreachable document origins come back.)*
 - ~~**Steps 04–06 have never been executed end to end.** There is no settlement
   receipt anywhere in the system, which is also why discovery's ranking is a
   labelled placeholder rather than settled volume.~~
-
   **Correction (2026-09-07, MOV-229):** the first sentence is wrong and the
   second is half wrong. Steps 04–06 *have* run end to end, more than once —
   MOV-220 settled real HBAR through Blocky402, and
@@ -137,5 +172,21 @@ runs as unreachable document origins come back.)*
   so `settlement_receipt` is empty and `find_sellers` still reports
   `ranking.placeholder: true`. `npm run ingest-receipts` closes that gap and the
   ranking flips to `settled_volume` on its own.
-- **The warm and hot tiers are drawn from the design, not from running code.**
-  Panel A describes where each vendor sits; only the cold tier is deployed.
+
+  **Addition (2026-09-07, MOV-225):** and on the Arc rail too, which the MOV-229
+  note above predates. One run paid the **same query over both rails** — Arc
+  returned authorization `fa4ca648-863c-4f61-9a1e-2953eb789f7f`, Hedera returned
+  `0.0.7162784@1788800327.098234984`, same verdict. Eleven Arc payments have
+  settled in two batch transactions; see `docs/arc-nanopayments.md`. The ranking
+  sentence is unaffected: Arc receipts are not ingested either.
+- ~~**The warm and hot tiers are drawn from the design, not from running code.**
+  Panel A describes where each vendor sits; only the cold tier is deployed.~~
+
+  **Correction (2026-09-07, MOV-225):** the **hot** tier is running code —
+  `buyer/watchdog/arc-signer.ts` signs the authorizations that bought real
+  answers, and its nonce is 0 on Arc testnet, which is the diagram's claim about
+  it made checkable. The **warm** tier is still not Privy: `scripts/arc-setup.ts`
+  calls `depositFor()` from a plain key where an org wallet with a quorum belongs.
+  So the *position* in Panel A is real and the *vendor* is not, and MOV-228
+  replaces the key rather than the mechanism. Only the cold tier is deployed in
+  the sense of being on a public network under a device-held key.
