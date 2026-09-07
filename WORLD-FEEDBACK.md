@@ -184,3 +184,11 @@ What cost time:
   confidential template shows the enclave, and stitching them was guesswork that
   happened to be right. One example doing both would be the single most useful
   addition.
+- **A missing `.env` file reports as a missing credential.** With no `.env` at
+  the CRE project root, `cre workflow simulate` fails with `failed to replace
+  secret names with environment variables: environment variable X for secret
+  value not found, please export it to your environment` — and exporting `X` in
+  the shell does not fix it, because the file takes precedence over the
+  environment. Two different problems produce one message, and the message
+  recommends the fix that does not work. "No .env found at <path>; -e <path> to
+  point elsewhere" would be unambiguous.
