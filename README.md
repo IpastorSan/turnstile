@@ -26,8 +26,47 @@ The property that matters: **the key that spends can never raise its own limit.*
 
 ## Architecture
 
-_Placeholder — filled in as components land. Arc requires an architecture
-diagram; it is drawn from this section plus the layout below._
+![Turnstile architecture: the three key tiers, and the request path](./docs/architecture.png)
+
+Two panels: where the keys sit, and what happens when an agent buys an answer.
+Full walkthrough, including which steps are live today and which are not, in
+[`docs/architecture.md`](./docs/architecture.md).
+
+The short version of the request path:
+
+```
+01 Discover  →  02 Read the offer  →  03 Ask  →  04 402  →  05 Pay  →  06 Answer
+   ERC-8004      ENSv2 resolver       MCP        quote     x402 /      result, not
+   Substreams    turnstile:price                           USDC on Arc  the method
+```
+
+**Steps 01 and 02 are live and browsable.** The market and seller pages run on
+them against real registrations. Steps 03–06 are the settlement half and are not
+built yet; `docs/architecture.md` says which issue delivers each.
+
+## The web app
+
+```bash
+cd web && npm install
+npm run dev        # http://localhost:3210
+```
+
+| Route | What it does |
+|---|---|
+| `/` | Market. All 197 real ERC-8004 registrations across Base, mainnet and Sepolia, filterable by capability, chain, price ceiling and x402 support. |
+| `/seller/[name]` | One seller's ENSv2 records, read from Sepolia on every request. Nothing cached, nothing hard-coded. |
+| `/mandate`, `/onboard` | Labelled placeholders. Blocked on MOV-228 and MOV-223; deliberately not faked. |
+| `GET /api/sellers` | The discovery query over HTTP — the same engine the MCP tool calls. |
+| `GET /api/offer/:name` | One seller's offer, read live from chain. |
+| `GET /api/health` | Which of the two data dependencies this deployment can actually reach. |
+
+`SEPOLIA_RPC_URL` must be set for the seller page to read anything; without it
+the page says so rather than serving a cached price.
+
+**One agent in 197 publishes a price anyone can read, and it is ours.** That
+contrast is the product, so the market page gives "no knowable price" three
+distinct states — posted on chain, askable but unanswered, nothing published —
+instead of a blank cell. See [`docs/discovery-api.md`](./docs/discovery-api.md).
 
 ## Repository layout
 
@@ -41,7 +80,7 @@ diagram; it is drawn from this section plus the layout below._
 | `buyer/` | Mandate policy, Privy org wallet, the watchdog agent |
 | `mcp-turnstile/` | MCP server + `SKILL.md` — the reusable-infrastructure artifact |
 | `identity/` | World Selfie Check, nullifier ↔ cold key binding |
-| `web/` | Next.js frontend and backend |
+| `web/` | Next.js frontend and backend — market + seller pages, live ENS and discovery reads |
 | `docs/` | Architecture notes, submission copy, on-chain evidence |
 | `scripts/` | `wt.sh`, the worktree helper the git workflow runs on |
 
