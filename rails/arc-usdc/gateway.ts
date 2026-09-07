@@ -173,6 +173,9 @@ function withResource(payload: PaymentPayload, resource: string): Record<string,
   };
 }
 
+/** Gateway rejects a larger page with a 400 rather than clamping it. */
+export const MAX_PAGE_SIZE = 100;
+
 export class CircleGateway {
   readonly baseUrl: string;
   private readonly facilitator: Pick<BatchFacilitatorClient, 'verify' | 'settle' | 'getSupported'>;
@@ -269,6 +272,10 @@ export class CircleGateway {
   async searchTransfers(params: { from?: string; to?: string; nonce?: string; network?: string; pageSize?: number } = {}): Promise<GatewayTransfer[]> {
     const query = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) if (v !== undefined) query.set(k, String(v));
+    // Gateway caps this at 100 and answers a **400** — not a clamped page — for
+    // anything larger. Verified 2026-09-07. Clamped here so a caller asking for
+    // more gets fewer results rather than an exception.
+    if (params.pageSize !== undefined) query.set('pageSize', String(Math.min(params.pageSize, MAX_PAGE_SIZE)));
     const body = await this.getJson<{ transfers?: GatewayTransfer[] }>(`/v1/x402/transfers?${query}`);
     return body?.transfers ?? [];
   }
