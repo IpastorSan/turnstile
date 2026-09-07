@@ -4,8 +4,9 @@
   "type": "module",
   "description": "Turnstile — the JS/TS half: Substreams sink, discovery API, MCP server.",
   "license": "MIT",
+  "comment": "No build step: Node runs the .ts files directly (type stripping, on by default since 22.18), and node:sqlite is built in. viem is used for ENS reads only.",
   "engines": {
-    "node": ">=22.6"
+    "node": ">=22.18"
   },
   "scripts": {
     "sink": "node graph/sink/sink.ts",
