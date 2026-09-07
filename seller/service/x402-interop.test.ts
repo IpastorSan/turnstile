@@ -20,7 +20,7 @@ import { decodePaymentResponseHeader } from '@x402/core/http';
 import { validatePaymentPayload, validatePaymentRequired } from '@x402/core/schemas';
 
 import { createPaidFetch, enforceMandate } from '../../buyer/watchdog/pay.ts';
-import type { Mandate } from '../../buyer/watchdog/pay.ts';
+import type { SpendingLimits } from '../../buyer/watchdog/pay.ts';
 import { createStubSigner } from '../../buyer/watchdog/stub-signer.ts';
 import type { PaymentRequirement } from '../../rails/PaymentRail.ts';
 import { createApp } from './app.ts';
@@ -50,7 +50,7 @@ test('the 402 body validates against the x402 SDK schema', async () => {
 
 test('an unmodified @x402/fetch client can pay this server', async () => {
   await withServer(app(), async baseUrl => {
-    const mandate: Mandate = { preferredRails: ['rail-one', 'rail-two'], maxPerPaymentUsd: 0.1 };
+    const mandate: SpendingLimits = { preferredRails: ['rail-one', 'rail-two'], maxPerPaymentUsd: 0.1 };
     const pay = createPaidFetch({ mandate, signers });
 
     const res = await pay(`${baseUrl}/analyze/${POOL}`);

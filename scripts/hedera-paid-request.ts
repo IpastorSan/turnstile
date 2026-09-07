@@ -25,7 +25,7 @@
 import { decodePaymentRequiredHeader, decodePaymentResponseHeader, encodePaymentSignatureHeader } from '@x402/core/http';
 
 import { createPaidFetch } from '../buyer/watchdog/pay.ts';
-import type { Mandate } from '../buyer/watchdog/pay.ts';
+import type { SpendingLimits } from '../buyer/watchdog/pay.ts';
 import { createHederaSigner } from '../buyer/watchdog/hedera-signer.ts';
 import { hashscanTopicUrl, hashscanTransactionUrl } from '../rails/hedera-x402/config.ts';
 import { HcsReceiptTopic, createHederaRail } from '../rails/hedera-x402/index.ts';
@@ -56,7 +56,7 @@ const registry = new RailRegistry([createHederaRail(), createArcRail()]);
 const app = createApp({ registry, analyst: useFixture ? fakeAnalyst() : liveAnalyst() });
 
 const signer = await createHederaSigner();
-const mandate: Mandate = {
+const mandate: SpendingLimits = {
   preferredRails: ['hedera-x402'],
   maxPerPaymentUsd: Number(process.env['BUYER_MAX_PER_PAYMENT_USD'] ?? 0.5),
 };

@@ -53,7 +53,7 @@ import { decodePaymentRequiredHeader, decodePaymentResponseHeader, encodePayment
 import { isBlockedHost } from '../graph/sink/card.ts';
 import { sellerDeclaredUsd } from './offer.ts';
 import { createPaidFetch, enforceMandate, requirementCostUsd } from '../buyer/watchdog/pay.ts';
-import type { Mandate, MandateDecision, RailSigner } from '../buyer/watchdog/pay.ts';
+import type { MandateDecision, RailSigner, SpendingLimits } from '../buyer/watchdog/pay.ts';
 import type { PaymentRequirement } from '../rails/PaymentRail.ts';
 import { loadSigners } from './signers.ts';
 import type { SignerGap } from './signers.ts';
@@ -100,7 +100,7 @@ export interface PurchaseResult {
   paidVia: 'x402-fetch' | 'manual' | null;
   /** The entry the mandate picked, and every entry it refused, with reasons. */
   decision: (MandateDecision & { costUsd: number | null }) | null;
-  mandate: Mandate;
+  mandate: SpendingLimits;
   settlement: Settlement | null;
   /** The seller's response body, parsed as JSON when it is JSON. */
   answer: unknown;
@@ -249,7 +249,7 @@ export async function purchase(options: PurchaseOptions): Promise<PurchaseResult
 
   const loaded = options.signers ? { signers: [...options.signers], gaps: [] as SignerGap[] } : await loadSigners();
   const signers = loaded.signers;
-  const mandate: Mandate = {
+  const mandate: SpendingLimits = {
     preferredRails: options.rails ? [...options.rails] : signers.map((s) => s.railId),
     maxPerPaymentUsd: options.maxPriceUsd,
   };
