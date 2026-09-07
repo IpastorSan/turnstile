@@ -279,3 +279,62 @@ still open for the reason MOV-218 gave. Evidence for all of it:
 - `node --test`: 36 passing. Nothing under `contracts/` was touched, so the 66
   `forge test` cases from MOV-218 are unaffected — and Foundry is not installed
   on this machine, so they were not re-run.
+
+### MOV-216 — Liquidity Analyst: Subgraph MCP + Uniswap quotes (2026-09-07)
+
+Nothing is ticked in place. The Graph rows are shared with MOV-215, MOV-221 and
+MOV-222 and still need a single owner, per MOV-221's note. Evidence for
+everything below is in `seller/analyst/README.md` and reproducible with
+`node seller/analyst/analyst-cli.ts --top 3`.
+
+- **"Compose ≥2 Graph products"** — now genuinely satisfied by this branch on
+  its own, which the earlier notes could not claim. `seller/analyst/` composes
+  **the Subgraph MCP server** (`graphops/subgraph-mcp`, hosted at
+  `subgraphs.mcp.thegraph.com/sse`) with **our deployed subgraph**, and reaches
+  a third product — the decentralized network's gateway — through the MCP
+  server's `execute_query_by_subgraph_id`. Verified live against Messari's
+  Uniswap v3 Arbitrum deployment `FQ6JYszEKApsBpAmiHesRsd9Ygc6mzmpNRANeVQFYoVX`
+  at Arbitrum block 502,694,066.
+- **"Build on a standardized schema"** — strengthened, not newly claimed. The
+  analyst runs **one GraphQL document** against our subgraph and against other
+  teams' Messari deployments with no branching, so adding a venue is a subgraph
+  id rather than an adapter. That is the shared schema paying off on the
+  *consumer* side; MOV-215 showed it on the producer side.
+- **"Live data from a Graph provider"** — satisfied, and now with a second live
+  source to cross-check it. Every verdict prints the subgraph head block and how
+  far behind chain head it is, plus the mainnet block its Uniswap quotes were
+  taken at. Nothing is fixtured; the tests are offline but they score recorded
+  inputs, they do not stand in for the data.
+- **"Meaningful work — reasoning/decisions, not a raw query dump"** — this is
+  the row the analyst was built for. Output is a rated verdict with seven
+  signals, each carrying a claim, the reasoning behind it, and the numbers it
+  rests on. The demonstration to use: the top three pools by TVL on our
+  subgraph all come back `AVOID`, and the #1 by TVL — a $1.9 trillion
+  "USDT/USDT" pool built on a fake 18-decimal USDT at
+  `0x83cff3334e2d00d98416ad72fc383b77a242e169` — cannot fill a $1,000 trade.
+  A raw query result ranks it first.
+- **"Tooling must be reusable infrastructure, not one end-user app"** —
+  satisfied. `analyzePool()` is importable with no HTTP server, no database and
+  no other part of Turnstile; the CLI is a front end over it, not the product.
+  The scoring module is separately importable and pure.
+- **"Clear README so judges can run it"** — `seller/analyst/README.md`, with the
+  exact commands and real output.
+
+**Uniswap ($3,000) — `FEEDBACK.md` in the repo:** satisfied by this branch.
+Four dated entries under *Trading API and QuoterV2 — MOV-216*, each re-verified
+before writing, plus a section on what worked well. The **form at
+https://developers.uniswap.org/hackathon-feedback is still unsubmitted** and is
+a separate row — the file alone does not win the prize.
+
+**Not claimed, so nobody ticks it by mistake:**
+
+- The **Uniswap Trading API is unverified end to end.** It needs an API key we
+  do not have (`401 Unauthenticated api key or session`). Live depth comes from
+  on-chain QuoterV2 instead, which is Uniswap's own quoting API and arguably the
+  better instrument for an LP question — but if a submission claims "uses the
+  Uniswap API", say which one.
+- The deployed subgraph was **12.6 days behind chain head** at 2026-09-07 13:44
+  UTC and still backfilling. Verdicts are honest about it (lag is printed and
+  costs confidence), but a demo recorded before it catches up will show a
+  two-week-old history beside a current quote. Check `_meta.block.timestamp`
+  before filming.
