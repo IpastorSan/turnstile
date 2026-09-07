@@ -98,6 +98,17 @@ EIP-8004 registration-v1 has no price field and a survey of 1,200 live
 registrations found zero carrying one. `x402_support` is the real signal, and it
 means *ask the endpoint*. See `../../docs/discovery-api.md`.
 
+## Tests
+
+```bash
+npm test        # node --test, scoped to our own directories
+npm run typecheck
+```
+
+The scoping matters: a bare `node --test` from the repo root walks into
+`contracts/lib/contracts-v2/` and runs the ENS submodule's 2,000-odd tests,
+most of which fail outside their own toolchain.
+
 ## Commands
 
 | Command | What it does |
