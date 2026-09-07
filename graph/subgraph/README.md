@@ -317,6 +317,29 @@ archive-capable mainnet RPC (a non-archive endpoint stalls silently on the
 first `eth_call` into historical state, which is worth knowing) and a copy of
 `subgraph.yaml` with a recent `startBlock`.
 
+## Deployed
+
+**Studio:** `turnstile-uniswap-v-3-messari` (note the hyphen Studio inserts into `v-3`)
+**Query endpoint:** `https://api.studio.thegraph.com/query/1758854/turnstile-uniswap-v-3-messari/v0.1.0`
+**Deployed** 2026-09-07, `startBlock: 25810000` (~2 weeks of history, chosen so closed daily
+snapshots exist without a multi-day full-history sync).
+
+First verification, 181 blocks in, `hasIndexingErrors: false`:
+
+| Pool | TVL USD | Volume USD | Swaps |
+|---|---|---|---|
+| Uniswap v3 USDC/WETH 0.05% | 103,283,728 | 4,519,676 | 255 |
+| Uniswap v3 WETH/USDT 0.3% | 114,743,982 | 3,793,409 | 63 |
+| Uniswap v3 USDC/WETH 0.01% | 4,628,677 | 1,017,738 | 409 |
+
+**Why a recent `startBlock` still yields real data** — worth stating, because it looks wrong
+at first glance. Uniswap v3's factory deployed at block 12,369,621, so a start block 13.4M
+blocks later sees almost no `PoolCreated` events. The high-volume pools are nonetheless
+indexed because they are declared as **explicit `dataSources`**, not only reached through the
+factory template; `getOrCreatePool` creates the entity lazily on the first event it sees, and
+ETH/USD is bootstrapped with a `slot0()` call so the opening block prices correctly rather
+than at zero. Full history would add the long tail of pools at the cost of days of syncing.
+
 ## Build and deploy
 
 ```bash
@@ -327,7 +350,7 @@ npm run build
 # Studio
 export GRAPH_DEPLOY_KEY=...
 npx graph auth "$GRAPH_DEPLOY_KEY"
-npx graph deploy turnstile-uniswap-v3-messari --version-label v0.0.1
+npx graph deploy turnstile-uniswap-v-3-messari --version-label v0.1.0
 ```
 
 > **Status.** The subgraph builds and its IPFS bundle uploads cleanly
