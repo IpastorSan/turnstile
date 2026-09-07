@@ -16,5 +16,5 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["graph/sink/**/*.ts", "seller/**/*.ts", "mcp-turnstile/**/*.ts"]
+  "include": ["graph/sink/**/*.ts", "seller/**/*.ts", "rails/**/*.ts", "buyer/**/*.ts", "mcp-turnstile/**/*.ts"]
 }

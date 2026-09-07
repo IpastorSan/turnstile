@@ -62,6 +62,42 @@ The payout is deliberately the name's `addr()` record rather than a
 means "send funds here"; hiding the most security-relevant value behind a schema
 nobody else reads would have been the wrong trade.
 
+### `turnstile:rails` — what the two tokens actually name
+
+**Clarification (2026-09-07, MOV-219):** nothing in this file was wrong — every
+value in the table above was re-read live off Sepolia while implementing the
+service and all of them still match, `turnstile:rails` included. What was
+*missing* is what its two tokens map to, and the answer is not obvious enough to
+leave implicit while MOV-220 and MOV-225 are about to build against it.
+
+```
+turnstile:rails = "x402,usdc-arc"
+```
+
+| Token | Rail | Directory |
+| --- | --- | --- |
+| `x402` | Hedera testnet, settled through Blocky402 | `rails/hedera-x402/` |
+| `usdc-arc` | Circle / Arc Agent Stack USDC | `rails/arc-usdc/` |
+
+Two traps in that mapping:
+
+1. **`x402` names the protocol, not a chain**, and *both* rails are x402. Read on
+   its own the token says nothing about which rail it is; it means Hedera only by
+   convention.
+2. **`usdc-arc` is the reverse of the directory name** `arc-usdc`. Easy to
+   mistype, and a typo here is a seller nobody can discover.
+
+`RailInfo.ensRailToken` carries the token, `PaymentRail.id` carries the rail id,
+and `rails/registry.test.ts` asserts that the set of `ensRailToken` values equals
+this record's tokens — so the record and the live 402 cannot drift apart without
+a test going red.
+
+**This record is cold-key-written**, per the table above, so it cannot be
+corrected from the hot key. Rewriting `x402` to something that names its chain
+would need a Ledger session, which is a judgement call for MOV-220 rather than
+something to do in passing. The code was matched to the record instead, because
+a buyer that discovered us through ENS filters on these exact tokens.
+
 ### The ENSIP-25 key, decoded
 
 ```

@@ -2,6 +2,98 @@
 
 Two things live here: the x402-gated HTTP service, and the discovery API.
 
+## `app.ts` / `x402.ts` — the service that sells the verdict
+
+`npm run serve`. Express, over `seller/analyst/`, gated by x402 (MOV-219).
+
+| Route | Price | |
+|---|---|---|
+| `GET /health` | free | what this seller sells, accepts, and whether settlement is live |
+| `GET /analyze/:pool` | **$0.07** | the Liquidity Analyst verdict, from the subgraph |
+| `GET /analyze/:pool/attested` | **$0.35** | the verdict, a live depth ladder, and the scorer input behind both |
+| `GET /receipts/:transaction` | free | audit-trail lookup, across every rail |
+
+### The flow
+
+```
+GET /analyze/0x88e6…                    -> 402  PAYMENT-REQUIRED: <base64>
+GET /analyze/0x88e6…  PAYMENT-SIGNATURE -> 200  PAYMENT-RESPONSE: <base64>
+```
+
+x402 **v2**, so the headers are `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE` and
+`PAYMENT-RESPONSE` — not v1's `X-PAYMENT` / `X-PAYMENT-RESPONSE`. The challenge
+goes in the header *and* in the JSON body: the header is what the protocol reads,
+the body is what a human with `curl` sees, and they are the same object. A full
+transcript is in `docs/x402-service.md`.
+
+Ordering is **verify -> do the work -> settle**. A payer whose payment is bad is
+refused before any work happens, and value moves only once there is an answer to
+hand over. If settlement then fails, the answer is withheld and the response is a
+402 naming the failure — we neither give the work away nor charge for something
+undelivered.
+
+### Two tiers, and the difference is not a rate limit
+
+The premium tier returns the complete `AnalystInput` alongside the verdict.
+`seller/analyst/scoring.ts` is a *pure* function of that object, so a buyer
+holding it can re-derive the verdict and get the same bytes — the claim is
+checkable rather than merely asserted.
+
+That is also the MOV-227 seam, and it needs no new tier: the Chainlink TEE's
+argument and the premium payload are one object. `attestation.status` reads
+`'unattested'` today and is where the attestation lands.
+
+The standard tier answers from the subgraph alone. Skipping the live quote is
+most of why it is cheaper, and the verdict *says* it is flying blind and loses
+confidence for it, rather than quietly scoring on history.
+
+### Prices are read, not invented
+
+`$0.07` is the `turnstile:price` text record on `liquidity.turnstile.eth`,
+verified live on Sepolia 2026-09-07. `discovery.ts` reports that record as an
+*exact* price (`priceSource: 'turnstile'`), so a service charging anything else
+would make the discovery layer a liar.
+
+`$0.35` is under the `turnstile:price-ceiling` of `0.50` on the same name.
+`assertWithinCeiling()` runs at construction, so a seller that would overcharge
+refuses to start rather than finding out on the first sale. Raising that ceiling
+is a **cold-key** operation — the `CLAUDE.md` invariant applied to the seller
+side.
+
+### The 402 advertises both rails
+
+`accepts[]` carries one entry per rail, and the buyer's mandate picks. See
+`rails/README.md` for the seam, and `buyer/watchdog/README.md` for the choosing.
+
+**As of MOV-219 both rails are placeholders that settle nothing**, and they say
+so: `/health` reports `settlementLive: false`, and every `accepts[]` entry
+carries `extra.turnstileSettlement: 'stub'`. MOV-220 brings Hedera/Blocky402;
+MOV-225 brings Arc.
+
+### No chain-specific code lives here
+
+The service speaks US dollars and opaque strings; rails speak chains. This is
+asserted mechanically by `no-chain-code.test.ts` rather than left to review — no
+file on the payment path may name a chain, vendor, asset or signature format, and
+exactly one file (`server.ts`, the composition root) may import a concrete rail.
+`discovery.ts` is exempt by name and for a reason: it reads a multi-chain agent
+registry, so chain identifiers are its subject matter rather than a leak.
+
+### Why the middleware is ours and not `@x402/express`'s
+
+The SDK splits challenge construction into `parsePrice(price, network)` and
+`enhancePaymentRequirements(...)`, and **neither is given the resource being
+sold** — so a rail cannot bind its challenge to the URL it was issued for, which
+is what stops a payment authorized for the $0.07 route being replayed against the
+$0.35 one. Adopting that split would also have made the SDK's scheme-server shape
+(asset transfer methods, payment flows, facilitator `/supported` sync) the thing
+MOV-220 and MOV-225 implement, instead of four methods.
+
+Header codecs and zod schemas still come from `@x402/core`, so the bytes on the
+wire are the specification's rather than our reading of it, and
+`x402-interop.test.ts` proves it the way that counts: an **unmodified
+`@x402/fetch` client** walks the whole flow against this server and gets a 200.
+
 ## `discovery.ts` — find and rank sellers
 
 `findSellers(db, query)` answers "which agents can do X, for under $Y, and which
@@ -80,7 +172,10 @@ can tell a declared capability from a word in a sentence.
 
 ### Seams left open
 
-- **`settledVolume`** — MOV-220. Described above.
+- **`settledVolume`** — MOV-220. Described above. The lookup it needs now
+  exists as `PaymentRail.receipt(id)` and `RailRegistry.findReceipt(...)`
+  (MOV-219); what is still missing is a rail that actually settles, and the HCS
+  topic to read the receipts back from.
 - **`worldVerification`** — MOV-223, blocked on World Sandbox approval. Every
   result reports `'unknown'`. Not `'unverified'`: that would be a claim we have
   not earned.

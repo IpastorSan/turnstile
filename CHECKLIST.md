@@ -374,3 +374,60 @@ The lines below are appended rather than edited, per the union-merge rule.
 - Re-cut `web/data/discovery.db` (`cd web && npm run snapshot`) close to the
   judging date, so the directory shown is current. It is a committed snapshot of
   the live store, dated in `web/data/provenance.json`.
+
+### MOV-219 — x402 seller service + PaymentRail seam (2026-09-07)
+
+Appending rather than ticking. **Nothing in the Hedera or Arc blocks is ticked
+by this issue**, and the reason is worth being exact about: the x402 flow is
+real and complete, and both rails are placeholders that settle nothing. A live
+402 that moves no value is not "a live x402-gated service".
+
+What exists now, verified by `npm test` (85 passing) and captured in
+`docs/x402-service.md`:
+
+- `rails/PaymentRail.ts` — the four-method seam MOV-220 and MOV-225 both
+  implement. `rails/README.md` is the contract they read.
+- `seller/service/` — Express, two priced tiers over the Liquidity Analyst.
+  Unpaid request returns 402 with a well-formed `PAYMENT-REQUIRED` advertising
+  **two** rails; a paid request returns 200 with `PAYMENT-RESPONSE`.
+- x402 **v2**, verified against the specification two ways: the 402 body passes
+  `@x402/core`'s own zod schema, and an **unmodified `@x402/fetch` client**
+  completes the flow against our server.
+- `buyer/watchdog/pay.ts` — the buyer half, with the mandate cap enforced
+  client-side before a signature exists.
+
+**Toward the Hedera block** — these three rows stay open and belong to MOV-220:
+
+- *Live x402-gated service on Hedera testnet or mainnet* — the service is live
+  and the Hedera rail is a placeholder. `rails/hedera-x402/` ships with its
+  network (`eip155:296`) and asset marked **UNVERIFIED**; which CAIP-2 form
+  Blocky402 expects is unknown to us as of 2026-09-07 and must be read off its
+  `/supported`.
+- *Settled through Blocky402 specifically* — not attempted yet.
+- *≥1 real paid request end to end* — **not claimed.** The paid requests in
+  `docs/x402-service.md` are against stub rails and say so on the wire.
+
+*README covering setup, architecture and the payment flow* is partly served by
+`docs/x402-service.md` and `seller/service/README.md`; MOV-220 should judge
+whether that is enough for the Hedera row and tick it, since it owns the row.
+
+**Toward the ENS block** — the *Demo functional, no hard-coded values* row is
+still open and unchanged by this issue. `agent-endpoint[mcp]` on
+`liquidity.turnstile.eth` still points at a placeholder host; MOV-219 built the
+HTTP service, not the MCP endpoint that record advertises, and nothing is
+deployed. MOV-218's note on that row remains accurate.
+
+Two supporting facts, both re-verified live off Sepolia on 2026-09-07 rather
+than copied from a doc: `turnstile:price` is `0.07` and `turnstile:price-ceiling`
+is `0.50`. The service charges exactly `0.07` for its standard tier and refuses
+to start if any tier exceeds the ceiling.
+
+**Not claimed, so nobody ticks it by mistake:**
+
+- **No value has moved on any chain.** Every `accepts[]` entry carries
+  `extra.turnstileSettlement: "stub"` and `/health` reports
+  `settlementLive: false`. The receipts in the transcript are in-memory.
+- The Arc rail's network id is a **deliberate placeholder**
+  (`eip155:0-PLACEHOLDER-arc`), not a real chain. Arc's CAIP-2 identifier is
+  unverified as of 2026-09-07, and item 10 above records that we are still
+  waiting on Circle about the Launch track's testnet/mainnet question.
