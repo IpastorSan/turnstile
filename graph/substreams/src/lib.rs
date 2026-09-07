@@ -13,7 +13,7 @@ mod pb;
 mod registration;
 
 use substreams::errors::Error;
-use substreams::store::{StoreNew, StoreSet, StoreSetString};
+use substreams::store::{StoreGet, StoreGetString, StoreNew, StoreSet, StoreSetString};
 use substreams_ethereum::pb::eth::v2 as eth;
 use substreams_ethereum::Event;
 
@@ -133,6 +133,29 @@ fn store_agent_wallets(registrations: out::AgentRegistrations, store: StoreSetSt
     for update in registrations.wallet_updates {
         store.set(update.ordinal, &update.agent_uid, &update.wallet);
     }
+}
+
+/// The same feed, with `operator` resolved against every `agentWallet` ever
+/// seen — not just those in the current block.
+///
+/// `map_agent_registrations` is a pure per-block function, so an agent that
+/// repointed its payout address in an earlier block still shows the block-local
+/// answer there. This module joins the store back in, and is the one to consume
+/// if you want "who gets paid" to be right. It is also the worked example of
+/// composing on top of the map: your own module can do the same join.
+#[substreams::handlers::map]
+fn map_agent_directory(
+    registrations: out::AgentRegistrations,
+    wallets: StoreGetString,
+) -> Result<out::AgentRegistrations, Error> {
+    let mut registrations = registrations;
+    for agent in &mut registrations.registrations {
+        if let Some(wallet) = wallets.get_at(agent.ordinal, &agent.agent_uid) {
+            agent.operator = wallet;
+            agent.operator_source = out::OperatorSource::AgentWallet as i32;
+        }
+    }
+    Ok(registrations)
 }
 
 fn collect_wallet_updates(

@@ -47,6 +47,15 @@ modules:
       downstream module can read this to resolve the address an agent is paid
       at without re-decoding the registry.
 
+  - name: map_agent_directory
+    kind: map
+    initialBlock: 24339871
+    inputs:
+      - map: map_agent_registrations
+      - store: store_agent_wallets
+    output:
+      type: proto:turnstile.erc8004.v1.AgentRegistrations
+
 params:
   map_agent_registrations: "registry=0x8004a169fb4a3325136eb29fa0ceb6d2e539a432&chain_id=1&network=mainnet"
 
@@ -59,6 +68,7 @@ networks:
     initialBlock:
       map_agent_registrations: 24339871
       store_agent_wallets: 24339871
+      map_agent_directory: 24339871
     params:
       map_agent_registrations: "registry=0x8004a169fb4a3325136eb29fa0ceb6d2e539a432&chain_id=1&network=mainnet"
 
@@ -66,6 +76,7 @@ networks:
     initialBlock:
       map_agent_registrations: 41663783
       store_agent_wallets: 41663783
+      map_agent_directory: 41663783
     params:
       map_agent_registrations: "registry=0x8004a169fb4a3325136eb29fa0ceb6d2e539a432&chain_id=8453&network=base"
 
@@ -73,6 +84,7 @@ networks:
     initialBlock:
       map_agent_registrations: 9989393
       store_agent_wallets: 9989393
+      map_agent_directory: 9989393
     params:
       map_agent_registrations: "registry=0x8004a818bfb912233c491871b3d84c89a494bd9e&chain_id=11155111&network=sepolia"
 
@@ -80,5 +92,6 @@ networks:
     initialBlock:
       map_agent_registrations: 36304145
       store_agent_wallets: 36304145
+      map_agent_directory: 36304145
     params:
       map_agent_registrations: "registry=0x8004a818bfb912233c491871b3d84c89a494bd9e&chain_id=84532&network=base-sepolia"
