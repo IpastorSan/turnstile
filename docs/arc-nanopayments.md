@@ -11,11 +11,14 @@ so — per `CLAUDE.md`, silence reads as confidence.
   record on `liquidity.turnstile.eth`
 - **Mandate funded by:** [`0xe031e97c80b6aefc3e8b851fdab7d33d8cdef2ed47037f1ecff4abc5a0cffc1c`](https://testnet.arcscan.app/tx/0xe031e97c80b6aefc3e8b851fdab7d33d8cdef2ed47037f1ecff4abc5a0cffc1c)
   — `depositFor(0.25 USDC, agent)`, paid for by the **org**, not the agent
-- **Seven payments settled**, one at $0.07 and six at $0.000500 — **all seven in
-  one on-chain transaction**:
+- **Eleven payments settled** across two runs, at $0.07 and $0.000500 each, in
+  **two** on-chain transactions. The first run's seven were all in one:
   [`0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1`](https://testnet.arcscan.app/tx/0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1)
   (block 60940635, 22 payments in total including other Gateway users', 0.133111
-  USDC moved, gas paid by Circle's batcher)
+  USDC moved, gas paid by Circle's batcher). The second run's four were in
+  [`0xe50b8be63a2fe102c70de3b62a43251fbfcac1d8ca93f9f1760dd3c7a7985c39`](https://testnet.arcscan.app/tx/0xe50b8be63a2fe102c70de3b62a43251fbfcac1d8ca93f9f1760dd3c7a7985c39)
+  (block 60942503)
+- **The agent's nonce is 0**, before and after all eleven
 
 Reproduce it:
 
@@ -277,11 +280,52 @@ agent nonce now: 0
 agent native now: 0n
 ```
 
+### A second run, a second batch
+
+A later run of three nanopayments plus one $0.07 query settled in a different
+transaction, which is the same property seen twice rather than a lucky first
+attempt:
+
+| | |
+|---|---|
+| Transaction | [`0xe50b8be6…5c39`](https://testnet.arcscan.app/tx/0xe50b8be63a2fe102c70de3b62a43251fbfcac1d8ca93f9f1760dd3c7a7985c39) |
+| Block | 60942503, `status: success`, `gasUsed: 111067` |
+| From | `0xc73ef0d80c6c5e7d632d8ff8f651ffca8654a884` — Circle's batcher again |
+| Ours | 4 — three $0.000500 nanopayments and one $0.07 |
+
+Eleven settled payments in total, in two transactions, and after all of them:
+
+```
+hot / agent   0x0633a193017939Bb1eB242982397224c66948e2F
+  nonce       0
+  on chain    0.000000 USDC   [native 0 wei]
+  gateway     0.1055 USDC available
+```
+
+0.25 USDC of allowance in, 0.1445 spent across eleven payments, nonce never
+moved, on-chain balance never anything but zero.
+
+### The status lifecycle, observed live
+
+`arc-receipts --watch` caught the intermediate state, which is worth knowing
+because a poller that only tests for `completed` will see nothing for minutes and
+then everything at once:
+
+```
+17:27:41  7/11 mined  [received  received  received  received  completed …]
+17:28:01  7/11 mined  [batched   batched   batched   batched   completed …]
+17:28:22  11/11 mined [completed completed completed completed completed …]
+```
+
+`received` → `batched` → `completed`, and `txHash` is populated at `batched`.
+
 ### The latency is Circle's, and it varies — plan a demo around that
 
 This took **~13 minutes**, not the ~2 minutes an earlier window that afternoon
-showed. The first `arc:pay` run polled for six minutes and exited with all seven
-authorizations still at `status: received`.
+showed. **Both** `arc:pay` runs polled for six minutes and **both** exited with
+every authorization still at `status: received` — so the six-minute default is
+not a window the batch usually lands inside, and the script says so rather than
+implying something went wrong.
 
 That was **not specific to us**. Circle's batcher had stalled across the whole
 chain — its most recent completion was `16:57:03Z`, our payments landed at

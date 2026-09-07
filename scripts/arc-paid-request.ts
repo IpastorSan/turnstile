@@ -218,8 +218,17 @@ try {
     // `settle()` returned authorization ids; Circle's batcher redeems them
     // together minutes later. Observed on Arc testnet 2026-09-07: ~2 minutes,
     // 12-13 authorizations per transaction.
-    console.log(`polling ${settledOnArc.length} authorizations until Circle's batcher mines them...`);
-    const deadline = Date.now() + 6 * 60_000;
+    // Six minutes by default, and **that is often not enough** — measured twice on
+    // 2026-09-07, Circle's batcher was running roughly every 13-15 minutes and
+    // both runs exited before it fired. That is not a failure and the script says
+    // so; `npm run arc:receipts -- --ours --watch` is the second step. The window
+    // is short by default because a demo should not block for a quarter of an
+    // hour, not because the batch usually lands inside it.
+    const watchMinutes = Number(process.env['ARC_WATCH_MINUTES'] ?? 6);
+    console.log(`polling ${settledOnArc.length} authorizations for up to ${watchMinutes} minutes...`);
+    console.log(`(Circle's batcher fires on its own schedule -- 2 to 15 minutes observed. If this`);
+    console.log(` window closes first, the payments are still settled: run 'npm run arc:receipts -- --ours'.)`);
+    const deadline = Date.now() + watchMinutes * 60_000;
     const resolved = new Map<string, string>();
 
     while (Date.now() < deadline && resolved.size < settledOnArc.length) {
@@ -255,8 +264,12 @@ try {
       }
     }
     if (batches.size === 0) {
-      console.log('  none mined within the polling window. They are credited and will mine; re-run');
-      console.log('  section 7 later, or poll GET /receipts/<authorization id>.');
+      console.log('  Not mined inside the polling window -- which is ordinary, not a failure.');
+      console.log('  Every payment above is settled: Gateway returned success, credited the seller');
+      console.log('  and debited the payer. Only the batch transaction is outstanding, and it is');
+      console.log("  Circle's to submit. Resolve it whenever it lands:");
+      console.log('');
+      console.log('    npm run arc:receipts -- --ours --watch');
     }
 
     rule('7. RECEIPT LOOKUP — the seller\'s own audit trail, across both rails');
