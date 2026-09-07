@@ -64,19 +64,30 @@ Three findings that shape everything below:
 
 | # | Blocker | Why the agent could not clear it |
 |---|---|---|
-| 1 | `baz login` needs browser approval | No headless auth path exists in the CLI. The URL can be printed and handed to a human. |
+| 1 | `baz login` needs browser approval | No headless auth path exists in the CLI. **The user runs this themselves** — an agent should not initiate it even to hand over the approval URL, because approving binds the user's Bazantic account in their browser and that is theirs to start. |
 | 2 | `--endpoint` must be a public HTTPS URL | The seller service is localhost-only. `docs/deploy.md` (MOV-230, 2026-09-07) states no hosting credentials exist on this machine — no Vercel, Netlify, Fly or Cloudflare CLI and no token for any of them. |
-| 3 | `--spec-url` must be publicly fetchable | The spec now exists (`docs/openapi.turnstile.json`) but the repo is still **private**, so a raw.githubusercontent URL will not resolve for Bazantic's server-side fetch. |
+| 3 | `--spec-url` must be publicly fetchable | The spec now exists (`seller/service/openapi.yaml`) but the repo is still **private**, so a raw.githubusercontent URL will not resolve for Bazantic's server-side fetch. |
 | 4 | Recipe authoring is web-app only | See finding 3 above. |
 | 5 | Screen recording | A human action in all cases. |
 
-**The one lever that clears #2 and #3 together:** `tailscale` is installed on this
-machine (verified 2026-09-07; `cloudflared`, `ngrok` and `localtunnel` are not).
-`tailscale funnel` exposes a local port on a public HTTPS URL with a valid
-certificate, which is exactly what both flags require. It was **not** run by the
-agent, because it publishes a local service to the open internet and that is the
-user's decision. Flipping the repo public — already a hard gate in `CHECKLIST.md`
-before submitting — clears #3 on its own.
+**#2 and #3 are one missing thing, and it is the same one blocking MOV-230:** a
+public HTTPS deployment of the service. One deployment clears the ENS live-demo
+gate and this gateway together. Do not design around its absence.
+
+Flipping the repo public — already a hard gate in `CHECKLIST.md` before submitting
+— clears #3 on its own, since the spec is then fetchable from raw.githubusercontent.
+
+> **Correction (2026-09-07, MOV-231):** an earlier revision of this file, in this
+> same branch, proposed `tailscale funnel` as "the one lever that clears #2 and #3
+> together". **Do not do that.** A funnel dies when this machine sleeps, so a
+> gateway registered against a funnel URL would break the moment Bazantic's own
+> fetcher or a judge touched it — trading a visible blocker for an invisible one,
+> which is worse. It is also an outward-facing action nobody authorised.
+>
+> Still true: `tailscale` is the only tunnel present on this machine (verified
+> 2026-09-07; `cloudflared`, `ngrok` and `localtunnel` are not installed), and no
+> hosting CLI or token exists here either. The conclusion that changed is what to
+> do about it — wait for a real deployment, not a tunnel.
 
 ---
 
@@ -85,12 +96,13 @@ before submitting — clears #3 on its own.
 Serve the spec and the API from the same public origin so the two flags agree.
 
 ```bash
-# 0. one terminal: the seller service on some local port
-npm run serve                                  # note the port it prints
+# 0. the origin the seller service is deployed at — a real deployment, not a tunnel.
+#    See docs/deploy.md; this is the MOV-230 blocker too.
+export TURNSTILE_PUBLIC=https://<the deployment>
 
-# 1. another terminal: a public HTTPS origin for that port
-tailscale funnel <port>                        # prints https://<host>.ts.net
-export TURNSTILE_PUBLIC=https://<host>.ts.net
+# 1. sanity-check that Bazantic will be able to fetch both, from outside this machine
+curl -fsS "$TURNSTILE_PUBLIC/health"      | head -c 200
+curl -fsS "$TURNSTILE_PUBLIC/openapi.yaml" | head -c 200
 
 # 2. sign in — prints an approval URL and waits for a human
 npx -y @bazantic/cli@0.8.0 login --name turnstile-build --no-browser
@@ -98,7 +110,7 @@ npx -y @bazantic/cli@0.8.0 whoami              # must report IpastorSan
 
 # 3. register the gateway
 npx -y @bazantic/cli@0.8.0 gateway add \
-  --spec-url  "$TURNSTILE_PUBLIC/openapi.json" \
+  --spec-url  "$TURNSTILE_PUBLIC/openapi.yaml" \
   --endpoint  "$TURNSTILE_PUBLIC" \
   --name      "Turnstile Liquidity Analyst" \
   --auth-type x402-mpp \
@@ -109,8 +121,8 @@ npx -y @bazantic/cli@0.8.0 gateway add \
 npx -y @bazantic/cli@0.8.0 gateway list --json   # endpointUrl, and its MCP server at /mcp
 ```
 
-Step 3 needs the spec reachable at a URL. `docs/openapi.turnstile.json` is the
-document; serving it at `$TURNSTILE_PUBLIC/openapi.json` is one static route on the
+Step 3 needs the spec reachable at a URL. `seller/service/openapi.yaml` is the
+document; serving it at `$TURNSTILE_PUBLIC/openapi.yaml` is one static route on the
 seller service, or any public file host will do — Bazantic only fetches it.
 
 **Record the `{ id, slug, mcpUrl }` from step 3 and the `endpointUrl` from step 4
@@ -122,7 +134,7 @@ always possible.
 
 ## The OpenAPI spec
 
-`docs/openapi.turnstile.json` — OpenAPI 3.1.0, validated 2026-09-07 with
+`seller/service/openapi.yaml` — OpenAPI 3.1.0, validated 2026-09-07 with
 `@apidevtools/swagger-parser`. Four operations:
 
 | Operation | Route | Price | Sources it reads |
@@ -276,7 +288,7 @@ on Hedera testnet, with HCS receipts on topic `0.0.10408013`. See
 
 ## Open items
 
-- [ ] A public HTTPS origin for the seller service (blocker #2/#3)
+- [ ] A public HTTPS deployment of the seller service (blockers #2/#3 — **shared with MOV-230**; one deployment clears both)
 - [ ] `baz login` approved in a browser as `IpastorSan` (blocker #1)
 - [ ] `baz gateway add` run, and its output recorded above
 - [ ] Recipe created in the Bazantic web app from the copy above (blocker #4)

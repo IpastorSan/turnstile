@@ -3,6 +3,28 @@
 Three things live here: the x402-gated HTTP service, the discovery API, and the
 premium tier.
 
+## `openapi.yaml` — the wire contract
+
+OpenAPI 3.1, hand-written against `app.ts` and `tiers.ts` and cross-checked
+against the captured transcript in `docs/x402-service.md`. It documents the 402
+challenge itself — `accepts[]`, the opaque `extra` object, and the
+`extra.resource` binding — which is the part a generic generator gets wrong,
+because a generator only ever sees the happy path.
+
+It has a second audience besides human readers: an agent runtime can turn this
+file into tools, and Bazantic generates a hosted MCP server from it
+(`docs/bazantic-gateway.md`). Every `description` in it is therefore the tool
+documentation an agent reads when deciding whether to call an operation, and is
+written as when/why/how guidance rather than as a restatement of the response
+shape. **Keep it that way when you edit it**, and re-validate:
+
+```bash
+npx -y @apidevtools/swagger-parser validate seller/service/openapi.yaml
+```
+
+`servers[0]` is a placeholder. There is no public deployment yet — see
+`docs/deploy.md`.
+
 ## `premium.ts` — the answer, plus a pointer to the attested verdict
 
 Discovery is free: you can find the analyst, read its price and see what it
