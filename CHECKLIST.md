@@ -205,3 +205,42 @@ note. The second is left open on purpose.
 - `forge test`: 66 passing, including 7 fork tests that assert the *live*
   deployment still has the offer and still denies the hot key the payout record
   (`contracts/test/fork/SepoliaOffer.t.sol`).
+
+### MOV-222 — discovery API: find and rank sellers (2026-09-07)
+
+Nothing is ticked in place. The Graph rows are shared with MOV-215 and MOV-221
+and need a single owner, per MOV-221's note; the ENS "demo functional" row is
+still open for the reason MOV-218 gave. Evidence for all of it:
+`docs/discovery-api.md`.
+
+- **"Live data from a Graph provider"** — strengthened, not newly claimed.
+  `graph/sink/` consumes the packaged `.spkg` through the Graph Market JWT and
+  persists it: **197 real agents from Ethereum mainnet, Base and Sepolia,
+  queryable in one result set**, joined on the cross-chain `agent_uid`. No
+  fixtures anywhere; the store is rebuilt from the chain by four `sink.ts`
+  invocations.
+- **"Graph load-bearing as the live data source"** (AI, From Scratch) — the
+  discovery API and the `find_sellers` MCP tool have no other source of agents.
+  Remove the Substreams feed and there is nothing to rank.
+- **ERC-8004 / x402 finding worth putting in the pitch:** of 197 live agents,
+  **exactly one has a price anyone can read, and it is ours.** 96 advertise
+  `x402Support`, 13 publish an endpoint that can be asked, and none of the 13
+  returns a 402. EIP-8004 registration-v1 has no price field. This is the
+  concrete case for the ENS leg — an offer published as a resolver record is
+  readable whether or not the seller's HTTP endpoint is up.
+- **Off-module resolution:** 123 of 151 live agent-card URLs resolved (81.5%),
+  taking document coverage from 7.6% in-module to 70.1%. Failures are stored
+  with their status, never dropped.
+- **Ranking is explicitly a placeholder.** `settlement_receipt` is the MOV-220
+  seam and is empty, so results are ordered by registration recency with
+  `ranking.placeholder = true` and a note saying the order carries no
+  information about business done. A test inserts a receipt and asserts the
+  basis flips to `settled_volume` with the flag cleared.
+- **World verification (MOV-223) seam:** table present, empty, every agent
+  reports `'unknown'` rather than `'unverified'`. Not implemented — still
+  blocked on Sandbox approval.
+- **Reachable as an MCP tool:** `mcp-turnstile/server.ts` over stdio;
+  `find_sellers` verified end to end with a real `tools/list` + `tools/call`.
+- `node --test`: 36 passing. Nothing under `contracts/` was touched, so the 66
+  `forge test` cases from MOV-218 are unaffected — and Foundry is not installed
+  on this machine, so they were not re-run.
