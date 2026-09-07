@@ -199,9 +199,11 @@ export function selectProbeCandidates(db: DatabaseSync, limit: number, network?:
       WHERE a.x402_support = 1
         AND e.uri LIKE 'http%'
         ${networkClause}
-        AND NOT EXISTS (
-          SELECT 1 FROM x402_quote q WHERE q.agent_uid = a.agent_uid AND q.endpoint = e.uri
-        )
+        -- One probe per AGENT, not per endpoint. An agent that publishes an
+        -- x402, API or MCP service has told us where it takes money; if that
+        -- URL is dead, that is the finding. Falling through to whatever else it
+        -- listed just probes its GitHub link.
+        AND NOT EXISTS (SELECT 1 FROM x402_quote q WHERE q.agent_uid = a.agent_uid)
     )
     WHERE rn = 1
     ORDER BY block_timestamp DESC

@@ -293,8 +293,10 @@ SELECT
   a.first_seen_block,
   a.first_seen_timestamp,
 
-  COALESCE(c.name, a.name)               AS name,
-  COALESCE(c.description, a.description) AS description,
+  -- A Turnstile seller's agentURI is its ENS name, so there is no document to
+  -- fetch: the ENSIP-26 records ARE its document, and they fill in last.
+  COALESCE(c.name, a.name, s.ens_name)                    AS name,
+  COALESCE(c.description, a.description, s.agent_context) AS description,
   COALESCE(c.image, a.image)             AS image,
   COALESCE(c.x402_support, a.x402_support, 0) AS x402_support,
   COALESCE(c.active, a.active, 0)        AS active,

@@ -61,7 +61,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         ? `${s.price.usd !== null ? `$${s.price.usd}` : s.price.raw} (${s.price.source}${s.price.comparable ? '' : ', not comparable'})`
         : '(no price)';
       console.log(`${s.network.padEnd(9)} #${s.agentId.padEnd(7)} ${price}`);
-      console.log(`  ${s.name ?? '(unnamed)'}${s.turnstile ? `  <- ${s.turnstile.ensName}` : ''}`);
+      const via = s.turnstile && s.turnstile.ensName !== s.name ? `  <- ${s.turnstile.ensName}` : '';
+      console.log(`  ${s.name ?? '(unnamed)'}${via}`);
       if (s.description) console.log(`  ${s.description.slice(0, 110)}`);
       console.log(
         `  uid ${s.agentUid}\n` +
