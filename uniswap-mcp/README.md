@@ -15,10 +15,16 @@ node server.ts
 claude mcp add uniswap -- node "$PWD/server.ts"
 ```
 
-**Standalone by construction.** Nothing in this directory imports anything
-outside it. Copy the folder out of this repository, `npm install`, and it runs —
-there is no Turnstile context to carry along. That is deliberate: it was
-extracted to be reusable, not vendored to look reusable.
+**Standalone by construction, and checked rather than claimed.** Nothing in this
+directory imports anything outside it. Copy the folder out of this repository,
+`npm install`, and it runs — there is no Turnstile context to carry along. That
+is deliberate: it was extracted to be reusable, not vendored to look reusable.
+
+Verified on 2026-09-07 by doing exactly that: copied to a directory outside the
+repo, fresh `npm install`, then `npm test` (60 passing), `npm run typecheck`
+(clean) and `node test/live-smoke.ts` against mainnet. The check is worth
+running after any change here, because the failure it catches — an import that
+reaches back into the parent repo — is invisible from inside the repo.
 
 ---
 
