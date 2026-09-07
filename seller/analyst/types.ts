@@ -54,6 +54,8 @@ export interface PoolFacts {
   protocol: string;
   network: string;
   tokens: TokenFacts[];
+  /** Unix seconds the pool was created on chain. The honest floor for "how long has this existed". */
+  createdTimestamp: number;
   totalValueLockedUSD: number;
   cumulativeVolumeUSD: number;
   cumulativeSupplySideRevenueUSD: number;

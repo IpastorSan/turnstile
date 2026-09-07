@@ -49,6 +49,7 @@ query PoolFacts($pool: ID!, $poolRef: String!, $hours: Int!) {
   liquidityPool(id: $pool) {
     id
     name
+    createdTimestamp
     totalValueLockedUSD
     cumulativeVolumeUSD
     cumulativeSupplySideRevenueUSD
@@ -82,6 +83,7 @@ query TopPools($first: Int!) {
   liquidityPools(first: $first, orderBy: totalValueLockedUSD, orderDirection: desc) {
     id
     name
+    createdTimestamp
     totalValueLockedUSD
     cumulativeVolumeUSD
     inputTokens { symbol }
@@ -154,6 +156,7 @@ export function mcpSource(options: {
 interface RawPool {
   id: string;
   name: string | null;
+  createdTimestamp: string;
   totalValueLockedUSD: string;
   cumulativeVolumeUSD: string;
   cumulativeSupplySideRevenueUSD: string;
@@ -281,6 +284,7 @@ export async function fetchPoolFacts(
   return {
     address: raw.id,
     name: raw.name ?? address,
+    createdTimestamp: Number(raw.createdTimestamp),
     protocol: protocol?.name ?? 'unknown',
     network: protocol?.network ?? 'unknown',
     tokens,

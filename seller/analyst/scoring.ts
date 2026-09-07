@@ -84,7 +84,14 @@ export const THRESHOLDS = {
   activityWindowHours: 24,
   /** Below this share of hours carrying volume, the pool trades in bursts. */
   activeHourWarnShare: 0.5,
-  activeHourFailShare: 0.1,
+  /**
+   * At or below this, it is not a market. Set at a fifth rather than a tenth
+   * after the real TRUMP/WETH pool — three traded hours out of twenty-four,
+   * $1.54 of volume between them — came back as merely "bursty" at 0.1. A pool
+   * that is silent for five hours out of every six is not one an LP should be
+   * parked in, whatever the remaining hour looks like.
+   */
+  activeHourFailShare: 0.2,
 
   /** Open positions. One LP is one person's inventory. */
   lpCountFail: 1,
@@ -194,12 +201,15 @@ function historyWindow(pool: PoolFacts, hours: number): HistoryWindow {
   // The denominator is elapsed time, computed without reference to how many
   // rows landed in it — an empty window is still 24 hours of nothing happening,
   // and reporting it as a 0-hour or 1-hour window would hide exactly the fact
-  // that matters. It shrinks only when the pool's own history starts inside the
-  // window, because a pool cannot be idle before it exists.
-  const earliestKnown = pool.hourly.length > 0
-    ? Math.min(...pool.hourly.map((b) => b.hour))
-    : headHour;
-  const start = Math.max(firstHour, Math.min(earliestKnown, headHour));
+  // that matters. It shrinks only for a pool younger than the window, because a
+  // pool cannot be idle before it exists.
+  //
+  // `createdTimestamp` is the right floor and the oldest snapshot is not: with
+  // sparse snapshots, the earliest one marks the pool's first *trade*, not its
+  // creation. Using it would let a pool that has been silent for a month claim
+  // its window began the last time somebody touched it.
+  const createdHour = Math.floor(pool.createdTimestamp / 3600);
+  const start = Math.max(firstHour, Math.min(createdHour, headHour));
   return {
     buckets,
     elapsedHours: Math.max(1, headHour - start + 1),
@@ -217,9 +227,16 @@ function inventoryBalance(pool: PoolFacts): Signal {
   const evidence: Record<string, string> = {
     'claimed TVL': usd(pool.totalValueLockedUSD),
   };
+  // Keyed by address, not by symbol. Two sides can carry the *same* symbol —
+  // the top pool by TVL on our own subgraph is a fake 18-decimal "USDT" at
+  // 0x83cf…e169 paired with the real 6-decimal one, and keying by symbol both
+  // collapsed the two rows into one and hid the only fact that identifies the
+  // impersonation.
   for (const token of pool.tokens) {
-    evidence[`${token.symbol} side`] =
+    const short = `${token.address.slice(0, 6)}…${token.address.slice(-4)}`;
+    evidence[`${token.symbol} side (${short})`] =
       `${token.balance.toLocaleString('en-US', { maximumFractionDigits: 4 })} ${token.symbol}` +
+      `, ${token.decimals} decimals` +
       ` (${usd(token.balanceUSD)}${token.priceUSD === null ? ', unpriced' : ''})`;
   }
 
@@ -476,6 +493,29 @@ function slippageCurve(depth: DepthProfile | null): Signal {
   for (const p of points) {
     evidence[usd(p.notionalUSD)] =
       `${pct(p.slip, 3)}${p.ticks === null ? '' : ` (${p.ticks} tick${p.ticks === 1 ? '' : 's'})`}`;
+  }
+
+  // Rungs were quoted but few or none of them filled. There is no curve to read
+  // the shape of — `executable-depth` is where that failure belongs, and saying
+  // it twice in different words would double-count one fact.
+  if (points.length < 2) {
+    return {
+      ...base,
+      verdict: 'unknown',
+      headline:
+        `Only ${points.length} of ${depth.rungs.length} quoted sizes filled, so there is no ` +
+        `curve to read.`,
+      evidence: {
+        ...evidence,
+        'rungs that did not fill': depth.rungs
+          .filter((r) => r.amountOut === null)
+          .map((r) => usd(r.notionalUSD))
+          .join(', ') || 'none',
+      },
+      reasoning:
+        'The shape of the curve is what says where liquidity runs out, and a shape needs at ' +
+        'least two points. Whether the pool trades at all is answered above, not here.',
+    };
   }
 
   // Two tests, because either one alone is blind in a case the other catches.
