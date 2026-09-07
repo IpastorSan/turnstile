@@ -329,10 +329,12 @@ a separate row — the file alone does not win the prize.
 **Not claimed, so nobody ticks it by mistake:**
 
 - The **Uniswap Trading API is unverified end to end.** It needs an API key we
-  do not have (`401 Unauthenticated api key or session`). Live depth comes from
-  on-chain QuoterV2 instead, which is Uniswap's own quoting API and arguably the
-  better instrument for an LP question — but if a submission claims "uses the
-  Uniswap API", say which one.
+  do not have (`401 Unauthenticated api key or session`). If a submission says
+  "uses the Uniswap API", say **which one**: live depth comes from Uniswap's
+  on-chain quoting API, QuoterV2, which is the primary provider by design and
+  not a substitute for anything — it measures the one pool an LP would deposit
+  into rather than a best route across many, and it is the only source of
+  `initializedTicksCrossed`, which the slippage-curve signal is built on.
 - The deployed subgraph was **12.6 days behind chain head** at 2026-09-07 13:44
   UTC and still backfilling. Verdicts are honest about it (lag is printed and
   costs confidence), but a demo recorded before it catches up will show a
