@@ -167,9 +167,13 @@ paths:
 
         **The finding this tier exists to produce.** Combining the two sources
         yields conclusions neither reaches alone. On Uniswap v3 USDC/WETH 0.05%
-        the verdict is ACCEPTABLE at 75% confidence — and the live ladder shows
-        that only **0.944%** of the pool's claimed TVL is reachable within 1%
-        slippage. The subgraph supplies the claimed TVL; the quoter supplies the
+        the verdict was ACCEPTABLE at 75% confidence — and the live ladder showed
+        that only **0.944%** of the pool's claimed TVL was reachable within 1%
+        slippage (mainnet block 25,925,794, 2026-09-07). **These are live figures
+        and they drift**: the same pool's claimed TVL read $106.68M, $105.9M and
+        $105.72M within three hours of the same day, and the reachable ratio moved
+        0.944% → 0.946%. Quote them with their block or re-derive them; a bare
+        number here is wrong by the time you read it. The subgraph supplies the claimed TVL; the quoter supplies the
         reachable depth; the ratio is the answer, and it exists only because both
         were asked. In concentrated liquidity a small ratio is normal, since most
         capital sits outside the active range by design — but it does mean the
@@ -588,7 +592,8 @@ components:
           description: >-
             How much of the evidence the analyst wanted was actually available.
             Falls with no live quote, a stale subgraph, an unpriced token, or a
-            self-referential price. 0.75 on the USDC/WETH 0.05% worked example.
+            self-referential price. 0.75 on the USDC/WETH 0.05% worked example at
+            mainnet block 25,925,794 (2026-09-07).
         summary:
           type: string
           description: The one-paragraph answer, in prose.
@@ -711,8 +716,9 @@ components:
           type: number
           description: >-
             The *claimed* TVL. Compare it against the depth ladder before trusting
-            it; on the worked example only 0.944% of it is reachable within 1%
-            slippage.
+            it — on the worked example only 0.944% of it was reachable within 1%
+            slippage at mainnet block 25,925,794 (2026-09-07). Both numbers drift
+            hour to hour; the ratio is the point, not the digits.
         cumulativeVolumeUSD:
           type: number
         cumulativeSupplySideRevenueUSD:
@@ -862,7 +868,8 @@ components:
             Initialized ticks the swap crossed. In concentrated liquidity this is
             how much of the range the trade had to eat through, and therefore how
             much worse the next trade will be. On the worked example $1.00M crosses
-            9 and costs 0.385%; $10.00M crosses 125 and costs 4.837%. Null when the
+            9 and cost 0.385%; $10.00M crossed 125 and cost 4.837% — mainnet block
+            25,925,794, 2026-09-07, and re-quoting will move them. Null when the
             provider does not report it.
         error:
           type: string
