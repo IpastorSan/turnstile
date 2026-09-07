@@ -155,7 +155,7 @@ gated.
 | `identity/` | World Selfie Check, nullifier ↔ cold key binding |
 | `web/` | Next.js frontend and backend — market + seller pages, live ENS and discovery reads |
 | `docs/` | Architecture notes, submission copy, on-chain evidence |
-| `scripts/` | `wt.sh`, the worktree helper the git workflow runs on; Hedera setup and the end-to-end paid request |
+| `scripts/` | `wt.sh`, the worktree helper the git workflow runs on; the end-to-end paid request on each rail (`hedera-paid-request.ts`, `arc-paid-request.ts`) |
 
 ## Working in this repo
 

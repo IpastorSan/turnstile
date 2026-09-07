@@ -154,8 +154,20 @@ runs as unreachable document origins come back.)*
   a placeholder host. The ENS record is real and readable; the service behind it
   is MOV-219/220 and is not deployed. The seller page says so on the page rather
   than only here.
-- **Steps 04–06 have never been executed end to end.** There is no settlement
+- ~~**Steps 04–06 have never been executed end to end.** There is no settlement
   receipt anywhere in the system, which is also why discovery's ranking is a
-  labelled placeholder rather than settled volume.
-- **The warm and hot tiers are drawn from the design, not from running code.**
-  Panel A describes where each vendor sits; only the cold tier is deployed.
+  labelled placeholder rather than settled volume.~~
+  **Correction (2026-09-07, MOV-220 then MOV-225):** they have, on both rails.
+  Hedera settled first; Arc settled on 2026-09-07 in the same run that paid the
+  same query over both. Receipts exist. The ranking claim is separately handled
+  by `graph/sink/ingest-receipts.ts` — see the MOV-222 note in `CHECKLIST.md`.
+- ~~**The warm and hot tiers are drawn from the design, not from running code.**
+  Panel A describes where each vendor sits; only the cold tier is deployed.~~
+  **Correction (2026-09-07, MOV-225):** the **hot** tier is running code —
+  `buyer/watchdog/arc-signer.ts` signs the authorizations that bought real
+  answers, and its nonce is 0 on Arc testnet, which is the diagram's claim about
+  it made checkable. The **warm** tier is still not Privy: `scripts/arc-setup.ts`
+  calls `depositFor()` from a plain key where an org wallet with a quorum belongs.
+  So the *position* in Panel A is real and the *vendor* is not, and MOV-228
+  replaces the key rather than the mechanism. Only the cold tier is deployed in
+  the sense of being on a public network under a device-held key.

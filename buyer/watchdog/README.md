@@ -63,9 +63,24 @@ copying rather than reinventing:
   that makes 12 HBAR look like seven cents would otherwise pass a cap computed
   from its own arithmetic. A cap the counterparty can move is not a cap.
 
+`arc-signer.ts` is the second (MOV-225), and it is smaller because the rail is
+simpler in the two places that matter: USDC is a dollar, so there is no rate to
+read; and signing is a local EIP-712 operation that opens no connection and sends
+no transaction. The one thing worth copying from it is what it does **not** do —
+it never constructs a wallet client for the agent key, because the agent's whole
+value as evidence is that its nonce is 0, and a wallet client in scope is how a
+later edit spends that.
+
+It keeps the `usdPerUnit` discipline anyway: the `1` is a constant this repo owns
+and the seller's `extra.usdPerUnit` is ignored, because a seller quoting
+`usdPerUnit: 0.01` on a USDC rail is the same trick with different numbers.
+
 ## Still to come
 
 - The watchdog loop itself — poll pools, decide when a verdict is worth buying.
-- ~~Real signers, with MOV-220~~ — done, `hedera-signer.ts`. Still to come with
-  MOV-225 (Arc).
-- Mandate issuance and the Privy warm tier.
+- ~~Real signers, with MOV-220~~ — done, `hedera-signer.ts`.
+  ~~Still to come with MOV-225 (Arc)~~ — done, `arc-signer.ts`.
+- Mandate issuance and the Privy warm tier. **Correction (2026-09-07, MOV-225):**
+  the warm tier is now load-bearing rather than merely absent — `scripts/arc-setup.ts`
+  calls `depositFor()` from a plain key where a Privy org wallet with a quorum
+  belongs. MOV-228 replaces the key, not the mechanism.

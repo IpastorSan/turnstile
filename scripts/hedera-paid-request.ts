@@ -43,9 +43,15 @@ const pool = args[args.indexOf('--pool') + 1]?.startsWith('0x')
 
 const rule = (title: string) => console.log(`\n${'='.repeat(72)}\n${title}\n${'='.repeat(72)}`);
 
-// Both rails, as the seller really advertises them: Hedera is live, Arc is still
-// MOV-225's placeholder. The buyer holds a signer for one of them, so the
-// mandate has a genuine choice to make rather than a foregone one.
+// Both rails, as the seller really advertises them.
+//
+// **Correction (2026-09-07, MOV-225):** this comment used to say "Hedera is live,
+// Arc is still MOV-225's placeholder", and that the buyer held a signer for one
+// of them so the mandate had "a genuine choice to make rather than a foregone
+// one". Arc is live now, so the choice here is genuinely foregone in the other
+// direction: this script deliberately carries only the Hedera signer, so the
+// mandate rules Arc out for want of a signer rather than for want of a rail.
+// `scripts/arc-paid-request.ts` is the one that pays the same query over both.
 const registry = new RailRegistry([createHederaRail(), createArcRail()]);
 const app = createApp({ registry, analyst: useFixture ? fakeAnalyst() : liveAnalyst() });
 

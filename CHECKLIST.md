@@ -70,6 +70,8 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] Video **and/or** live demo link (ideally both); open source
 
 **Arc — Agentic ($1,667) + Launch ($3,500)**
+- [x] **A live agentic payment on Arc** — done (MOV-225). USDC on Arc testnet (`eip155:5042002`) through **Circle Gateway Nanopayments**, `@circle-fin/x402-batching@3.4.0`, facilitator `https://gateway-api-testnet.circle.com` with no API key. Seven payments settled 2026-09-07 — one at $0.07 and six at $0.000500 — from agent `0x0633a193017939Bb1eB242982397224c66948e2F`, whose **nonce stayed 0 throughout**: it signs EIP-3009 authorizations offchain and never submits a transaction, so it paid exactly zero gas. Transcript and verified/unverified table in `docs/arc-nanopayments.md`
+- [x] **The same query settles over both rails** — done (MOV-225). One run, one URL: Arc returned authorization `fa4ca648-863c-4f61-9a1e-2953eb789f7f`, Hedera returned `0.0.7162784@1788800327.098234984`, same verdict both times. `seller/service/no-chain-code.test.ts` fails the build if any file on the payment path names a chain, so this is enforced rather than asserted
 - [ ] **State explicitly which bounty** each submission targets
 - [x] Working **frontend and backend** — done (MOV-230). Next.js 16 app in `web/`: market and seller pages server-rendered, plus `/api/sellers`, `/api/offer/:name` and `/api/health` as real routes over the discovery store and live Sepolia. Not a static export. **Still not deployed** — see `docs/deploy.md`
 - [x] **Architecture diagram** (§2.1 + §2.2) — done (MOV-230). `docs/architecture.svg` + `.png`, embedded in `README.md`, walked through in `docs/architecture.md`. Panel A the cold/warm/hot key tiers, Panel B discovery → offer → 402 → rail → answer
