@@ -82,7 +82,7 @@ instead of a blank cell. See [`docs/discovery-api.md`](./docs/discovery-api.md).
 | `identity/` | World Selfie Check, nullifier ↔ cold key binding |
 | `web/` | Next.js frontend and backend — market + seller pages, live ENS and discovery reads |
 | `docs/` | Architecture notes, submission copy, on-chain evidence |
-| `scripts/` | `wt.sh`, the worktree helper the git workflow runs on |
+| `scripts/` | `wt.sh`, the worktree helper the git workflow runs on; Hedera setup and the end-to-end paid request |
 
 ## Working in this repo
 

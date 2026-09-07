@@ -52,8 +52,20 @@ rail without touching `pay.ts`.
 `stub-signer.ts` is the placeholder that pairs with `rails/stub-rail.ts`. It
 signs nothing, and its name says so.
 
+`hedera-signer.ts` is the first real one (MOV-220). Two things in it are worth
+copying rather than reinventing:
+
+- it builds the payment with **`@x402/hedera`'s own client signer**, not with our
+  reading of the spec — the facilitator validates transaction shape strictly, and
+  the reference implementation is the cheaper way to match it;
+- it computes `usdPerUnit` from a rate the **buyer** reads, not from the seller's
+  `extra.usdPerUnit`. A seller quoting 12 HBAR for "seven cents" alongside a rate
+  that makes 12 HBAR look like seven cents would otherwise pass a cap computed
+  from its own arithmetic. A cap the counterparty can move is not a cap.
+
 ## Still to come
 
 - The watchdog loop itself — poll pools, decide when a verdict is worth buying.
-- Real signers, with MOV-220 and MOV-225.
+- ~~Real signers, with MOV-220~~ — done, `hedera-signer.ts`. Still to come with
+  MOV-225 (Arc).
 - Mandate issuance and the Privy warm tier.
