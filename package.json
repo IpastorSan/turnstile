@@ -15,7 +15,7 @@
     "discover": "node seller/service/discovery-cli.ts",
     "mcp": "node mcp-turnstile/server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --test"
+    "test": "node --test \"graph/**/*.test.ts\" \"seller/**/*.test.ts\" \"mcp-turnstile/**/*.test.ts\""
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.0",
