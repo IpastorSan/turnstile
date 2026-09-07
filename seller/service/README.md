@@ -40,8 +40,20 @@ holding it can re-derive the verdict and get the same bytes — the claim is
 checkable rather than merely asserted.
 
 That is also the MOV-227 seam, and it needs no new tier: the Chainlink TEE's
-argument and the premium payload are one object. `attestation.status` reads
-`'unattested'` today and is where the attestation lands.
+argument and the premium payload are one object.
+
+`attestation.ts` holds the injection point — `AttestationPort`, mirroring
+`AnalystPort`, defaulting to `unattestedPort()` and injected on
+`ServiceOptions.attestation`. MOV-227 implements it in `seller/cre/`, which is
+where an enclave and a contract address are allowed to live; a file here naming
+either fails `no-chain-code.test.ts`.
+
+**An implementation must hash exactly the bytes the buyer receives in
+`analystInput`.** `app.ts` passes the same object reference to the port that it
+serializes into the response, and `attestation.test.ts` asserts the two serialize
+identically — because hashing a normalized copy or a re-fetch would silently turn
+the premium tier back into an assertion without anything failing.
+`docs/x402-service.md` has the long version.
 
 The standard tier answers from the subgraph alone. Skipping the live quote is
 most of why it is cheaper, and the verdict *says* it is flying blind and loses
@@ -78,6 +90,12 @@ file on the payment path may name a chain, vendor, asset or signature format, an
 exactly one file (`server.ts`, the composition root) may import a concrete rail.
 `discovery.ts` is exempt by name and for a reason: it reads a multi-chain agent
 registry, so chain identifiers are its subject matter rather than a leak.
+
+**If this test fails your branch, it has found a boundary rather than an
+obstacle** — the answer is nearly always that the code belongs in `rails/`,
+`seller/cre/` or `buyer/watchdog/`. Get an exemption agreed rather than adding
+yourself to the list; it is the audit trail for the rule.
+`docs/x402-service.md` explains why it exists.
 
 ### Why the middleware is ours and not `@x402/express`'s
 
