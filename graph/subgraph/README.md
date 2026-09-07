@@ -159,9 +159,11 @@ Concretely, not in the abstract:
   Adding Curve to the sweep above cost one line.
 - **Cross-protocol comparison is arithmetic, not archaeology.** `cumulativeVolumeUSD`
   means the same thing in all four responses, so summing or ranking across
-  protocols is legitimate. With native subgraphs it is not: Uniswap's own
-  subgraph reports `volumeUSD` on `Pool`, Curve's reports per-pool token
-  volumes, and reconciling them is a research task per protocol.
+  protocols is legitimate. Against each protocol's own native subgraph it is
+  not — they do not agree on entity names, on which entity carries volume, on
+  whether an amount is raw or decimal-adjusted, or on the window a "cumulative"
+  figure covers, and establishing that is a per-protocol research task before
+  any arithmetic is safe.
 - **Fee semantics survive the trip.** `FIXED_TRADING_FEE` / `FIXED_LP_FEE` /
   `FIXED_PROTOCOL_FEE` decompose the fee the same way everywhere, so "what does
   the LP actually earn" is answerable without knowing whether a protocol calls
