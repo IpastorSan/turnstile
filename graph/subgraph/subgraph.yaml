@@ -1,0 +1,224 @@
+specVersion: 1.0.0
+description: >-
+  Uniswap v3 on Ethereum mainnet, indexed against the Messari DEX AMM (Extended)
+  v4.0.1 standardized schema. Entity and field names are the standard's, not
+  ours, so the same GraphQL document runs unchanged against any other subgraph
+  built on the same schema.
+repository: https://github.com/IpastorSan/turnstile
+schema:
+  file: ./schema.graphql
+indexerHints:
+  prune: auto
+dataSources:
+  # --- Factory -------------------------------------------------------------
+  # Spawns a Pool template for every pool created from the start block onward.
+  # The curated pools further down cover liquidity that already existed before
+  # it -- a factory-only subgraph starting at a recent block would index a live
+  # chainhead with almost no volume in it.
+  - kind: ethereum
+    name: Factory
+    network: mainnet
+    source:
+      address: "0x1f98431c8ad98523631ae4a59f267346ea31f984"
+      abi: UniswapV3Factory
+      startBlock: 25920000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/mappings/factory.ts
+      entities:
+        - DexAmmProtocol
+        - LiquidityPool
+        - LiquidityPoolFee
+        - Token
+        - _HelperStore
+        - _LiquidityPoolAmount
+      abis:
+        - name: UniswapV3Factory
+          file: ./abis/UniswapV3Factory.json
+        - name: UniswapV3Pool
+          file: ./abis/UniswapV3Pool.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: PoolCreated(indexed address,indexed address,indexed uint24,int24,address)
+          handler: handlePoolCreated
+
+  # --- Position manager ----------------------------------------------------
+  # Uniswap v3 LP positions are ERC-721s minted by this contract, so Position
+  # and PositionSnapshot -- the Extended-variant entities that make this a
+  # concentrated-liquidity subgraph rather than a v2-shaped one -- come from
+  # here, not from the pools.
+  - kind: ethereum
+    name: PositionManager
+    network: mainnet
+    source:
+      address: "0xc36442b4a4522e871399cd717abdd847ab11fe88"
+      abi: NonfungiblePositionManager
+      startBlock: 25920000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/mappings/positionManager.ts
+      entities:
+        - Account
+        - DexAmmProtocol
+        - LiquidityPool
+        - LiquidityPoolFee
+        - Position
+        - PositionSnapshot
+        - Tick
+        - Token
+        - _HelperStore
+        - _LiquidityPoolAmount
+      abis:
+        - name: NonfungiblePositionManager
+          file: ./abis/NonfungiblePositionManager.json
+        - name: UniswapV3Factory
+          file: ./abis/UniswapV3Factory.json
+        - name: UniswapV3Pool
+          file: ./abis/UniswapV3Pool.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: IncreaseLiquidity(indexed uint256,uint128,uint256,uint256)
+          handler: handleIncreaseLiquidity
+        - event: DecreaseLiquidity(indexed uint256,uint128,uint256,uint256)
+          handler: handleDecreaseLiquidity
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handlePositionTransfer
+
+  # --- Curated pools -------------------------------------------------------
+  # The deepest mainnet v3 pools, so the subgraph carries real swap, deposit,
+  # withdraw and tick activity from its first indexed block. Every one of them
+  # runs the same handlers as a template-spawned pool.
+  # USDC / WETH 0.05%
+  - kind: ethereum
+    name: PoolUsdcWeth005
+    network: mainnet
+    source:
+      address: "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640"
+      abi: UniswapV3Pool
+      startBlock: 25920000
+    mapping: &poolMapping
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      file: ./src/mappings/pool.ts
+      entities:
+        - Account
+        - ActiveAccount
+        - Deposit
+        - DexAmmProtocol
+        - FinancialsDailySnapshot
+        - LiquidityPool
+        - LiquidityPoolDailySnapshot
+        - LiquidityPoolFee
+        - LiquidityPoolHourlySnapshot
+        - Swap
+        - Tick
+        - TickDailySnapshot
+        - TickHourlySnapshot
+        - Token
+        - UsageMetricsDailySnapshot
+        - UsageMetricsHourlySnapshot
+        - Withdraw
+        - _HelperStore
+        - _LiquidityPoolAmount
+      abis:
+        - name: UniswapV3Pool
+          file: ./abis/UniswapV3Pool.json
+        - name: UniswapV3Factory
+          file: ./abis/UniswapV3Factory.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: Initialize(uint160,int24)
+          handler: handleInitialize
+        - event: Swap(indexed address,indexed address,int256,int256,uint160,uint128,int24)
+          handler: handleSwap
+        - event: Mint(address,indexed address,indexed int24,indexed int24,uint128,uint256,uint256)
+          handler: handleMint
+        - event: Burn(indexed address,indexed int24,indexed int24,uint128,uint256,uint256)
+          handler: handleBurn
+
+  # USDC / WETH 0.30%
+  - kind: ethereum
+    name: PoolUsdcWeth030
+    network: mainnet
+    source:
+      address: "0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8"
+      abi: UniswapV3Pool
+      startBlock: 25920000
+    mapping: *poolMapping
+
+  # WBTC / WETH 0.30%
+  - kind: ethereum
+    name: PoolWbtcWeth030
+    network: mainnet
+    source:
+      address: "0xcbcdf9626bc03e24f779434178a73a0b4bad62ed"
+      abi: UniswapV3Pool
+      startBlock: 25920000
+    mapping: *poolMapping
+
+  # WETH / USDT 0.05%
+  - kind: ethereum
+    name: PoolWethUsdt005
+    network: mainnet
+    source:
+      address: "0x11b815efb8f581194ae79006d24e0d814b7697f6"
+      abi: UniswapV3Pool
+      startBlock: 25920000
+    mapping: *poolMapping
+
+  # WETH / USDT 0.30%
+  - kind: ethereum
+    name: PoolWethUsdt030
+    network: mainnet
+    source:
+      address: "0x4e68ccd3e89f51c3074ca5072bbac773960dfa36"
+      abi: UniswapV3Pool
+      startBlock: 25920000
+    mapping: *poolMapping
+
+  # USDC / USDT 0.01%
+  - kind: ethereum
+    name: PoolUsdcUsdt001
+    network: mainnet
+    source:
+      address: "0x3416cf6c708da44db2624d63ea0aaef7113527c6"
+      abi: UniswapV3Pool
+      startBlock: 25920000
+    mapping: *poolMapping
+
+  # DAI / USDC 0.01%
+  - kind: ethereum
+    name: PoolDaiUsdc001
+    network: mainnet
+    source:
+      address: "0x5777d92f208679db4b9778590fa3cab3ac9e2168"
+      abi: UniswapV3Pool
+      startBlock: 25920000
+    mapping: *poolMapping
+
+  # DAI / WETH 0.30%
+  - kind: ethereum
+    name: PoolDaiWeth030
+    network: mainnet
+    source:
+      address: "0xc2e9f25be6257c210d7adf0d4cd6e3e881ba25f8"
+      abi: UniswapV3Pool
+      startBlock: 25920000
+    mapping: *poolMapping
+
+templates:
+  # Pools created after the start block are indexed by exactly the same code.
+  - kind: ethereum
+    name: Pool
+    network: mainnet
+    source:
+      abi: UniswapV3Pool
+    mapping: *poolMapping
