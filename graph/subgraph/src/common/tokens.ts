@@ -31,7 +31,7 @@ export function getOrCreateToken(address: Address): Token {
   const staticFallback = staticSymbol(address);
   if (!symbolResult.reverted) {
     token.symbol = symbolResult.value;
-  } else if (staticFallback != null) {
+  } else if (staticFallback !== null) {
     token.symbol = staticFallback as string;
   } else {
     token.symbol = "UNKNOWN";

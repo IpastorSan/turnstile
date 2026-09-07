@@ -70,3 +70,29 @@ export const FEE_DENOMINATOR = BigDecimal.fromString("10000");
 
 // --- Helper store keys --------------------------------------------------------
 export const ETH_PRICE_KEY = Bytes.fromUTF8("ETH_PRICE_USD");
+
+/**
+ * The pools declared as static data sources in subgraph.yaml. They are already
+ * indexed, so the lazy path must never spawn a Pool template for one of them --
+ * that would index every event in them twice.
+ */
+export const CURATED_POOLS: string[] = [
+  "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640", // USDC/WETH 0.05%
+  "0x8ad599c3a0ff1de082011efddc58f1908eb6e6d8", // USDC/WETH 0.30%
+  "0xcbcdf9626bc03e24f779434178a73a0b4bad62ed", // WBTC/WETH 0.30%
+  "0x11b815efb8f581194ae79006d24e0d814b7697f6", // WETH/USDT 0.05%
+  "0x4e68ccd3e89f51c3074ca5072bbac773960dfa36", // WETH/USDT 0.30%
+  "0x3416cf6c708da44db2624d63ea0aaef7113527c6", // USDC/USDT 0.01%
+  "0x5777d92f208679db4b9778590fa3cab3ac9e2168", // DAI/USDC 0.01%
+  "0xc2e9f25be6257c210d7adf0d4cd6e3e881ba25f8", // DAI/WETH 0.30%
+];
+
+export function isCuratedPool(address: Address): boolean {
+  const hex = address.toHexString();
+  for (let i = 0; i < CURATED_POOLS.length; i++) {
+    if (CURATED_POOLS[i] == hex) {
+      return true;
+    }
+  }
+  return false;
+}
