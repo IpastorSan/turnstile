@@ -38,16 +38,21 @@ AVAIL=$(cast call "$REGISTRAR" "isAvailable(string)(bool)" "$LABEL" --rpc-url "$
 [ "$AVAIL" = "true" ] || die "$LABEL.eth is NOT available (isAvailable=false). Someone registered it."
 info "$LABEL.eth is available"
 
-read -r BASE PREMIUM < <(cast call "$REGISTRAR" \
+# cast prints one value per line, sometimes with a "[8e6]" scientific suffix.
+# Strip the suffix and take the first two numbers. NOTE: `read` returns 1 at EOF,
+# which under `set -e` would kill the script silently — so parse without it.
+PRICE_RAW=$(cast call "$REGISTRAR" \
   "getRegisterPrice(string,uint64,address)(uint256,uint256)" \
-  "$LABEL" "$DURATION" "$MOCK_USDC" --rpc-url "$RPC" | tr '\n' ' ')
-BASE=${BASE%% *}; PREMIUM=${PREMIUM%% *}
+  "$LABEL" "$DURATION" "$MOCK_USDC" --rpc-url "$RPC")
+BASE=$(echo "$PRICE_RAW" | sed -n '1p' | awk '{print $1}')
+PREMIUM=$(echo "$PRICE_RAW" | sed -n '2p' | awk '{print $1}')
+: "${BASE:=0}"; : "${PREMIUM:=0}"
+[ "$BASE" -gt 0 ] 2>/dev/null || die "could not parse price from: $PRICE_RAW"
 TOTAL=$((BASE + PREMIUM))
 info "price: base=$BASE premium=$PREMIUM total=$TOTAL (6 decimals, so ~$((TOTAL / 1000000)) USDC)"
 
 # --- 1. mint the mock USDC (permissionless, free) ---------------------------
-BAL=$(cast call "$MOCK_USDC" "balanceOf(address)(uint256)" "$OWNER" --rpc-url "$RPC" | tr -d ' ')
-BAL=${BAL%% *}
+BAL=$(cast call "$MOCK_USDC" "balanceOf(address)(uint256)" "$OWNER" --rpc-url "$RPC" | awk '{print $1}')
 if [ "$BAL" -lt "$TOTAL" ]; then
   info "minting $((TOTAL * 10)) MockUSDC (free, no access control on mint)"
   cast send "$MOCK_USDC" "mint(address,uint256)" "$OWNER" "$((TOTAL * 10))" \
@@ -57,8 +62,7 @@ else
 fi
 
 # --- 2. approve the registrar ----------------------------------------------
-ALLOW=$(cast call "$MOCK_USDC" "allowance(address,address)(uint256)" "$OWNER" "$REGISTRAR" --rpc-url "$RPC" | tr -d ' ')
-ALLOW=${ALLOW%% *}
+ALLOW=$(cast call "$MOCK_USDC" "allowance(address,address)(uint256)" "$OWNER" "$REGISTRAR" --rpc-url "$RPC" | awk '{print $1}')
 if [ "$ALLOW" -lt "$TOTAL" ]; then
   info "approving the registrar"
   cast send "$MOCK_USDC" "approve(address,uint256)" "$REGISTRAR" "$((TOTAL * 10))" \
@@ -77,7 +81,20 @@ if [ -f "$SECRET_FILE" ]; then
   SECRET=$(cat "$SECRET_FILE")
   info "reusing secret from $SECRET_FILE"
 else
-  SECRET=$(cast keccak "$(head -c 32 /dev/urandom | xxd -p -c 64)")
+  # SECURITY: this must be unpredictable. A guessable secret lets an observer
+  # front-run the reveal and take the name. `xxd` is not installed everywhere
+  # (it was missing here), and the old one-liner silently degraded to
+  # `cast keccak ""` — a fixed constant — when it was absent. Fall back
+  # explicitly and fail loudly rather than quietly producing a weak secret.
+  if command -v openssl >/dev/null; then
+    RAND=$(openssl rand -hex 32)
+  elif command -v od >/dev/null; then
+    RAND=$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
+  else
+    die "no openssl or od available to generate a random secret"
+  fi
+  [ ${#RAND} -eq 64 ] || die "random source produced ${#RAND} chars, expected 64"
+  SECRET=$(cast keccak "0x$RAND")
   echo "$SECRET" > "$SECRET_FILE"
   info "generated secret, saved to $SECRET_FILE (gitignored — do not lose it mid-flow)"
 fi
@@ -89,14 +106,12 @@ COMMITMENT=$(cast call "$REGISTRAR" \
   --rpc-url "$RPC")
 info "commitment: $COMMITMENT"
 
-COMMITTED_AT=$(cast call "$REGISTRAR" "commitmentAt(bytes32)(uint64)" "$COMMITMENT" --rpc-url "$RPC" | tr -d ' ')
-COMMITTED_AT=${COMMITTED_AT%% *}
+COMMITTED_AT=$(cast call "$REGISTRAR" "commitmentAt(bytes32)(uint64)" "$COMMITMENT" --rpc-url "$RPC" | awk '{print $1}')
 if [ "$COMMITTED_AT" = "0" ]; then
   info "committing (tx 3 of 4)"
   cast send "$REGISTRAR" "commit(bytes32)" "$COMMITMENT" \
     --private-key "$DEPLOYER_PRIVATE_KEY" --rpc-url "$RPC" >/dev/null
-  COMMITTED_AT=$(cast call "$REGISTRAR" "commitmentAt(bytes32)(uint64)" "$COMMITMENT" --rpc-url "$RPC" | tr -d ' ')
-  COMMITTED_AT=${COMMITTED_AT%% *}
+  COMMITTED_AT=$(cast call "$REGISTRAR" "commitmentAt(bytes32)(uint64)" "$COMMITMENT" --rpc-url "$RPC" | awk '{print $1}')
 else
   info "commitment already exists at t=$COMMITTED_AT, reusing it"
 fi
