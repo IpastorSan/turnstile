@@ -51,6 +51,16 @@ changed is the key holder, and it buys three things a raw key cannot have:
 3. **An owner that is a quorum of humans**, not a file — and raising the cap
    needs two of them.
 
+`scripts/arc-paid-request.ts` — the Arc demo take — also stopped needing the
+legacy key. It used to require it purely to construct a `GatewayClient` that
+could read the agent's Gateway balance, because the SDK's constructor demands a
+private key even for a read. After MOV-228 the org has no private key here at
+all, so that requirement would have made the demo depend on the exact thing the
+design had just removed. `gatewayBalance()` in `rails/arc-usdc/wallet.ts` reads
+Circle's `/v1/balances` directly; it needs no key and no auth header. Re-run
+2026-09-07 after the change: two more payments settled, agent nonce still 0,
+Gateway balance 0.3555 → 0.2850 USDC.
+
 `ARC_ORG_PRIVATE_KEY` survives for exactly one purpose: `arc-setup.ts --seed`,
 the one-time transfer that moves testnet USDC to the new org wallet, because
 Circle's faucet is reCAPTCHA-gated and a fresh address cannot fund itself. It is
