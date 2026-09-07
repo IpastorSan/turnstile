@@ -77,10 +77,17 @@ side.
 `accepts[]` carries one entry per rail, and the buyer's mandate picks. See
 `rails/README.md` for the seam, and `buyer/watchdog/README.md` for the choosing.
 
-**As of MOV-219 both rails are placeholders that settle nothing**, and they say
-so: `/health` reports `settlementLive: false`, and every `accepts[]` entry
-carries `extra.turnstileSettlement: 'stub'`. MOV-220 brings Hedera/Blocky402;
-MOV-225 brings Arc.
+**Correction (2026-09-07, MOV-220):** this section said "**as of MOV-219 both
+rails are placeholders that settle nothing**". Half of that has fallen.
+`hedera-x402` settles real HBAR on Hedera testnet through Blocky402, `/health`
+reports `settlementLive: true`, and its entries carry
+`extra.turnstileSettlement: 'live'`. See `docs/payment-flow.md` for the
+transaction. `arc-usdc` is still a placeholder carrying
+`turnstileSettlement: 'stub'` — MOV-225 brings it.
+
+The property that has not changed, and is the one worth watching: **each entry
+says which it is, on the wire.** A service that advertises a rail and settles
+nothing without saying so looks identical from outside to one that works.
 
 ### No chain-specific code lives here
 
@@ -165,8 +172,21 @@ blindly would rank a seven-cent seller against a seventy-thousand-dollar one.
 
 The intended signal is **settled volume** — the sum of payments other buyers
 actually made, which is the one number an agent cannot fake. It comes from HCS
-receipts (MOV-220), which do not exist yet, so `settlement_receipt` is empty and
-results come back ordered by registration recency with:
+receipts.
+
+**Correction (2026-09-07, MOV-220):** those receipts "do not exist yet" is no
+longer true. `rails/hedera-x402/hcs.ts` writes one per settled payment to topic
+`0.0.10408013`, and `graph/sink/ingest-receipts.ts` reads the topic back off the
+public mirror node into `settlement_receipt`. Run it and the ranking below stops
+being a placeholder:
+
+```bash
+node graph/sink/ingest-receipts.ts --ens liquidity.turnstile.eth
+```
+
+Everything else in this section is unchanged, and still describes a database that
+has not had that run. With `settlement_receipt` empty, results come back ordered
+by registration recency with:
 
 ```json
 "ranking": {
@@ -190,10 +210,11 @@ can tell a declared capability from a word in a sentence.
 
 ### Seams left open
 
-- **`settledVolume`** — MOV-220. Described above. The lookup it needs now
-  exists as `PaymentRail.receipt(id)` and `RailRegistry.findReceipt(...)`
-  (MOV-219); what is still missing is a rail that actually settles, and the HCS
-  topic to read the receipts back from.
+- **`settledVolume`** — **closed by MOV-220.** A rail that settles, an HCS topic,
+  and `graph/sink/ingest-receipts.ts` to read it into `settlement_receipt` all
+  exist; `graph/sink/ingest-receipts.test.ts` asserts the ranking flips off its
+  placeholder on the first receipt. It stays listed here because it is only
+  closed for a database the ingest has actually run against.
 - **`worldVerification`** — MOV-223, blocked on World Sandbox approval. Every
   result reports `'unknown'`. Not `'unverified'`: that would be a claim we have
   not earned.

@@ -57,12 +57,12 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] Public repo + video 2–4 min
 
 **Hedera — Agentic Payments ($6,000)**
-- [ ] Live x402-gated service on Hedera testnet or mainnet
-- [ ] Settled through **Blocky402** specifically
-- [ ] ≥1 **real paid request end to end**
-- [ ] README covering setup, architecture **and the payment flow**
-- [ ] Video **≤5 min** showing the paid request executing
-- [ ] Free extra points: ERC-8004/HCS-14 identity, HCS audit trail, HTS custom fees, Scheduled Transactions
+- [x] Live x402-gated service on Hedera testnet or mainnet — done (MOV-220). `exact` on `hedera:testnet`, native HBAR, priced off Hedera's own network exchange rate
+- [x] Settled through **Blocky402** specifically — done (MOV-220). `https://api.testnet.blocky402.com`, `/supported` → `/verify` → `/settle`, no API key
+- [x] ≥1 **real paid request end to end** — done (MOV-220). `0.0.7162784@1788791855.758948636`, 0.84367844 HBAR ($0.07) from `0.0.10408012` to `0.0.10403961`, buyer gas zero. Mirror node record and HashScan link in `docs/payment-flow.md`
+- [x] README covering setup, architecture **and the payment flow** — done (MOV-220). `docs/payment-flow.md`
+- [ ] Video **≤5 min** showing the paid request executing — `node scripts/hedera-paid-request.ts` is the take; not recorded yet
+- [ ] Free extra points: ERC-8004/HCS-14 identity, HCS audit trail, HTS custom fees, Scheduled Transactions — **HCS audit trail done** (MOV-220), topic `0.0.10408013`, one message per settled payment, read back through the public mirror node with no key. The other three not attempted
 
 **ENS — ENSv2 ($4,500)**
 - [x] ENSv2 on **Sepolia**; features **central, not cosmetic** — done (MOV-217 + MOV-218). Registry, registrar and a `PermissionedResolver` live on Sepolia; `liquidity.turnstile.eth` minted with ENSIP-25/26 records and a cold/hot EAC role split enforced by the resolver. Tx hashes and on-chain reads in `docs/ens-offer-records.md`
@@ -431,3 +431,65 @@ to start if any tier exceeds the ceiling.
   (`eip155:0-PLACEHOLDER-arc`), not a real chain. Arc's CAIP-2 identifier is
   unverified as of 2026-09-07, and item 10 above records that we are still
   waiting on Circle about the Launch track's testnet/mainnet question.
+
+
+---
+
+## MOV-220 — the Hedera x402 rail, and the first real paid request
+
+Appended 2026-09-07. **Value has now moved on chain.**
+
+- **Transaction:** `0.0.7162784@1788791855.758948636` — `CRYPTOTRANSFER`,
+  `result: SUCCESS`, consensus `1788791864.361892104`.
+- **HashScan:** <https://hashscan.io/testnet/transaction/0.0.7162784@1788791855.758948636>
+- **Mirror node, and this is the link that has actually been verified from a
+  terminal:** <https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1788791855-758948636>
+- 0.84367844 HBAR ($0.07) `0.0.10408012` → `0.0.10403961`. The 0.0024105 HBAR
+  fee was charged to `0.0.7162784`, Blocky402's fee payer — **the buyer paid no
+  gas at all**.
+- **HCS receipts:** topic `0.0.10408013`, one message per settled payment.
+- Full setup, architecture, transcript and verification commands:
+  **`docs/payment-flow.md`**.
+
+**Correction (2026-09-07, MOV-220) to the MOV-219 block above.** That block's
+"Not claimed, so nobody ticks it by mistake" list says **"No value has moved on
+any chain"** and that every `accepts[]` entry carries
+`extra.turnstileSettlement: "stub"` with `/health` reporting
+`settlementLive: false`. That was true when written and is now false for the
+Hedera half: `hedera-x402` reports `live: true` and `turnstileSettlement:
+"live"`. The **Arc half of that list is unchanged and still accurate** —
+`arc-usdc` is still a placeholder on a deliberately fake network id, and MOV-225
+owns it. The same block's "Toward the Hedera block" note asked MOV-220 to judge
+whether `docs/x402-service.md` served the README row; it did not, so
+`docs/payment-flow.md` was written and the row is ticked against that.
+
+**Correction (2026-09-07, MOV-220) to the MOV-219 rail note.** It recorded
+`rails/hedera-x402/` shipping with network `eip155:296` marked UNVERIFIED. That
+value was **wrong**, not merely unverified. Blocky402 advertises Hedera under
+Hedera's own CAIP-2 namespace, `hedera:testnet`, and `@x402/hedera` accepts
+nothing else — a challenge on `eip155:296` is rejected with `network_mismatch`
+before anything is signed. Hedera *does* have an EVM chain id of 296; it belongs
+to the JSON-RPC relay, which is a different execution path from the one x402
+uses. The asset also changed, from a USDC placeholder to native HBAR (`0.0.0`,
+8 decimals), for reasons recorded in `rails/hedera-x402/config.ts`.
+
+**Ranking is no longer a placeholder once receipts are ingested.** The MOV-222
+note above says `settlement_receipt` is "the MOV-220 seam and is empty". It need
+not be: `graph/sink/ingest-receipts.ts` reads the HCS topic off the public mirror
+node and fills the table, and `graph/sink/ingest-receipts.test.ts` asserts the
+basis flips to `settled_volume` with the placeholder flag cleared. The note is
+accurate for any database that has not had the ingest run.
+
+**Not claimed, so nobody ticks it by mistake:**
+
+- **The HashScan link has not been verified from this environment.**
+  `hashscan.io` answers 404 to curl for every path including its own root — it is
+  a single-page app behind bot filtering, so a status code proves nothing either
+  way. Open it in a browser before putting it in front of a judge. The mirror
+  node link above *has* been verified end to end.
+- **Testnet only.** Nothing here has been run against Hedera mainnet.
+- **No video.** `node scripts/hedera-paid-request.ts` produces the transcript the
+  demo needs; nobody has recorded it.
+- **ERC-8004/HCS-14 identity, HTS custom fees and Scheduled Transactions are not
+  attempted.** Only the HCS audit trail of those four extra-point items is done.
+- **`arc-usdc` is untouched by this issue** and still settles nothing.

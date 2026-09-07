@@ -16,12 +16,17 @@
     "mcp": "node mcp-turnstile/server.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --test \"graph/**/*.test.ts\" \"seller/**/*.test.ts\" \"rails/**/*.test.ts\" \"buyer/**/*.test.ts\" \"mcp-turnstile/**/*.test.ts\"",
-    "serve": "node seller/service/server.ts"
+    "serve": "node seller/service/server.ts",
+    "hedera:setup": "node scripts/hedera-setup.ts",
+    "hedera:pay": "node scripts/hedera-paid-request.ts",
+    "ingest-receipts": "node graph/sink/ingest-receipts.ts"
   },
   "dependencies": {
+    "@hiero-ledger/sdk": "2.85.0",
     "@modelcontextprotocol/sdk": "^1.20.0",
     "@x402/core": "^2.25.0",
     "@x402/fetch": "^2.25.0",
+    "@x402/hedera": "^2.25.0",
     "express": "^5.2.1",
     "viem": "^2.40.0",
     "zod": "^3.25.0"

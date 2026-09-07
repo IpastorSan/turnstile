@@ -88,12 +88,27 @@ service must not read.
 
 `rails/stub-rail.ts` shows the shape, with a warning worth repeating here: the
 requirement it compares is the *payer's* copy, so a payer can delete
-`extra.resource` and skip the check. A stub signs nothing and has no honest way
-to detect that. **On a real rail the requirement must be covered by the payer's
-signature**, which is what makes the comparison load-bearing rather than
-advisory. The tier-downgrade attack is blocked either way by the amount check in
-`seller/service/x402.ts` — which is why that check lives in the service and is
-not delegated to rails.
+`extra.resource` and skip the check.
+
+**Correction (2026-09-07, MOV-220):** this section previously said "**on a real
+rail the requirement must be covered by the payer's signature**, which is what
+makes the comparison load-bearing rather than advisory." That is not true of the
+Hedera rail, and it was stated as a general rule. A Hedera payment is a signed
+`TransferTransaction`, and a Hedera transaction commits to `payTo`, `amount`,
+`asset` and the fee payer — **not to a URL**. Blocky402's parity check compares
+only those fields plus `maxTimeoutSeconds`, so a payer can edit `extra.resource`
+in their own copy and the binding check does not notice.
+
+Whether the binding is load-bearing therefore depends on what your chain's
+signature actually covers, and you have to check rather than assume. Where it
+does not cover the requirement — as here — the check is still worth keeping,
+because it catches an honest client pointed at the wrong URL, but do not count it
+as a security boundary. `rails/hedera-x402/` adds a **replay guard** for the job
+the binding cannot do: one signed transaction buys exactly one answer.
+
+The rest of the paragraph stands. The tier-downgrade attack is blocked either
+way by the amount check in `seller/service/x402.ts` — which is why that check
+lives in the service and is not delegated to rails.
 
 ### `settle(payload)`
 
@@ -115,7 +130,20 @@ fake and there are no receipts yet. It switches itself over the moment
 
 ---
 
-## What MOV-219 shipped, and what it did not
+## What is live, and what is still a placeholder
+
+**Correction (2026-09-07, MOV-220):** this section described *two* placeholder
+rails. `hedera-x402` is no longer one — it settles real value on Hedera testnet
+through Blocky402, `info.live` is `true`, and its challenges carry
+`extra.turnstileSettlement: 'live'`. See `docs/payment-flow.md` for the
+transaction. `arc-usdc` is unchanged and everything below still describes it.
+
+| Rail | State |
+|---|---|
+| `hedera-x402` | **live** — settles HBAR on Hedera testnet via Blocky402 (MOV-220) |
+| `arc-usdc` | placeholder — MOV-225 |
+
+### What MOV-219 shipped
 
 Two **placeholder** rails, `hedera-x402/` and `arc-usdc/`, both built on
 `stub-rail.ts`. They speak the whole interface and settle nothing.
@@ -137,17 +165,23 @@ Written as obvious placeholders rather than plausible-looking real values, on
 purpose. A wrong-but-believable asset address is far more expensive to discover
 than an obviously fake one.
 
+**Correction (2026-09-07, MOV-220):** the two `hedera-x402` rows below are
+resolved, and the first of them was **wrong**, not merely unverified. The
+`arc-usdc` rows are unchanged and still placeholders.
+
 | | Value as shipped | Status |
 |---|---|---|
-| `hedera-x402` network | `eip155:296` | **UNVERIFIED** (2026-09-07). Hedera testnet's EVM chain id. Hedera also has its own CAIP-2 namespace (`hedera:testnet`); which one Blocky402 expects is unknown. Read its `/supported`. |
-| `hedera-x402` asset | `PLACEHOLDER-hedera-testnet-usdc` | **PLACEHOLDER**, deliberately not an address |
+| `hedera-x402` network | ~~`eip155:296`~~ → **`hedera:testnet`** | **RESOLVED, and the old value was wrong.** Blocky402's `/supported` advertises Hedera under its own CAIP-2 namespace, and `@x402/hedera` accepts nothing else. A challenge on `eip155:296` is rejected with `network_mismatch` before anything is signed. Verified 2026-09-07 |
+| `hedera-x402` asset | ~~`PLACEHOLDER-hedera-testnet-usdc`~~ → **`0.0.0` (native HBAR)** | **RESOLVED.** Testnet USDC is `0.0.429274` (6 decimals) and the rail can settle it, but HTS needs association on both sides plus a faucet we do not control. HBAR needs none of it. See `docs/payment-flow.md` |
 | `arc-usdc` network | `eip155:0-PLACEHOLDER-arc` | **PLACEHOLDER**. Arc's CAIP-2 identifier is unknown to us as of 2026-09-07 |
 | `arc-usdc` asset | `PLACEHOLDER-arc-usdc` | **PLACEHOLDER**, deliberately not an address |
-| `hedera-x402` payout | `0.0.10403961` (`HEDERA_PAYOUT_ACCOUNT`) | From `docs/accounts.md`. Confirm it is the account you want paid |
+| `hedera-x402` payout | `0.0.10403961` (`HEDERA_PAYOUT_ACCOUNT`) | **Confirmed 2026-09-07** — it received a real payment |
 | `arc-usdc` payout | `0x0Adca6e14bA956201D221feC767e4f24194bf5F2` (`ARC_PAYOUT_ADDRESS`) | The `addr(60)` record on `liquidity.turnstile.eth`, read live off Sepolia 2026-09-07 |
 
-`docs/accounts.md` also records that Blocky402 needs no credential on testnet,
-itself marked "confirm before depending on it".
+**Correction (2026-09-07, MOV-220):** `docs/accounts.md` recorded that Blocky402
+needs no credential on testnet, marked "confirm before depending on it". It is
+now **confirmed** — an unauthenticated `GET https://api.testnet.blocky402.com/supported`
+answers, and a real payment settled through it with no key of any kind.
 
 ---
 
@@ -188,6 +222,10 @@ is a judgement call for MOV-220, not something to do in passing. See
 3. Add it to the list in `seller/service/server.ts`. That is the only line in
    `seller/service/` that should change.
 4. Add a `RailSigner` next to it for the buyer side (`buyer/watchdog/pay.ts`).
+   `buyer/watchdog/hedera-signer.ts` is the worked example, including the one
+   thing worth copying: it computes `usdPerUnit` from a rate the **buyer** reads,
+   not from the seller's `extra.usdPerUnit`. A cap denominated by the
+   counterparty is not a cap.
 
 If step 3 needs more than a list entry, say so loudly — that means the seam is
 wrong, not that your rail is unusual.
