@@ -501,3 +501,59 @@ leave these tokens unpriced rather than confidently mispriced. That is a real
 schema-conformance question, not an obvious win, because the standard's
 `lastPriceUSD` is non-nullable — leaving it at zero is its own kind of lie.
 Recording the trade-off here rather than silently picking one.
+
+## Sync progress and a v4 note from MOV-226 (2026-09-07)
+
+Found while building `uniswap-mcp/`, which consumes this subgraph as one of its
+five tools. Appended rather than edited in place, per `CLAUDE.md`.
+
+### The lag figure above has moved. It is now ~1 day, not 12.6
+
+**Correction (2026-09-07, MOV-226):** the MOV-216 section above records the
+subgraph as **90,218 blocks / 12.6 days** behind, verified at 13:44 UTC on
+2026-09-07. That was true when written and has since changed — the backfill is
+catching up. Re-verified against the live endpoint at **17:04 UTC on
+2026-09-07**, about three and a quarter hours later:
+
+```
+$ curl -s -X POST https://api.studio.thegraph.com/query/1758854/turnstile-uniswap-v-3-messari/v0.1.0 \
+    -H 'content-type: application/json' \
+    --data '{"query":"{ _meta{ block{number timestamp} hasIndexingErrors } }"}'
+{"data":{"_meta":{"block":{"number":25919353,"timestamp":1788710303},"hasIndexingErrors":false}}}
+```
+
+| | MOV-216, 13:44 UTC | MOV-226, 17:04 UTC |
+|---|---|---|
+| Subgraph head | 25,835,635 | 25,919,353 |
+| Head timestamp | 2026-08-25T23:55:35Z | 2026-09-06T15:58:23Z |
+| Behind by | 12.6 days | **1.05 days** (25.1 h) |
+| `hasIndexingErrors` | `false` | `false` |
+
+It indexed ~83,700 blocks in ~3.3 hours of wall clock, so at that rate it
+reaches chainhead within a few more hours.
+
+**Still true, and the more durable half:** the *instruction* in that section is
+unchanged and is the part worth keeping — **date every figure you take from
+this subgraph, and read `_meta.block.timestamp` rather than assuming
+freshness.** This correction is itself the argument for it: a hardcoded "12.6
+days behind" was wrong within four hours. Consumers should report the lag rather
+than bake it in. `uniswap-mcp`'s `uniswap_amm_query` computes it from `_meta` on
+every single response and says so in prose, and `seller/analyst/` does the same.
+
+### V4Quoter has no `initializedTicksCrossed`, which bounds what a v4 version of this could do
+
+Not a correction — new information, recorded here because it is the constraint
+anyone extending this subgraph to v4 will hit.
+
+`QuoterV2` (v3) returns
+`(amountOut, sqrtPriceX96After, initializedTicksCrossed, gasEstimate)`.
+`V4Quoter` returns only `(amountOut, gasEstimate)` — verified against
+`v4-periphery/src/lens/V4Quoter.sol` and live against mainnet
+`0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203` on 2026-09-07.
+
+This matters to the subgraph's *consumers* rather than to the subgraph itself.
+The `Tick` and `Position` entities here are the Extended schema's answer to
+"where is the liquidity", and the on-chain cross-check for that on v3 is the
+quoter's tick count. On v4 that cross-check does not exist, so a v4 Extended
+subgraph's tick data would have no cheap independent verification. Written up
+as feedback to Uniswap in `FEEDBACK.md`.
