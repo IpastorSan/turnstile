@@ -86,8 +86,18 @@ by `npm run typecheck:cre`. It has to be: it compiles to WASM against a pinned
 npm run evidence          # evidence server on :8787, gated on TURNSTILE_EVIDENCE_TOKEN
 cd seller/cre
 cre workflow simulate analyst-verdict --target staging-settings \
-  --non-interactive --trigger-index 0
+  --non-interactive --trigger-index 0 -e ../../.env
 ```
+
+**`-e ../../.env` is not optional.** The CRE project root is this directory, so
+the CLI looks for `seller/cre/.env` and finds nothing — it then fails at
+`failed to replace secret names with environment variables: environment variable
+TURNSTILE_EVIDENCE_TOKEN for secret value not found`, which reads like a missing
+credential rather than a missing file. Exporting the variable in your shell does
+**not** help either; the CLI's `.env` takes precedence over the environment.
+Pointing `-e` at the repo `.env` is the whole fix. (Symlinking
+`seller/cre/.env -> ../../.env` works too, but `.env` is gitignored at any depth
+so the symlink does not survive a clone — which is how this was found.)
 
 You need the `cre` CLI (`smartcontractkit/cre-cli` releases) and a free CRE
 account. **Simulation does not need deployment access and does not need the

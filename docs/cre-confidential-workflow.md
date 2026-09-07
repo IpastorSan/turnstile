@@ -63,8 +63,18 @@ Run it yourself:
 npm run evidence                      # seller/cre/evidence-server.ts, port 8787
 cd seller/cre
 cre workflow simulate analyst-verdict --target staging-settings \
-  --non-interactive --trigger-index 0
+  --non-interactive --trigger-index 0 -e ../../.env
 ```
+
+**Correction (2026-09-07, MOV-227):** this command was first written without
+`-e ../../.env`, and in that form it fails on a fresh clone. The CRE project
+root is `seller/cre/`, so the CLI looks for `seller/cre/.env`; the original run
+worked only because a gitignored symlink happened to be sitting there, and
+`.env` is ignored at any depth so it never reached the repo. The failure is
+`environment variable TURNSTILE_EVIDENCE_TOKEN for secret value not found`,
+which reads like a missing credential rather than a missing file. The three
+transcripts below are unaffected — they are what the workflow printed, and only
+the invocation was wrong.
 
 ### Uniswap v3 USDC/WETH 0.05% — where the sealed calibration changes the answer
 
