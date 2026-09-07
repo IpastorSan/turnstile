@@ -65,7 +65,7 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] Free extra points: ERC-8004/HCS-14 identity, HCS audit trail, HTS custom fees, Scheduled Transactions
 
 **ENS — ENSv2 ($4,500)**
-- [ ] ENSv2 on **Sepolia**; features **central, not cosmetic**
+- [x] ENSv2 on **Sepolia**; features **central, not cosmetic** — done (MOV-217 + MOV-218). Registry, registrar and a `PermissionedResolver` live on Sepolia; `liquidity.turnstile.eth` minted with ENSIP-25/26 records and a cold/hot EAC role split enforced by the resolver. Tx hashes and on-chain reads in `docs/ens-offer-records.md`
 - [ ] Demo functional, **no hard-coded values**
 - [ ] Video **and/or** live demo link (ideally both); open source
 
@@ -178,3 +178,30 @@ Here is what is now true, for whoever ticks it:
   interactive browser login, and publishing now would expose the module during
   the private build window. It belongs with the repo visibility flip in
   **Before submitting**, not before it.
+### MOV-218 — offer records + cold/hot role split (2026-09-07)
+
+The first ENS bounty line above is ticked in place — one owner, per MOV-217's
+note. The second is left open on purpose.
+
+- ENS "features central, not cosmetic": **now true and deployed.**
+  `liquidity.turnstile.eth` is live on Sepolia with an offer written in
+  ENSIP-26 (`agent-context`, `agent-endpoint[mcp]`) and ENSIP-25
+  (`agent-registration[<erc7930>][10127]`) keys, and the seller's hot key is
+  authorized on exactly two of those records by ENS's own
+  `PermissionedResolver`. The hot key's attempt to move the payout address
+  reverts on-chain. Full transcript: `docs/ens-offer-records.md`.
+- ENS "no hard-coded values": also covers **names**, not just addresses.
+  `src/TurnstileName.sol` walks `IRegistry.getParent()` up the hierarchy to
+  derive the full name, its DNS encoding and its namehash at run time.
+  `test_derivedNameFollowsAReparent` re-parents the registry and asserts the
+  namehash moves with it. The seller label comes from `TURNSTILE_SELLER_LABEL`.
+- ENS "demo functional" is still **open**: the MCP endpoint in
+  `agent-endpoint[mcp]` is a placeholder host until MOV-219/220 land the real
+  service. The record is real; nothing answers on it yet.
+- ERC-8004 (free extra points on the Hedera line, and the Substreams module's
+  subject): agent `10127` registered in the Sepolia `IdentityRegistry`
+  `0x8004A818BFB912233c491871b3d84c89A494BD9e`, `tokenURI` pointing back at
+  `liquidity.turnstile.eth`, so the ENSIP-25 link reads the same from both ends.
+- `forge test`: 66 passing, including 7 fork tests that assert the *live*
+  deployment still has the offer and still denies the hot key the payout record
+  (`contracts/test/fork/SepoliaOffer.t.sol`).
