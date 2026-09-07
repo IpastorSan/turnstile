@@ -52,8 +52,8 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] Select the **Start Fresh** pool on submission
 - [ ] Graph load-bearing as the live data source
 - [ ] Meaningful work — reasoning/decisions/automation/NL interface, not a raw query dump
-- [ ] Tooling must be **reusable infrastructure**, not one end-user app
-- [ ] Clear `README` **or** `SKILL.md` so judges can run it
+- [x] Tooling must be **reusable infrastructure**, not one end-user app — done (MOV-229). `mcp-turnstile` is four MCP tools with no code path for any particular seller. Proven rather than asserted: `mcp-turnstile/examples/discover-pay-reason.ts` runs the same buyer against two unrelated sellers, and `mcp-turnstile/examples/stranger-seller.test.ts` pins it offline in CI
+- [x] Clear `README` **or** `SKILL.md` so judges can run it — done (MOV-229). `mcp-turnstile/SKILL.md`: `npx -y mcp-turnstile`, the four tools, the credential ledger, what the tools do not know, and five things a judge should try to break. The published tarball carries the 197-agent snapshot, so it answers a real query with an empty environment
 - [ ] Public repo + video 2–4 min
 
 **Hedera — Agentic Payments ($6,000)**
