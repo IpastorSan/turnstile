@@ -737,3 +737,40 @@ address. `rails/arc-usdc/config.ts` holds all three as named constants. Arc
 mainnet has **no public RPC** (Circle's own SDK comment says partners must supply
 a private one), which is a real obstacle to the Launch track and is not something
 we can solve ourselves.
+
+### MOV-225 addendum — evidence stamped to blocks, and where the seller's money is
+
+Appended 2026-09-07, after the settlement block above.
+
+**Every live figure in the MOV-225 evidence now carries its block and timestamp**,
+per the new gate in the Continuous section. The gate is owned by whoever writes
+MOV-232 for submission copy; this is the Arc rail's half of it, done at source so
+MOV-232 can quote rather than re-derive:
+
+| Figure | Value | Read at |
+|---|---|---|
+| Agent nonce / native / USDC, after all 11 payments | `0` / `0` / `0` | block 60943091, 2026-09-07T17:33:02Z |
+| Org wallet, one block before it funded the mandate | `20000000000000000000` (18 dp) = `20000000` (6 dp) | block 60938781, 2026-09-07T16:56:10Z |
+| Seller's Gateway balance | `0.144500` USDC | 2026-09-07T17:34Z |
+| Batch 1 | 22 payments, 7 ours | block 60940635 |
+| Batch 2 | 4 ours | block 60942503 |
+
+**The drift the gate exists to catch showed up in our own numbers within the
+hour.** The team lead verified the faucet drip as **20.0 USDC**; by the time the
+settlement ran, the same wallet read **19.746237** — it had paid for the deposit.
+Both are correct at their own block and neither is correct unqualified. That is
+the argument for the gate, made on a wallet we control.
+
+**A judging trap worth knowing before the video is recorded.** Circle Gateway
+credits a seller's **Gateway balance**, not their wallet. The payout address
+`0x0Adca6e14bA956201D221feC767e4f24194bf5F2` reads **0 USDC on chain** and always
+will until someone calls `withdraw()`. A judge who checks the payout address on
+ArcScan to answer "did the seller get paid?" gets a confident wrong answer. The
+real number is 0.144500 USDC in Gateway, and it reconciles three ways: what the
+buyer spent (0.250000 → 0.105500), what the seller was credited, and 11 completed
+transfers summing to 144500 atomic units, split 7/4 across the two batches.
+
+`npm run arc:setup -- --status` now prints all three wallets including the
+seller's Gateway balance, so the reconciliation is one command rather than a
+paragraph. **Show that, not a block explorer**, when demonstrating that the seller
+was paid.

@@ -74,6 +74,19 @@ async function report(label: string): Promise<void> {
   console.log(`  gateway     ${agentGateway ? `${agentGateway.gateway.formattedAvailable} USDC available` : '(no Gateway balance yet)'}`);
   console.log(`  ${arcscanAddressUrl(agentState.address)}`);
 
+  // The seller's side, because it is the number everyone gets wrong. Gateway
+  // credits a seller's **Gateway balance**; the payout wallet stays at zero until
+  // the seller withdraws. Checking `USDC.balanceOf(payout)` on a block explorer
+  // answers "did they get paid?" with a confident, incorrect no.
+  const payout = process.env['ARC_PAYOUT_ADDRESS'];
+  if (payout) {
+    const onChain = await readArcWallet(payout as Address);
+    const inGateway = await org.getBalances(payout as Address).catch(() => null);
+    console.log(`seller payout ${payout}`);
+    console.log(`  on chain    ${formatUsdc(onChain.usdc)} USDC   (stays 0 until the seller withdraws -- this is not "unpaid")`);
+    console.log(`  gateway     ${inGateway ? `${inGateway.gateway.formattedAvailable} USDC` : '(none)'}   <-- what the seller has actually been paid`);
+  }
+
   if (agentState.nonce !== 0) {
     console.warn('\n  WARNING: the agent has submitted a transaction. The zero-gas demonstration is void');
     console.warn('  for this wallet — generate a fresh ARC_AGENT_PRIVATE_KEY rather than explaining it away.');
