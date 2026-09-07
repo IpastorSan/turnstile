@@ -96,14 +96,66 @@ export interface QuoterOptions {
   client?: PublicClient;
 }
 
-function toRawAmount(whole: number, decimals: number): bigint {
-  // Going through a fixed-point string rather than `BigInt(whole * 10 ** d)`
-  // avoids the float overflow that silently produces `Infinity` for an
-  // 18-decimal amount above roughly 1e2.
-  const fixed = whole.toFixed(Math.min(decimals, 18));
-  const [integer = '0', fraction = ''] = fixed.split('.');
+/**
+ * Human amount to raw integer units.
+ *
+ * `BigInt(whole * 10 ** decimals)` overflows a double at around 1e21, which an
+ * 18-decimal token reaches at a few thousand, so the multiplication loses its
+ * low digits before `BigInt` ever sees the value. Going through a decimal
+ * string instead keeps every digit — but *which* string matters, and
+ * `whole.toFixed(Math.min(decimals, 18))`, which this function used until
+ * MOV-245, is wrong in three separate ways:
+ *
+ *   - It invents digits for a value that is not representable in binary.
+ *     `(0.1).toFixed(18)` is `"0.100000000000000006"`, so 0.1 WETH quoted as
+ *     100000000000000006 raw units — six wei more than asked for. `(2.675)`
+ *     is worse, and off in the other direction: 2674999999999999822.
+ *   - It throws outright at 1e21 and above, where `toFixed` itself switches to
+ *     exponent notation: `(1e21).toFixed(18)` is `"1e+21"` and `BigInt("1e+21")`
+ *     is a SyntaxError. A ladder rung of $10M against a token priced below
+ *     ~1e-14 USD reaches that, and the throw is outside the per-rung `try`, so
+ *     it takes the whole depth profile down rather than marking one rung.
+ *   - The `Math.min(decimals, 18)` clamp it needs in order to stay inside
+ *     `toFixed`'s range truncates the fraction of a token with more than 18
+ *     decimals.
+ *
+ * `String(n)` gives the shortest decimal that round-trips to the same double —
+ * `"0.1"` for 0.1 — which is the digit sequence the caller meant, and the whole
+ * conversion then happens in integer space. It switches to exponent notation
+ * outside roughly 1e-7 to 1e21 too, so `splitDecimal` expands that form rather
+ * than handing an `e` to `BigInt`.
+ *
+ * This is the same implementation as `uniswap-mcp/src/amounts.ts`, deliberately
+ * duplicated rather than imported: `uniswap-mcp/` is a standalone package with
+ * its own `package.json` and nothing else in the repo reaches into it. The two
+ * must agree; `uniswap-mcp` is the reference if they ever drift.
+ */
+export function toRawAmount(whole: number, decimals: number): bigint {
+  if (!Number.isFinite(whole) || whole < 0) {
+    throw new RangeError(`amount must be a non-negative finite number, got ${whole}`);
+  }
+  const [integer, fraction] = splitDecimal(whole);
   const padded = (fraction + '0'.repeat(decimals)).slice(0, decimals);
   return BigInt(integer) * 10n ** BigInt(decimals) + BigInt(padded || '0');
+}
+
+/** A number as an exact pair of digit strings, expanding exponent notation. */
+function splitDecimal(value: number): [integer: string, fraction: string] {
+  const s = String(value);
+  const e = s.indexOf('e');
+  if (e < 0) {
+    const [i = '0', f = ''] = s.split('.');
+    return [i, f];
+  }
+  const exponent = Number(s.slice(e + 1));
+  const [mantissaInt = '0', mantissaFrac = ''] = s.slice(0, e).split('.');
+  const digits = mantissaInt + mantissaFrac;
+  // The decimal point starts after the mantissa's integer digits and moves by
+  // the exponent.
+  const point = mantissaInt.length + exponent;
+  if (point <= 0) return ['0', '0'.repeat(-point) + digits];
+  if (point >= digits.length) return [digits + '0'.repeat(point - digits.length), ''];
+  return [digits.slice(0, point), digits.slice(point)];
 }
 
 function fromRawAmount(raw: bigint, decimals: number): number {
