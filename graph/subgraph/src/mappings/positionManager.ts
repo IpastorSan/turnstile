@@ -31,7 +31,7 @@ import {
   liquidityToUSD,
 } from "../common/liquidityPool";
 import { priceUSDOrZero } from "../common/pricing";
-import { getOrCreateProtocol } from "../common/protocol";
+import { countUniqueUser, getOrCreateProtocol } from "../common/protocol";
 import { getOrCreateTick } from "../common/tick";
 import { bigIntToBigDecimal } from "../common/utils";
 
@@ -124,15 +124,21 @@ function loadOrCreatePosition(
   const protocol = getOrCreateProtocol();
   protocol.cumulativePositionCount += 1;
   protocol.openPositionCount += 1;
-  protocol.lastUpdateTimestamp = event.block.timestamp;
-  protocol.lastUpdateBlockNumber = event.block.number;
-  protocol.save();
 
   pool.positionCount += 1;
   pool.openPositionCount += 1;
   pool.save();
 
-  const account = getOrCreateAccount(Address.fromBytes(owner)).account;
+  // An LP first seen here is a unique user. Counting them only in
+  // updateUsageMetrics -- which this path never reaches -- let
+  // dailyActiveUsers exceed cumulativeUniqueUsers.
+  const result = getOrCreateAccount(Address.fromBytes(owner));
+  countUniqueUser(protocol, result.isNew, true);
+  protocol.lastUpdateTimestamp = event.block.timestamp;
+  protocol.lastUpdateBlockNumber = event.block.number;
+  protocol.save();
+
+  const account = result.account;
   account.positionCount += 1;
   account.openPositionCount += 1;
   account.save();
@@ -319,7 +325,12 @@ export function handlePositionTransfer(event: Transfer): void {
   }
   from.save();
 
-  const to = getOrCreateAccount(event.params.to).account;
+  const toResult = getOrCreateAccount(event.params.to);
+  const protocol = getOrCreateProtocol();
+  countUniqueUser(protocol, toResult.isNew, true);
+  protocol.save();
+
+  const to = toResult.account;
   to.positionCount += 1;
   if (isOpen) {
     to.openPositionCount += 1;

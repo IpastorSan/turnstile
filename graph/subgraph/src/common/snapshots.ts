@@ -11,6 +11,7 @@ import {
 } from "../../generated/schema";
 import { ZERO_BD, ZERO_BI } from "./constants";
 import { getOrCreateAccount, markActive } from "./account";
+import { countUniqueUser } from "./protocol";
 import { getDayID, getHourID, snapshotId } from "./utils";
 
 export const TX_SWAP: i32 = 0;
@@ -81,14 +82,7 @@ export function updateUsageMetrics(
   const hour = getHourID(event.block.timestamp);
 
   const result = getOrCreateAccount(accountAddress);
-  if (result.isNew) {
-    protocol.cumulativeUniqueUsers += 1;
-    if (txType == TX_SWAP) {
-      protocol.cumulativeUniqueTraders += 1;
-    } else {
-      protocol.cumulativeUniqueLPs += 1;
-    }
-  }
+  countUniqueUser(protocol, result.isNew, txType != TX_SWAP);
 
   const account = result.account;
   if (txType == TX_SWAP) {

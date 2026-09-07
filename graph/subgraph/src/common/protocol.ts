@@ -68,3 +68,27 @@ export function touchProtocol(
   protocol.lastUpdateTimestamp = event.block.timestamp;
   protocol.lastUpdateBlockNumber = event.block.number;
 }
+
+/**
+ * Fold a newly seen account into the protocol's unique-user counters.
+ *
+ * Every path that can be an account's first appearance has to call this, not
+ * just the swap path: an LP whose position arrives through the position
+ * manager is a unique user too, and counting them only in the usage snapshot
+ * lets dailyActiveUsers exceed cumulativeUniqueUsers, which is nonsense.
+ */
+export function countUniqueUser(
+  protocol: DexAmmProtocol,
+  isNewAccount: boolean,
+  isLiquidityProvider: boolean
+): void {
+  if (!isNewAccount) {
+    return;
+  }
+  protocol.cumulativeUniqueUsers += 1;
+  if (isLiquidityProvider) {
+    protocol.cumulativeUniqueLPs += 1;
+  } else {
+    protocol.cumulativeUniqueTraders += 1;
+  }
+}
