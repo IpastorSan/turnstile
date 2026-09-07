@@ -1,2 +1,3 @@
 /target
 buf.gen.yaml
+src/abi/identity_registry.rs

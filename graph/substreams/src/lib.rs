@@ -7,6 +7,10 @@
 //! the same WASM binary streams Ethereum mainnet, Base, Sepolia and Base
 //! Sepolia unchanged.
 
+// `substreams_ethereum::init!()` expands to the extern entrypoint the runtime
+// calls; clippy reads its raw-pointer argument as an unsafe deref in safe code.
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+
 mod abi;
 mod params;
 mod pb;
@@ -27,7 +31,10 @@ const AGENT_WALLET_KEY: &str = "agentWallet";
 substreams_ethereum::init!();
 
 #[substreams::handlers::map]
-fn map_agent_registrations(raw_params: String, blk: eth::Block) -> Result<out::AgentRegistrations, Error> {
+fn map_agent_registrations(
+    raw_params: String,
+    blk: eth::Block,
+) -> Result<out::AgentRegistrations, Error> {
     let params = Params::parse(&raw_params)?;
 
     let block_number = blk.number;
@@ -41,13 +48,19 @@ fn map_agent_registrations(raw_params: String, blk: eth::Block) -> Result<out::A
     // consumers through `store_agent_wallets`, not by rewriting past rows.
     let mut wallets_in_block: Vec<(&str, &str)> = Vec::new();
     for update in &wallet_updates {
-        match wallets_in_block.iter_mut().find(|(uid, _)| *uid == update.agent_uid) {
+        match wallets_in_block
+            .iter_mut()
+            .find(|(uid, _)| *uid == update.agent_uid)
+        {
             Some(entry) => entry.1 = &update.wallet,
             None => wallets_in_block.push((&update.agent_uid, &update.wallet)),
         }
     }
     let wallet_for = |agent_uid: &str| -> Option<String> {
-        wallets_in_block.iter().find(|(uid, _)| *uid == agent_uid).map(|(_, w)| w.to_string())
+        wallets_in_block
+            .iter()
+            .find(|(uid, _)| *uid == agent_uid)
+            .map(|(_, w)| w.to_string())
     };
 
     let mut registrations = Vec::new();
@@ -57,16 +70,27 @@ fn map_agent_registrations(raw_params: String, blk: eth::Block) -> Result<out::A
             continue;
         }
 
-        let (event, agent_id, uri, owner) = if let Some(e) = events::Registered::match_and_decode(log) {
-            (out::RegistrationEvent::Registered, e.agent_id, e.agent_uri, e.owner)
-        } else if let Some(e) = events::UriUpdated::match_and_decode(log) {
-            // `updatedBy` is the caller, which the registry requires to be the
-            // owner or an approved operator. It is the best owner signal this
-            // event carries.
-            (out::RegistrationEvent::UriUpdated, e.agent_id, e.new_uri, e.updated_by)
-        } else {
-            continue;
-        };
+        let (event, agent_id, uri, owner) =
+            if let Some(e) = events::Registered::match_and_decode(log) {
+                (
+                    out::RegistrationEvent::Registered,
+                    e.agent_id,
+                    e.agent_uri,
+                    e.owner,
+                )
+            } else if let Some(e) = events::UriUpdated::match_and_decode(log) {
+                // `updatedBy` is the caller, which the registry requires to be the
+                // owner or an approved operator. It is the best owner signal this
+                // event carries.
+                (
+                    out::RegistrationEvent::UriUpdated,
+                    e.agent_id,
+                    e.new_uri,
+                    e.updated_by,
+                )
+            } else {
+                continue;
+            };
 
         let agent_id = agent_id.to_string();
         let agent_uid = agent_uid(&params, &agent_id);
@@ -95,12 +119,21 @@ fn map_agent_registrations(raw_params: String, blk: eth::Block) -> Result<out::A
             uri_scheme: uri_scheme as i32,
             registration_resolved: parsed.is_some(),
             name: parsed.as_ref().map(|r| r.name.clone()).unwrap_or_default(),
-            description: parsed.as_ref().map(|r| r.description.clone()).unwrap_or_default(),
+            description: parsed
+                .as_ref()
+                .map(|r| r.description.clone())
+                .unwrap_or_default(),
             image: parsed.as_ref().map(|r| r.image.clone()).unwrap_or_default(),
-            endpoints: parsed.as_ref().map(|r| r.endpoints.clone()).unwrap_or_default(),
+            endpoints: parsed
+                .as_ref()
+                .map(|r| r.endpoints.clone())
+                .unwrap_or_default(),
             x402_support: parsed.as_ref().map(|r| r.x402_support).unwrap_or(false),
             active: parsed.as_ref().map(|r| r.active).unwrap_or(false),
-            supported_trust: parsed.as_ref().map(|r| r.supported_trust.clone()).unwrap_or_default(),
+            supported_trust: parsed
+                .as_ref()
+                .map(|r| r.supported_trust.clone())
+                .unwrap_or_default(),
             price: parsed.and_then(|r| r.price),
             event: event as i32,
             block_number,
@@ -170,7 +203,9 @@ fn collect_wallet_updates(
         if log.address != params.registry_bytes {
             continue;
         }
-        let Some(event) = events::MetadataSet::match_and_decode(log) else { continue };
+        let Some(event) = events::MetadataSet::match_and_decode(log) else {
+            continue;
+        };
         if event.metadata_key != AGENT_WALLET_KEY {
             continue;
         }
@@ -201,7 +236,10 @@ fn collect_wallet_updates(
 /// CAIP-10-shaped identifier extended with the ERC-721 token id, unique across
 /// every chain that runs a registry: `eip155:<chain_id>:<registry>/<agent_id>`.
 fn agent_uid(params: &Params, agent_id: &str) -> String {
-    format!("eip155:{}:{}/{}", params.chain_id, params.registry, agent_id)
+    format!(
+        "eip155:{}:{}/{}",
+        params.chain_id, params.registry, agent_id
+    )
 }
 
 fn block_timestamp(blk: &eth::Block) -> i64 {

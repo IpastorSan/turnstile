@@ -25,16 +25,17 @@ impl Params {
         let mut network = None;
 
         for pair in raw.split('&').filter(|p| !p.is_empty()) {
-            let (key, value) = pair
-                .split_once('=')
-                .ok_or_else(|| Error::msg(format!("malformed param {pair:?}, expected key=value")))?;
+            let (key, value) = pair.split_once('=').ok_or_else(|| {
+                Error::msg(format!("malformed param {pair:?}, expected key=value"))
+            })?;
             match key {
                 "registry" => registry = Some(value.to_string()),
-                "chain_id" => chain_id = Some(
-                    value
-                        .parse::<u64>()
-                        .map_err(|_| Error::msg(format!("chain_id {value:?} is not a number")))?,
-                ),
+                "chain_id" => {
+                    chain_id =
+                        Some(value.parse::<u64>().map_err(|_| {
+                            Error::msg(format!("chain_id {value:?} is not a number"))
+                        })?)
+                }
                 "network" => network = Some(value.to_string()),
                 other => return Err(Error::msg(format!("unknown param {other:?}"))),
             }
@@ -56,7 +57,13 @@ impl Params {
         let chain = format!("eip155:{chain_id}");
         let network = network.unwrap_or_else(|| chain.clone());
 
-        Ok(Params { registry, registry_bytes, chain_id, network, chain })
+        Ok(Params {
+            registry,
+            registry_bytes,
+            chain_id,
+            network,
+            chain,
+        })
     }
 }
 
@@ -91,7 +98,9 @@ mod tests {
 
     #[test]
     fn rejects_an_unknown_key() {
-        assert!(Params::parse("registry=0x8004a818bfb912233c491871b3d84c89a494bd9e&chain_id=1&oops=1")
-            .is_err());
+        assert!(Params::parse(
+            "registry=0x8004a818bfb912233c491871b3d84c89a494bd9e&chain_id=1&oops=1"
+        )
+        .is_err());
     }
 }

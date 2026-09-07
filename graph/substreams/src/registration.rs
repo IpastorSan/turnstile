@@ -24,7 +24,10 @@ pub fn parse_uri(uri: &str) -> (pb::UriScheme, Option<Value>) {
         return (pb::UriScheme::Empty, None);
     }
     if trimmed.starts_with('{') {
-        return (pb::UriScheme::InlineJson, serde_json::from_str(trimmed).ok());
+        return (
+            pb::UriScheme::InlineJson,
+            serde_json::from_str(trimmed).ok(),
+        );
     }
     if let Some(rest) = strip_ci(trimmed, "data:") {
         return (pb::UriScheme::Data, decode_data_uri(rest));
@@ -146,10 +149,16 @@ pub fn parse_document(doc: &Value) -> Registration {
 fn parse_endpoint(item: &Value) -> Option<pb::Endpoint> {
     // Some documents list endpoints as plain strings.
     if let Value::String(s) = item {
-        return Some(pb::Endpoint { uri: s.clone(), ..Default::default() });
+        return Some(pb::Endpoint {
+            uri: s.clone(),
+            ..Default::default()
+        });
     }
     let obj = item.as_object()?;
-    let uri = str_field(item, &["endpoint", "url", "serviceEndpoint", "uri", "value"]);
+    let uri = str_field(
+        item,
+        &["endpoint", "url", "serviceEndpoint", "uri", "value"],
+    );
     let name = str_field(item, &["name", "type", "protocol"]);
     if uri.is_empty() && name.is_empty() && obj.is_empty() {
         return None;
@@ -170,10 +179,18 @@ fn parse_endpoint(item: &Value) -> Option<pb::Endpoint> {
 /// for the non-standard `price` / `pricing` objects some agents publish, and is
 /// shaped like an x402 payment requirement so the two line up.
 fn parse_price(v: &Value) -> Option<pb::Price> {
-    let node = ["price", "pricing", "x402Price"].iter().find_map(|k| v.get(*k))?;
+    let node = ["price", "pricing", "x402Price"]
+        .iter()
+        .find_map(|k| v.get(*k))?;
     let price = match node {
-        Value::String(s) => pb::Price { amount: s.clone(), ..Default::default() },
-        Value::Number(n) => pb::Price { amount: n.to_string(), ..Default::default() },
+        Value::String(s) => pb::Price {
+            amount: s.clone(),
+            ..Default::default()
+        },
+        Value::Number(n) => pb::Price {
+            amount: n.to_string(),
+            ..Default::default()
+        },
         Value::Object(_) => pb::Price {
             amount: scalar_field(node, &["amount", "maxAmountRequired", "value", "price"]),
             currency: str_field(node, &["currency", "unit", "denom"]),
@@ -222,7 +239,11 @@ fn bool_field(v: &Value, keys: &[&str]) -> Option<bool> {
 fn str_list(v: &Value, keys: &[&str]) -> Vec<String> {
     for k in keys {
         if let Some(Value::Array(items)) = v.get(*k) {
-            return items.iter().filter_map(Value::as_str).map(str::to_string).collect();
+            return items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect();
         }
     }
     Vec::new()
@@ -240,7 +261,10 @@ mod tests {
     fn classifies_uri_schemes() {
         assert_eq!(parse_uri("").0, pb::UriScheme::Empty);
         assert_eq!(parse_uri("ipfs://QmPxKi").0, pb::UriScheme::Ipfs);
-        assert_eq!(parse_uri("https://api.freaks.one/api/freak/3652").0, pb::UriScheme::Https);
+        assert_eq!(
+            parse_uri("https://api.freaks.one/api/freak/3652").0,
+            pb::UriScheme::Https
+        );
         assert_eq!(parse_uri("http://x.example").0, pb::UriScheme::Http);
         assert_eq!(parse_uri("{\"name\":\"a\"}").0, pb::UriScheme::InlineJson);
         assert_eq!(parse_uri("did:web:example.com").0, pb::UriScheme::Other);
@@ -249,7 +273,8 @@ mod tests {
     #[test]
     fn decodes_a_base64_data_uri() {
         // The real mainnet agent 32055 document.
-        let (scheme, doc) = parse_uri("data:application/json;base64,eyJuYW1lIjoidHJ1c3RydXN0LmV0aCJ9");
+        let (scheme, doc) =
+            parse_uri("data:application/json;base64,eyJuYW1lIjoidHJ1c3RydXN0LmV0aCJ9");
         assert_eq!(scheme, pb::UriScheme::Data);
         assert_eq!(parse_document(&doc.unwrap()).name, "trustrust.eth");
     }
