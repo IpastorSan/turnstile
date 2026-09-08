@@ -9,6 +9,9 @@
     "node": ">=22.18"
   },
   "scripts": {
+    "demo": "node scripts/arc-paid-request.ts",
+    "verify": "npm run typecheck && npm test && npm run test:forge",
+    "test:forge": "cd contracts && forge test",
     "sink": "node graph/sink/sink.ts",
     "resolve-cards": "node graph/sink/resolve-cards.ts",
     "hydrate-sellers": "node graph/sink/hydrate-sellers.ts",
