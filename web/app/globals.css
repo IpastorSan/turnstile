@@ -1150,3 +1150,105 @@ a {
   }
   .payment-at, .payment-ref { grid-column: 1 / -1; }
 }
+
+/* --- creating a mandate --------------------------------------------------- */
+
+.create-form { margin: 18px 0 0; }
+
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 0 0 14px;
+}
+
+.field { flex: 1 1 200px; display: block; }
+
+.field-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chalk-faint);
+  margin: 0 0 6px;
+}
+
+.field-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: var(--rail);
+  border-radius: var(--radius);
+  background: var(--enamel-900);
+  color: var(--chalk);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.field-input:focus {
+  outline: none;
+  border-color: var(--brass-deep);
+}
+
+.field-note {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--chalk-faint);
+  margin: 0 0 18px;
+  max-width: 72ch;
+}
+
+.created { margin: 18px 0 0; }
+
+.created-lede {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--chalk-dim);
+  margin: 0 0 18px;
+}
+
+/* The one genuinely dangerous moment in the app: keys that exist nowhere else. */
+.warn-block {
+  padding: 14px 16px;
+  border-left: 2px solid var(--vermilion);
+  background: color-mix(in oklab, var(--vermilion) 9%, transparent);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--chalk-dim);
+  margin: 0 0 18px;
+}
+
+.warn-block b { color: var(--vermilion); }
+
+.env-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chalk-faint);
+  margin: 0 0 6px;
+}
+
+.env-block {
+  width: 100%;
+  padding: 14px;
+  border: var(--rail);
+  border-radius: var(--radius);
+  background: var(--enamel-900);
+  color: var(--chalk-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.created-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0 0;
+  align-items: center;
+}
+
+.created-actions a.probe-button { text-decoration: none; }

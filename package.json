@@ -22,7 +22,7 @@
     "evidence": "node seller/cre/evidence-server.ts",
     "settle": "node seller/cre/settle-cli.ts",
     "premium": "node seller/service/premium-cli.ts",
-    "test": "node --test \"graph/**/*.test.ts\" \"seller/**/*.test.ts\" \"rails/**/*.test.ts\" \"buyer/**/*.test.ts\" \"mcp-turnstile/**/*.test.ts\" \"uniswap-mcp/test/*.test.ts\"",
+    "test": "node --test \"graph/**/*.test.ts\" \"seller/**/*.test.ts\" \"rails/**/*.test.ts\" \"buyer/**/*.test.ts\" \"mcp-turnstile/**/*.test.ts\" \"uniswap-mcp/test/*.test.ts\" \"web/lib/*.test.ts\"",
     "serve": "node seller/service/server.ts",
     "hedera:setup": "node scripts/hedera-setup.ts",
     "hedera:pay": "node scripts/hedera-paid-request.ts",
