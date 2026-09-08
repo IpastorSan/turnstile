@@ -90,7 +90,7 @@ export class SubgraphMcpClient {
         args: options.args ?? [],
         // The self-hosted server reads the key from its environment. Pass only
         // what it needs rather than the whole process environment, which in
-        // this repo holds a Ledger-sealed world of other people's secrets.
+        // this repo holds a world of other people's secrets.
         env: apiKey ? { GRAPH_API_KEY: apiKey, GRAPH_GATEWAY_API_KEY: apiKey } : {},
       });
       this.describe = `stdio:${options.command}`;
