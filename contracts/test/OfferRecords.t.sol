@@ -36,9 +36,9 @@ contract LibraryHarness {
 ///
 /// The load-bearing assertion in this file is
 /// `test_hotKeyCannotChangeThePayoutAddress`. Everything else establishes that
-/// the hot key is genuinely useful — it reprices and moves its endpoint without a
-/// Ledger — so that the one thing it cannot do reads as a boundary rather than as
-/// a key that was never wired up.
+/// the hot key is genuinely useful — it reprices and moves its endpoint without
+/// the cold key — so that the one thing it cannot do reads as a boundary rather
+/// than as a key that was never wired up.
 contract OfferRecordsTest is OfferFixture {
     LibraryHarness internal harness = new LibraryHarness();
 
@@ -192,7 +192,7 @@ contract OfferRecordsTest is OfferFixture {
     ////////////////////////////////////////////////////////////////////////
 
     /// @dev The hot key's whole job: reprice and move the endpoint, every day,
-    ///      without touching a Ledger.
+    ///      without touching the cold key.
     function test_hotKeyCanUpdateEndpointAndPrice() public {
         vm.startPrank(hotKey);
         resolver.setText(

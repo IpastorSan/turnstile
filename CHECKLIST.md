@@ -21,7 +21,7 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 | 2b | Create **thegraph.market** account + JWT (Dashboard → Create New Key) for Substreams streaming | The Graph |
 | 3 | ✅ **Free CRE account** — done (MOV-227). `cre login` writes `~/.cre/cre.yaml`; `cre whoami` confirms org `org_Js0Ll47RXcQ17Uk6`, **Deploy Access: Not enabled**. Confirmed self-serve, no queue, and confirmed sufficient for `simulate`. **`CRE_API_KEY` is NOT the credential** — the key in `.env` is a Data Streams one and breaks every command; see `docs/accounts.md` | Chainlink |
 | 4 | ✅ **CRE CLI + Bun** — done (MOV-227). `cre` v1.32.0 from the `smartcontractkit/cre-cli` GitHub release at `~/.local/bin/cre`; Bun 1.3.14 already present | Chainlink |
-| 5 | `npm i -g @ledgerhq/wallet-cli`; run `wallet-cli genuine-check` and `ring init` **with the device attached** — this is the only step that needs hardware | Ledger |
+| 5 | ~~`npm i -g @ledgerhq/wallet-cli`; run `wallet-cli genuine-check` and `ring init` **with the device attached**~~ — **NOT PURSUED (2026-09-08, MOV-000).** Attempted and failed: `ring init` creates the local member credentials then dies at the device step with an untyped "unknown error" on our only device, a **Ledger Nano S** (2016, EOL, firmware capped at 2.1.0). LKRP is the trustchain behind Ledger Recover and has never supported the Nano S. Ruled out: permissions (udev verified, `uaccess` tag, hidraw readable), transport (`genuine-check` returns a *typed* error, so the device answers), and the package. The model cannot do it, so the track is dropped rather than forgotten | Ledger |
 | 6 | Create **portal.hedera.com** account + ECDSA testnet accounts (1,000 HBAR/24h × up to 5) | Hedera |
 | 7 | Create **bazantic.com** account | Bazantic |
 | 8 | ✅ **Real ENSv2 Sepolia addresses** — done (MOV-212). All 31 verified against live `eth_getCode`; zero bytes differ outside declared `immutableReferences` slots. Recorded in `contracts/addresses.sepolia.json`, method and caveats in `docs/ensv2-notes.md`. Artifacts are **rocketh/hardhat-deploy** at `contracts/deployments/sepolia/<Name>.json` — there is no Foundry `broadcast/`. Pinned to the 2026-06-29 deploy, not permanent: re-check before deploying, and `contracts/test/fork/SepoliaEnsV2.t.sol` is the canary | ENS |
@@ -84,10 +84,11 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] Working app, tested via the **Sandbox App**
 - [ ] **Feedback document** (item 14)
 
-**Ledger ($3,500)**
-- [ ] Built on the Ledger Agent Stack, **in particular `wallet-cli ring`**
-- [ ] Device-backed security **central**, not bypassed
-- [ ] Submission explicitly labels the capability broker as **ours**, not a Ledger primitive
+**Ledger ($3,500) — NOT PURSUED. Deliberate decision, 2026-09-08 (MOV-000). Do not submit to this track.**
+- [~] ~~Built on the Ledger Agent Stack, **in particular `wallet-cli ring`**~~ — impossible on our hardware; see setup step 5 for the full diagnosis
+- [~] ~~Device-backed security **central**, not bypassed~~ — **there is no device.** The cold/warm/hot tier split is real, and the cold key's authority is enforced on chain (MOV-218: the hot key's `setAddr` payout change reverts with `EACUnauthorizedAccountRoles` on Sepolia). It is simply **not hardware-backed**, so this gate cannot be claimed
+- [~] ~~Submission explicitly labels the capability broker as **ours**, not a Ledger primitive~~ — moot with the track dropped
+- **Why this is struck through rather than deleted:** the gates were evaluated and failed on hardware we could not change, not overlooked. Claiming a Ledger we do not have would be a false statement to judges. Every "Ledger" mention elsewhere in the repo was removed or dated-corrected in MOV-000; the one string that survives is the live ENS record `turnstile:operator-proof = "ledger-key-ring"` on Sepolia, which is a **stale label** — rewriting it needs a cold-key transaction. See `docs/ens-offer-records.md`.
 
 **Uniswap ($3,000)**
 - [ ] Public repo, open source

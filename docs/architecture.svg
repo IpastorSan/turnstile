@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 980" width="1200" height="980" font-family="Inter, Helvetica Neue, Helvetica, Arial, sans-serif">
   <title>Turnstile architecture — the three key tiers and the request path</title>
-  <desc>Two panels. The first shows the cold, warm and hot key tiers: Ledger Key Ring holds the seller operator identity, Privy holds the buyer organization wallet and mandate policy, Circle on Arc holds the buyer agent spending wallet. Authority flows downward only; the hot key that spends can never raise its own limit. The second shows the request path from discovery through the offer, an HTTP 402, a payment rail, and the answer.</desc>
+  <desc>Two panels. The first shows the cold, warm and hot key tiers: a cold key held offline holds the seller operator identity, Privy holds the buyer organization wallet and mandate policy, Circle on Arc holds the buyer agent spending wallet. Authority flows downward only; the hot key that spends can never raise its own limit. The second shows the request path from discovery through the offer, an HTTP 402, a payment rail, and the answer.</desc>
 
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -34,9 +34,9 @@
       <text x="64" y="212" fill="#5F7A74" font-size="12">once per</text>
       <text x="64" y="230" fill="#5F7A74" font-size="12">lifecycle</text>
     </g>
-    <text x="256" y="184" fill="#E9E5D8" font-size="19" font-weight="600">Ledger Key Ring</text>
+    <text x="256" y="184" fill="#E9E5D8" font-size="19" font-weight="600">Cold key, held offline</text>
     <text x="256" y="211" fill="#93A8A2" font-size="14">Seller operator identity · owns the ENSv2 name</text>
-    <text x="256" y="233" fill="#93A8A2" font-size="14">Seals upstream API keys</text>
+    <text x="256" y="233" fill="#93A8A2" font-size="14">Held offline · not hardware-backed</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
       <text x="742" y="178" fill="#5F7A74" font-size="11" letter-spacing="1.6">MAY AUTHORIZE</text>
       <text x="742" y="201" fill="#D2A857" font-size="13">rotate the hot key</text>
@@ -76,7 +76,7 @@
     </g>
     <text x="256" y="424" fill="#E9E5D8" font-size="19" font-weight="600">Circle · Arc Agent Stack</text>
     <text x="256" y="451" fill="#93A8A2" font-size="14">Buyer agent’s spending wallet</text>
-    <text x="256" y="473" fill="#93A8A2" font-size="14">Holds zero native token — Paymaster pays gas</text>
+    <text x="256" y="473" fill="#93A8A2" font-size="14">Signs offchain, never submits — pays zero gas</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
       <text x="742" y="418" fill="#5F7A74" font-size="11" letter-spacing="1.6">MAY AUTHORIZE</text>
       <text x="742" y="443" fill="#E4593A" font-size="15" font-weight="600">nothing</text>

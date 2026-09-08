@@ -2,9 +2,12 @@
 .env
 .env.local
 
-# NOTE: seller/secrets/*.enc IS tracked on purpose. It is Ledger-sealed
-# ciphertext; the whole point of the cold-key tier is that it is safe in the
-# repo. Do not add *.enc here.
+# NOTE: seller/secrets/*.enc IS tracked on purpose. It is ciphertext; the whole
+# point of the cold-key tier is that it is safe in the repo. Do not add *.enc
+# here.
+# Correction (2026-09-08, MOV-000): this note used to say "Ledger-sealed". The
+# Ledger track is dropped and seller/secrets/ holds no .enc files yet. The
+# do-not-ignore rule stands.
 
 # Dependencies / build output
 node_modules/

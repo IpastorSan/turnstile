@@ -54,8 +54,34 @@ can still discover the service and connect to it.
 | `turnstile:price` | ours | `0.07` | **hot** |
 | `turnstile:price-ceiling` | ours | `0.50` | cold |
 | `turnstile:rails` | ours | `x402,usdc-arc` | cold |
-| `turnstile:operator-proof` | ours | `ledger-key-ring` | cold |
+| `turnstile:operator-proof` | ours | `ledger-key-ring` — **stale, see below** | cold |
 | `addr(60)` — **the payout address** | ENSIP-1 | the seller's payout | cold |
+
+**Correction (2026-09-08, MOV-000): `turnstile:operator-proof` is a stale
+label.** The value published on Sepolia really is the string `ledger-key-ring`,
+and the `cast` transcript further down is a faithful record of what the chain
+says — it has deliberately **not** been edited. But the string no longer
+describes anything we do: the Ledger track is **not pursued**, because
+`wallet-cli ring init` fails on our only device (a Ledger Nano S, which LKRP has
+never supported). We do not use a Ledger. Read that record as "a cold key held
+offline".
+
+Two consequences, both deliberate:
+
+1. **The code no longer publishes it.** `PublishOffer.s.sol`'s
+   `TURNSTILE_OPERATOR_PROOF` default is now `cold-key-offline`, so no fresh
+   deploy asserts hardware we do not have.
+2. **Code and chain therefore disagree on this one string**, knowingly. The live
+   record is cold-key-written, so correcting it is a cold-key transaction rather
+   than an edit — the same judgement call as `turnstile:rails` below, and it has
+   not been made yet. Nothing reads this value semantically: it is carried
+   through `graph/sink/ens.ts` and `mcp-turnstile/offer.ts` as an opaque string
+   and no test asserts its contents, so the drift is cosmetic rather than
+   load-bearing.
+
+**Unchanged: every other row, and the cold/hot split itself.** Which keys may
+write which records is enforced by the resolver's roles, not by this string —
+see the MOV-218 payout-change revert below.
 
 The payout is deliberately the name's `addr()` record rather than a
 `turnstile:payout` text key. It is the one field every ENS client already knows
@@ -94,7 +120,8 @@ a test going red.
 
 **This record is cold-key-written**, per the table above, so it cannot be
 corrected from the hot key. Rewriting `x402` to something that names its chain
-would need a Ledger session, which is a judgement call for MOV-220 rather than
+would need a cold-key signing session, which is a judgement call for MOV-220
+rather than
 something to do in passing. The code was matched to the record instead, because
 a buyer that discovered us through ENS filters on these exact tokens.
 
@@ -150,7 +177,7 @@ $ cast call $R "text(bytes32,string)(string)" $N "turnstile:price-ceiling"
 $ cast call $R "text(bytes32,string)(string)" $N "turnstile:rails"
 "x402,usdc-arc"
 $ cast call $R "text(bytes32,string)(string)" $N "turnstile:operator-proof"
-"ledger-key-ring"
+"ledger-key-ring"        # stale label, not a Ledger — see the correction above
 
 $ cast call $R "addr(bytes32)(address)" $N
 0x0Adca6e14bA956201D221feC767e4f24194bf5F2
@@ -474,7 +501,10 @@ downloaded twice. If `forge` disappears again, that is where it is.
   to. It was used to prove the authorization moved, via `cast call --from`, not
   to send a transaction.
 - **The hot key in `.env` is a throwaway** generated 2026-09-07 for this demo,
-  funded with 0.01 Sepolia ETH. It is not device-backed; the cold tier in
-  `CLAUDE.md` is the Ledger Key Ring, and wiring that as the cold signer is
-  MOV-209's job, not this one's. Everything here treats
-  `DEPLOYER_PRIVATE_KEY` as standing in for it.
+  funded with 0.01 Sepolia ETH. Everything here treats `DEPLOYER_PRIVATE_KEY` as
+  standing in for the cold key. **Correction (2026-09-08, MOV-000):** this bullet
+  previously said the cold tier "is the Ledger Key Ring, and wiring that as the
+  cold signer is MOV-209's job". There is no Ledger — the track is not pursued.
+  What survives is the caveat that actually mattered: **neither key here is
+  hardware-backed, and the cold signer is a stand-in.** The cold/hot *split* is
+  real and enforced on chain regardless of what holds either key.

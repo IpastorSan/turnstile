@@ -6,6 +6,20 @@ Asset: [`architecture.svg`](./architecture.svg) (source) · [`architecture.png`]
 
 ![Turnstile architecture: the three key tiers, and the request path](./architecture.png)
 
+**Correction (2026-09-08, MOV-000): the diagram was re-rendered and three of its
+labels changed.** The `.svg` is the source and the `.png` was regenerated from it
+with `rsvg-convert -w 1200 -h 980 docs/architecture.svg -o docs/architecture.png`.
+
+| Was | Now | Why |
+| --- | --- | --- |
+| Cold row title: `Ledger Key Ring` | `Cold key, held offline` | The Ledger track is **not pursued** — no such device works here. See section A. |
+| Cold row line 2: `Seals upstream API keys` | `Held offline · not hardware-backed` | Nothing seals those keys; `seller/secrets/` holds no `.enc` files. |
+| Hot row line 2: `Holds zero native token — Paymaster pays gas` | `Signs offchain, never submits — pays zero gas` | **Found while doing the above.** This is the exact Paymaster wording MOV-225 corrected as wrong on 2026-09-07 in `CLAUDE.md`, `README.md` and section A of this file — the diagram was missed at the time, so the picture kept asserting it for a day after the prose stopped. There is no Paymaster in Turnstile. |
+
+The `<desc>` accessibility text was updated to match. Nothing else in the
+diagram changed: both panels, the invariant banner and the whole request path
+are as MOV-230 drew them.
+
 Two things are drawn here because they are the two things a reader has to hold
 at once: **where the keys sit**, and **what happens when an agent buys an
 answer**. They are not independent — step 05 of the request path is the only
@@ -21,9 +35,31 @@ actually best, and together they are one cold/warm/hot hierarchy.
 
 | Tier | Vendor | Holds | Frequency | May authorize |
 |---|---|---|---|---|
-| **Cold** | Ledger Key Ring (`wallet-cli ring`) | Seller operator identity; owns the ENSv2 name; seals upstream API keys | Once per lifecycle | Hot-key rotation, payout address change, price-ceiling raise |
+| **Cold** | A cold key held offline | Seller operator identity; owns the ENSv2 name | Once per lifecycle | Hot-key rotation, payout address change, price-ceiling raise |
 | **Warm** | Privy | Buyer **organization** wallet + mandate policy | Occasional | Issuing a mandate, raising a cap (quorum), adding an agent |
 | **Hot** | Circle / Arc Agent Stack | Buyer agent's spending wallet | Every query | Nothing. Spends *within* the mandate; **signs offchain and never submits a transaction**, so it pays exactly zero gas |
+
+**Correction (2026-09-08, MOV-000):** the Cold row previously named **Ledger Key
+Ring (`wallet-cli ring`)** as the vendor and claimed it "seals upstream API
+keys". Both are withdrawn — **we do not use a Ledger device and never got one
+working.** `wallet-cli ring init` fails on the only device available to us, a
+**Ledger Nano S** (the original 2016 model, EOL, firmware capped at 2.1.0): it
+creates the local member credentials and then fails at the device step with an
+untyped "unknown error". LKRP is the trustchain behind Ledger Recover, which has
+never supported the Nano S. It is not permissions (udev verified, `uaccess` tag
+present, hidraw readable), not transport (`genuine-check` returns a *typed*
+error, so the device does answer), and not the package — the model cannot do it.
+The Ledger prize track is **not pursued**; see `CHECKLIST.md`.
+
+**What is unchanged: the cold tier itself, and every other row.** Ledger was only
+ever going to be *where the cold key lives*, never *what makes it cold*. The
+cold/hot split is enforced by the resolver's role checks, and it is proven on
+chain rather than in prose — MOV-218 demonstrated the hot key's `setAddr` payout
+change **reverting** with `EACUnauthorizedAccountRoles`, live on Sepolia, with
+passing Forge tests and a fork test behind it. What falls is only the custody
+story: the cold key is held offline and is **not** hardware-backed. No substitute
+vendor is claimed.
+
 
 **Correction (2026-09-07, MOV-225):** the Hot row previously read "holds zero
 native token (Paymaster)". That is **wrong on Arc** — it names a mechanism that
@@ -82,8 +118,14 @@ the mechanism named in the Hot row was wrong.
 
 Authority flows downward only. If a change would let the hot tier widen its own
 mandate, rotate a key, or move a payout address, the change is wrong — take it
-to the tier above. Device-backed security is central here, not decorative; there
-is no "convenience" path that bypasses the Ledger.
+to the tier above. The tier separation is central here, not decorative; there is
+no "convenience" path that bypasses the cold key.
+
+**Correction (2026-09-08, MOV-000):** this paragraph previously read
+"Device-backed security is central here … bypasses the Ledger". There is no
+device — see the correction under the table in section A. The invariant itself
+is **unchanged and still enforced on chain**, by the resolver's role checks; only
+the appeal to hardware is gone.
 
 This is visible on chain rather than only in prose. `turnstile:price` is written
 by the hot key; `turnstile:price-ceiling` is written by the cold key. A hot key
@@ -95,7 +137,7 @@ permissions, not by a policy document. See
 
 | Tier | State on 2026-09-07 |
 |---|---|
-| Cold | **Live.** `liquidity.turnstile.eth` on Sepolia, resolver `0xb1B4Da2C49814c8CbF975E7a48fbB014EA0b075B`, operator proof `ledger-key-ring` published as a resolver record. |
+| Cold | **Live.** `liquidity.turnstile.eth` on Sepolia, resolver `0xb1B4Da2C49814c8CbF975E7a48fbB014EA0b075B`, operator proof published as a resolver record. **Correction (2026-09-08, MOV-000):** the published string is `ledger-key-ring` and this row used to quote it without comment. It is a **stale label** — the Ledger track is not pursued and no Ledger is used; the code now publishes `cold-key-offline` instead. The tier is still live and the split still enforced; only the label is wrong. See `ens-offer-records.md`. |
 | Warm | **Live (MOV-228).** A Privy server wallet at `0x3De96375140717193f52c220Df5Ec460971cbE84` (Privy id `w0cxyoh1lnc1lqfyi9tb5yej`), owned by a 1-of-2 operations key quorum and governed by a mandate policy owned by a separate 2-of-2 board quorum. It signed the `depositFor()` that funds the agent, on chain. **Correction (2026-09-07, MOV-228):** this row previously read "Not built. MOV-228 (Privy) has not been started. `/mandate` in the web app is a labelled placeholder." The first two sentences are now wrong; the third is unchanged and still true — the web app's `/mandate` page is still a placeholder, and the mandate lives in `buyer/mandate/` and in the Privy policy, not in the UI. See `docs/privy-mandate.md`. |
 | Hot | **Built (MOV-225), and it is the Arc rail's buyer half.** `buyer/watchdog/arc-signer.ts` is the spending wallet: it signs EIP-3009 authorizations against Circle Gateway and submits nothing, so its nonce stays 0. Funded by the warm tier through `depositFor`. **Correction (2026-09-07, MOV-225):** this row previously read "Not built. The Arc/Circle spending wallet lands with the rails work." — that was accurate when written and the rails work has now landed. **Correction (2026-09-07, MOV-228):** MOV-225's note added here that "the `depositFor` caller is a plain key today rather than an org wallet with a quorum" — that is no longer true, and the Warm row above now says what replaced it. Everything else in this row is unchanged: the hot wallet's nonce is still 0, verified by `buyer/watchdog/hot-wallet.test.ts` after MOV-228's changes. |
 

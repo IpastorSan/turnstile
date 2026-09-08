@@ -45,9 +45,31 @@ actually best, and together they are one cold/warm/hot hierarchy.
 
 | Tier | Vendor | Holds | Frequency | May authorize |
 |---|---|---|---|---|
-| **Cold** | Ledger Key Ring (`wallet-cli ring`) | Seller operator identity; owns the ENSv2 name; seals upstream API keys | Once per lifecycle | Hot-key rotation, payout address change, price-ceiling raise |
+| **Cold** | A cold key held offline | Seller operator identity; owns the ENSv2 name | Once per lifecycle | Hot-key rotation, payout address change, price-ceiling raise |
 | **Warm** | Privy | Buyer **organization** wallet + mandate policy | Occasional | Issuing a mandate, raising a cap (quorum), adding an agent |
 | **Hot** | Circle / Arc Agent Stack | Buyer agent's spending wallet | Every query | Nothing. Spends *within* the mandate; **signs offchain and never submits a transaction**, so it pays exactly zero gas |
+
+**Correction (2026-09-08, MOV-000):** the Cold row previously named **Ledger Key
+Ring (`wallet-cli ring`)** as the vendor and claimed it "seals upstream API
+keys". Both are withdrawn — **we do not use a Ledger device and never got one
+working.** `wallet-cli ring init` fails on the only device available to us, a
+**Ledger Nano S** (the original 2016 model, EOL, firmware capped at 2.1.0): it
+creates the local member credentials and then fails at the device step with an
+untyped "unknown error". LKRP is the trustchain behind Ledger Recover, which has
+never supported the Nano S. It is not permissions (udev verified, `uaccess` tag
+present, hidraw readable), not transport (`genuine-check` returns a *typed*
+error, so the device does answer), and not the package — the model cannot do it.
+The Ledger prize track is **not pursued**; see `CHECKLIST.md`.
+
+**What is unchanged: the cold tier itself, and every other row.** Ledger was only
+ever going to be *where the cold key lives*, never *what makes it cold*. The
+cold/hot split is enforced by the resolver's role checks, and it is proven on
+chain rather than in prose — MOV-218 demonstrated the hot key's `setAddr` payout
+change **reverting** with `EACUnauthorizedAccountRoles`, live on Sepolia, with
+passing Forge tests and a fork test behind it. What falls is only the custody
+story: the cold key is held offline and is **not** hardware-backed. No substitute
+vendor is claimed.
+
 
 **Correction (2026-09-07, MOV-225):** the Hot row previously read "holds zero
 native token (Paymaster)". That is **wrong on Arc** — it names a mechanism that
@@ -117,8 +139,13 @@ six rough edges in Privy's API.
 The invariant the whole design defends: **the key that spends can never raise
 its own limit.** If a change would let the hot tier widen its own mandate,
 rotate a key, or move a payout address, the change is wrong — take it to the
-tier above. Device-backed security is central here, not decorative; do not add
-a "convenience" path that bypasses the Ledger.
+tier above. The tier separation is central here, not decorative; do not add a
+"convenience" path that bypasses the cold key.
+
+**Correction (2026-09-08, MOV-000):** this paragraph previously read
+"Device-backed security is central here … bypasses the Ledger". There is no
+device — see the correction under the table above. The invariant itself is
+**unchanged and still enforced on chain**; only the appeal to hardware is gone.
 
 ---
 
@@ -226,8 +253,15 @@ Use a shared pnpm store for the same reason on the JS side.
 `.envrc` and fill it in.
 
 `seller/secrets/*.enc` **is** tracked and does follow the worktree. Those files
-are Ledger-sealed ciphertext; that is the point. Never add `*.enc` to
-`.gitignore`, and never commit a decrypted secret next to one.
+are ciphertext by design; that is the point. Never add `*.enc` to `.gitignore`,
+and never commit a decrypted secret next to one.
+
+**Correction (2026-09-08, MOV-000):** this paragraph previously called the blobs
+"Ledger-sealed". They are not, on two counts. The Ledger track is dropped (see
+the table above), and **`seller/secrets/` currently contains no `.enc` files at
+all** — only its `README.md`, verified 2026-09-08 with `ls seller/secrets/`. The
+directory is a placeholder, not a sealed store. The tracking rule above is
+unchanged and still correct for whenever blobs do land.
 
 ---
 

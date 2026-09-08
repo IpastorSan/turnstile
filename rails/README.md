@@ -216,8 +216,8 @@ A buyer that discovered us through ENS filters on the token; one that read a liv
 reconcile — so the record and the wire cannot drift apart unnoticed.
 
 The record is **cold-key-written**, so it cannot be corrected from a hot key.
-Changing `x402` to something that names a chain would need a Ledger session; that
-is a judgement call for MOV-220, not something to do in passing. See
+Changing `x402` to something that names a chain would need a cold-key signing
+session; that is a judgement call for MOV-220, not something to do in passing. See
 `docs/ens-offer-records.md`.
 
 ---
