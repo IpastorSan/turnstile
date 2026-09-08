@@ -176,8 +176,20 @@ cmd_done() {
   info "merging $branch into dev (--no-ff)"
   git -C "$REPO_ROOT" merge --no-ff "$branch" -m "merge: $branch"
 
+  # A worktree that ever had --contracts holds submodules, and git refuses
+  # outright to remove such a worktree -- "working trees containing submodules
+  # cannot be moved or removed" -- even after `submodule deinit --all -f` empties
+  # them, because the check is on .gitmodules existing, not on anything being
+  # checked out. --force is the only way through, and it is safe *here*
+  # specifically because both trees were asserted clean above; do not lift it
+  # out of that guard.
   info "removing worktree $wt_path"
-  git worktree remove "$wt_path"
+  if [ -f "$wt_path/.gitmodules" ]; then
+    git -C "$wt_path" submodule deinit --all -f >/dev/null 2>&1 || true
+    git worktree remove --force "$wt_path"
+  else
+    git worktree remove "$wt_path"
+  fi
 
   # Rule 5: feature branches stay on the remote after merging. Deleting them
   # deletes the history we are building. The local ref stays too.
