@@ -325,6 +325,16 @@ the scarce one — makes an empty pool look bottomless. Override with
   subgraph derived from that same pool. The token amounts quoted are exact; the
   dollar labels on them are only as good as that price. The scorer costs
   confidence for it and says so in the caveats.
+- **A price the ladder cannot be sized with fails the rung, not the report.**
+  `amountIn` is `notionalUSD / tokenInPriceUSD`, so a price of `0` gives
+  Infinity and one of `NaN` gives NaN, and neither has a raw token amount. Until
+  MOV-246 that conversion sat above the per-rung `try` and the throw escaped the
+  loop, so a token the analyst could not price took the whole profile — and with
+  it the verdict — down. It is inside the `try` now, and an unusable price reads
+  like a revert: that rung records the reason, the rest of the ladder still
+  quotes, and the verdict is rendered from the rungs that filled. This matters
+  here more than most places, because the demo's own headline pool is a scam
+  token: badly-priced and unpriced tokens are what the analyst exists to catch.
 - **`readContract` does work on QuoterV2**, despite the functions being
   `nonpayable` — viem simulates through `eth_call` quite happily. We use
   `call` + manual decode anyway, because a chain-agnostic `PublicClient` (which
@@ -346,11 +356,18 @@ the scarce one — makes an empty pool look bottomless. Override with
 ## Test
 
 ```bash
-npm test          # includes seller/analyst/scoring.test.ts
+npm test          # includes scoring.test.ts and uniswap-quotes.test.ts
 npx tsc --noEmit
 ```
 
-The tests are all against `scoring.ts` and run offline. Most of them exist
-because a live run produced a wrong answer and they now pin the fix — sparse
-snapshots, the zero-to-90% slippage cliff, a pool where every rung reverts, two
-sides sharing a symbol.
+**Correction (2026-09-08, MOV-246):** this section previously said "the tests
+are all against `scoring.ts`". That has been wrong since MOV-245 added
+`uniswap-quotes.test.ts`, which covers the amount conversion and — as of this
+issue — `fetchDepthFromQuoter` itself, against a stub `PublicClient` rather than
+a real one. **Still true, and the part that matters:** every test runs offline,
+with no network and no key.
+
+Most of them exist because a live run produced a wrong answer and they now pin
+the fix — sparse snapshots, the zero-to-90% slippage cliff, a pool where every
+rung reverts, two sides sharing a symbol, an amount conversion that invented
+digits, and a token price the ladder cannot be sized with.
