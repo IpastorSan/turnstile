@@ -1,0 +1,172 @@
+syntax = "proto3";
+
+// Normalized ERC-8004 ("Trustless Agents") agent-registry feed.
+//
+// One shape for every EVM chain that hosts an ERC-8004 Identity Registry, so a
+// consumer can union the output of this module across chains without writing
+// per-chain code. Naming follows EIP-8004 and the Agent0 subgraph schema
+// (`agentId`, `agentURI`, `owner`, `agentWallet`, `x402Support`,
+// `supportedTrust`) rather than inventing new terms.
+package turnstile.erc8004.v1;
+
+// Everything the registry emitted in one block, on one chain.
+message AgentRegistrations {
+  // CAIP-2 chain identifier, e.g. "eip155:1".
+  string chain = 1;
+  // Numeric EVM chain id, e.g. 1 or 8453.
+  uint64 chain_id = 2;
+  // Substreams network name the module ran against, e.g. "mainnet", "base".
+  string network = 3;
+  uint64 block_number = 4;
+  string block_hash = 5;
+  // Unix seconds.
+  int64 block_timestamp = 6;
+
+  repeated AgentRegistration registrations = 7;
+  // `agentWallet` metadata changes seen in this block. Emitted separately
+  // because an agent can repoint its payout address without ever touching its
+  // URI, so these do not always coincide with an AgentRegistration row.
+  repeated AgentWalletUpdate wallet_updates = 8;
+}
+
+// The reserved `agentWallet` metadata key changing for an agent.
+message AgentWalletUpdate {
+  string agent_uid = 1;
+  uint64 chain_id = 2;
+  string network = 3;
+  string registry = 4;
+  string agent_id = 5;
+  // New payout address, lowercase 0x-hex.
+  string wallet = 6;
+
+  uint64 block_number = 7;
+  int64 block_timestamp = 8;
+  string transaction_hash = 9;
+  uint32 log_index = 10;
+  uint64 ordinal = 11;
+}
+
+// A single agent as of one registry event.
+//
+// `REGISTERED` rows are the agent's first appearance; `URI_UPDATED` rows carry
+// the same identity with a new service document. A consumer that wants "current
+// state" keeps the highest (block_number, log_index) per `agent_uid`.
+message AgentRegistration {
+  // ---- identity -----------------------------------------------------------
+
+  // Globally unique agent identifier, CAIP-10-shaped and extended with the
+  // ERC-721 token id: "eip155:<chain_id>:<registry>/<agent_id>".
+  // This is the key to join on across chains.
+  string agent_uid = 1;
+  // CAIP-2 namespace. Always "eip155" for the EVM registries.
+  string namespace = 2;
+  uint64 chain_id = 3;
+  string network = 4;
+  // ERC-8004 Identity Registry contract, lowercase 0x-hex.
+  string registry = 5;
+  // ERC-721 tokenId assigned incrementally by the registry, as a decimal
+  // string because it is a uint256.
+  string agent_id = 6;
+
+  // ---- control ------------------------------------------------------------
+
+  // ERC-721 owner of the agent token at the time of this event.
+  string owner = 7;
+  // The `agentWallet` reserved metadata key: the address the agent is paid at.
+  // EIP-8004 initialises it to the owner, so this falls back to `owner` when no
+  // `agentWallet` has been set in or before this block. `operator_source` says
+  // which it was.
+  string operator = 8;
+  OperatorSource operator_source = 9;
+
+  // ---- service document ---------------------------------------------------
+
+  // Raw tokenURI as emitted. May be empty, ipfs://, https://, a data: URI, or
+  // (non-conformantly, but it happens) a bare JSON literal.
+  string agent_uri = 10;
+  UriScheme uri_scheme = 11;
+  // True when the registration document was inline in the URI and this module
+  // parsed it, so the fields below are populated. False for ipfs:// and
+  // https:// URIs, which need an off-chain fetch this module cannot perform
+  // deterministically — see README, "What is and is not resolved on-chain".
+  bool registration_resolved = 12;
+
+  string name = 13;
+  string description = 14;
+  string image = 15;
+  // EIP-8004 registration-v1 `services` (some agents emit `endpoints`; both are
+  // read into this field).
+  repeated Endpoint endpoints = 16;
+  bool x402_support = 17;
+  bool active = 18;
+  // e.g. ["reputation", "crypto-economic", "tee-attestation"].
+  repeated string supported_trust = 19;
+  // Advertised price, when the agent publishes one. Usually absent: see README.
+  Price price = 20;
+
+  // ---- provenance ---------------------------------------------------------
+
+  RegistrationEvent event = 21;
+  uint64 block_number = 22;
+  int64 block_timestamp = 23;
+  string transaction_hash = 24;
+  // Index of the log within the block.
+  uint32 log_index = 25;
+  uint64 ordinal = 26;
+}
+
+message Endpoint {
+  // Endpoint role, e.g. "web", "A2A", "MCP", "x402".
+  string name = 1;
+  string uri = 2;
+  string version = 3;
+  // OASF skill / domain tags, when present.
+  repeated string skills = 4;
+  repeated string domains = 5;
+}
+
+// A price the agent advertises in its registration document.
+//
+// EIP-8004 registration-v1 does not standardise a price field — under x402 the
+// quote is returned dynamically by the endpoint in an HTTP 402 response. This
+// message therefore captures the non-standard `price` objects some agents do
+// publish, shaped like an x402 payment requirement so the two line up.
+message Price {
+  // Decimal string in the asset's smallest unit when `asset` is set, otherwise
+  // as published.
+  string amount = 1;
+  // Human-readable currency code, e.g. "USDC".
+  string currency = 2;
+  // Token contract address, when the document names one.
+  string asset = 3;
+  // Settlement network as published, e.g. "base".
+  string network = 4;
+  // Payment scheme, e.g. "exact".
+  string scheme = 5;
+}
+
+enum RegistrationEvent {
+  REGISTRATION_EVENT_UNSPECIFIED = 0;
+  REGISTRATION_EVENT_REGISTERED = 1;
+  REGISTRATION_EVENT_URI_UPDATED = 2;
+}
+
+enum OperatorSource {
+  OPERATOR_SOURCE_UNSPECIFIED = 0;
+  // No agentWallet seen; operator == owner, per the EIP-8004 default.
+  OPERATOR_SOURCE_OWNER_DEFAULT = 1;
+  // Taken from an `agentWallet` MetadataSet event.
+  OPERATOR_SOURCE_AGENT_WALLET = 2;
+}
+
+enum UriScheme {
+  URI_SCHEME_UNSPECIFIED = 0;
+  URI_SCHEME_EMPTY = 1;
+  URI_SCHEME_DATA = 2;
+  URI_SCHEME_IPFS = 3;
+  URI_SCHEME_HTTPS = 4;
+  URI_SCHEME_HTTP = 5;
+  // A bare JSON literal in the URI field.
+  URI_SCHEME_INLINE_JSON = 6;
+  URI_SCHEME_OTHER = 7;
+}

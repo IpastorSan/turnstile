@@ -1,0 +1,45 @@
+{
+  "name": "uniswap-mcp",
+  "version": "0.1.0",
+  "description": "MCP server over the Uniswap stack: per-pool quotes with initializedTicksCrossed, depth-at-size ladders, factory pool discovery, and Messari DEX AMM subgraph queries. No API key.",
+  "license": "MIT",
+  "type": "module",
+  "comment": "No build step: Node runs the .ts files directly via type stripping, on by default since 22.18. That is why there is no 'main' pointing at a dist/ and why the bin is a .ts file.",
+  "bin": {
+    "uniswap-mcp": "./server.ts"
+  },
+  "files": [
+    "server.ts",
+    "src",
+    "tools",
+    "tsconfig.json",
+    "SKILL.md",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node server.ts",
+    "test": "node --test \"test/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "uniswap",
+    "mcp",
+    "model-context-protocol",
+    "defi",
+    "quoter",
+    "subgraph",
+    "messari"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "viem": "^2.40.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}

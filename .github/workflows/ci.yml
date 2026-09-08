@@ -18,6 +18,14 @@ jobs:
         with:
           node-version: '22'
 
+      # The lockfile is lockfileVersion 3 written by npm 11. Node 22 ships npm 10,
+      # which resolves the transitive tree differently and fails `npm ci` with a wall
+      # of "Missing: <pkg> from lock file" — nothing is actually wrong with the lock.
+      # Pin npm rather than the Node version, so CI keeps testing the declared floor
+      # (engines.node >= 22.18, the version that runs .ts without a flag).
+      - name: Pin npm to the version that wrote the lockfile
+        run: npm install -g npm@11
+
       - name: Shell scripts parse
         run: |
           for f in $(git ls-files '*.sh'); do
@@ -43,3 +51,59 @@ jobs:
           fi
           npm run --if-present lint
           npm run --if-present typecheck
+
+      # The sink and discovery tests are pure: no network, no .env, in-memory
+      # SQLite. The commands that do touch the chain are exercised by hand and
+      # written up in docs/, not run here.
+      - name: Test
+        run: |
+          if [ ! -f package.json ]; then
+            echo "no package.json yet — skipping"
+            exit 0
+          fi
+          npm run --if-present test
+
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The ENS contracts we compile against are submodules, pinned to the
+          # revisions contracts-v2 itself pins. Recursive because contracts-v2
+          # carries its own.
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: '1.8.1'
+
+      - name: Build
+        working-directory: contracts
+        run: forge build --sizes
+
+      - name: Test
+        working-directory: contracts
+        # Local tests only. The fork tests run in their own job so that a flaky
+        # public RPC cannot redden the build history judges read.
+        run: forge test --no-match-path 'test/fork/*' -vv
+
+  contracts-fork:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Advisory. This job carries the ENS redeploy canary — if it goes red, every
+    # address in contracts/addresses.sepolia.json is stale and the ENS work needs
+    # re-checking. It does not gate, because it depends on a free public RPC.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: '1.8.1'
+
+      - name: Fork tests against live Sepolia
+        working-directory: contracts
+        run: forge test --match-path 'test/fork/*' -vv

@@ -1,0 +1,50 @@
+{
+  "name": "turnstile",
+  "private": true,
+  "type": "module",
+  "description": "Turnstile \u2014 the JS/TS half: Substreams sink, discovery API, x402 seller service, MCP server.",
+  "license": "MIT",
+  "comment": "No build step: Node runs the .ts files directly (type stripping, on by default since 22.18), and node:sqlite is built in. viem is used for ENS reads only.",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "sink": "node graph/sink/sink.ts",
+    "resolve-cards": "node graph/sink/resolve-cards.ts",
+    "hydrate-sellers": "node graph/sink/hydrate-sellers.ts",
+    "discover": "node seller/service/discovery-cli.ts",
+    "mcp": "node mcp-turnstile/server.ts",
+    "typecheck": "tsc --noEmit",
+    "typecheck:cre": "tsc --noEmit -p seller/cre/analyst-verdict/tsconfig.json",
+    "evidence": "node seller/cre/evidence-server.ts",
+    "settle": "node seller/cre/settle-cli.ts",
+    "premium": "node seller/service/premium-cli.ts",
+    "test": "node --test \"graph/**/*.test.ts\" \"seller/**/*.test.ts\" \"rails/**/*.test.ts\" \"buyer/**/*.test.ts\" \"mcp-turnstile/**/*.test.ts\" \"uniswap-mcp/test/*.test.ts\"",
+    "serve": "node seller/service/server.ts",
+    "hedera:setup": "node scripts/hedera-setup.ts",
+    "hedera:pay": "node scripts/hedera-paid-request.ts",
+    "privy:setup": "node scripts/privy-org-setup.ts",
+    "privy:mandate": "node scripts/privy-mandate.ts",
+    "arc:setup": "node scripts/arc-setup.ts",
+    "arc:pay": "node scripts/arc-paid-request.ts",
+    "arc:receipts": "node scripts/arc-receipts.ts",
+    "ingest-receipts": "node graph/sink/ingest-receipts.ts"
+  },
+  "dependencies": {
+    "@circle-fin/x402-batching": "^3.4.0",
+    "@hiero-ledger/sdk": "2.85.0",
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "@x402/core": "^2.25.0",
+    "@x402/evm": "^2.25.0",
+    "@x402/fetch": "^2.25.0",
+    "@x402/hedera": "^2.25.0",
+    "express": "^5.2.1",
+    "viem": "^2.40.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}

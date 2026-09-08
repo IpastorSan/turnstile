@@ -2,12 +2,17 @@
 .env
 .env.local
 
-# NOTE: seller/secrets/*.enc IS tracked on purpose. It is Ledger-sealed
-# ciphertext; the whole point of the cold-key tier is that it is safe in the
-# repo. Do not add *.enc here.
+# NOTE: seller/secrets/*.enc IS tracked on purpose. It is ciphertext; the whole
+# point of the cold-key tier is that it is safe in the repo. Do not add *.enc
+# here.
+# Correction (2026-09-08, MOV-000): this note used to say "Ledger-sealed". The
+# Ledger track is dropped and seller/secrets/ holds no .enc files yet. The
+# do-not-ignore rule stands.
 
 # Dependencies / build output
 node_modules/
+# `cre workflow simulate` writes this next to the workflow while bundling to WASM
+.cre_build_tmp.js
 out/
 target/
 dist/
@@ -15,3 +20,18 @@ dist/
 
 # Local agent scratch
 .ralph-loop.sh
+.turnstile-eth-secret
+.env.bak*
+.env.*.bak
+
+# Personal operational runbook — must not ship in the public submission repo
+docs/manual-steps.md
+
+# Discovery store — rebuilt from the chain by graph/sink/, never committed
+graph/sink/data/
+
+# Next.js build metadata (MOV-230). The web app's own generated files; the
+# committed discovery snapshot under web/data/ is NOT one of these and is
+# tracked on purpose — a deployment needs real data to serve.
+*.tsbuildinfo
+next-env.d.ts
