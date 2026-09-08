@@ -37,7 +37,8 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 | 13 | Append to **`FEEDBACK.md`** every time we hit a Uniswap rough edge |
 | 14 | Append to **`WORLD-FEEDBACK.md`**: docs + integration flow, Developer Portal navigation/search/discovery/debugging, Sandbox states, proof flows, test users, errors, edge cases, what was confusing/missing/broken |
 | 15 | Capture **every on-chain tx the first time it works** — HashScan links, tx hashes, terminal output |
-| 16 | Repo is **private during the build**. Flipping it to public is the last step before submitting — see [Before submitting](#before-submitting--blocks-all-12-submissions) |
+| 16 | **Check `docs/architecture.png` by eye whenever a tier, key or mechanism changes.** A raster is a claim surface no `grep` can audit, and it has now outlived a prose correction twice (MOV-000, Paymaster wording, one day late; MOV-005, custody wording, same day). Edit `docs/architecture.svg`, then `rsvg-convert -w 1200 docs/architecture.svg -o docs/architecture.png` |
+| 17 | Repo is **private during the build**. Flipping it to public is the last step before submitting — see [Before submitting](#before-submitting--blocks-all-12-submissions) |
 
 ### Per-submission
 
