@@ -3,10 +3,12 @@
 Verbatim copy of §4 of `plan/turnstile-v3.md`. Every row is a binary
 disqualifier. Append-only (`merge=union`) — tick boxes, never rewrite lines.
 
-> ⚠️ **The repo is PRIVATE right now, on purpose.** It must be flipped to
-> public before submitting or all 12 submissions fail. See
-> [Before submitting](#before-submitting--blocks-all-12-submissions) at the
-> bottom of this file.
+> ✅ **The repo is PUBLIC** as of 2026-09-08, ahead of the midpoint review.
+> `main` carries the full history and the real `FEEDBACK.md`, not the template.
+> This banner previously warned that the repo was still private; that warning
+> was correct until it was not, and a resolved warning left standing is just
+> noise for the next reader. Remaining pre-submission steps are in
+> [Before submitting](#before-submitting--blocks-all-12-submissions).
 
 ## 4. Qualification checklist
 
