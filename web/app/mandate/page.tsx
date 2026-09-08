@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { QuorumProbe } from '../../components/QuorumProbe.tsx';
 import { readMandate } from '../../lib/mandate.ts';
+import { readSpend } from '../../lib/spend.ts';
 import { shortAddress } from '../../lib/price.ts';
 
 export const dynamic = 'force-dynamic';
@@ -29,6 +30,9 @@ export default async function MandatePage() {
 
   const m = read.state;
   const arcscan = `https://testnet.arcscan.app/address/${m.walletAddress}`;
+  const agentAddress = process.env['ARC_AGENT_ADDRESS'] ?? '0x0633a193017939Bb1eB242982397224c66948e2F';
+  const spend = await readSpend(agentAddress);
+  const shown = spend.payments.slice(0, 12);
 
   const rows: { family: string; key: string; values: string[]; note?: string }[] = [
     {
@@ -108,6 +112,14 @@ export default async function MandatePage() {
           <p className="band-value">{m.railPreference.length}</p>
           <p className="band-sub">{m.railPreference.join(' · ')}</p>
         </div>
+        <div className="band-cell">
+          <p className="band-label">Settled to date</p>
+          <p className="band-value">${spend.totalUsd.toFixed(4)}</p>
+          <p className="band-sub">
+            {spend.totalCount} payments that actually moved money, on both rails. Not a balance
+            against the cap above — see below.
+          </p>
+        </div>
       </div>
 
       <section className="section">
@@ -147,6 +159,88 @@ export default async function MandatePage() {
               </li>
             ))}
           </ul>
+        ) : null}
+      </section>
+
+      <section className="section">
+        <div className="section-head">
+          <h2 className="section-title">What it has actually spent</h2>
+          <p className="results-count">
+            {spend.totalCount} settled · ${spend.totalUsd.toFixed(4)}
+          </p>
+        </div>
+        <p className="section-note">
+          Everything above is permission. This is what the agent did with it. Neither rail is read
+          from a database of ours: Hedera receipts come off a public consensus topic through the
+          mirror node, and Arc settlements come from Circle Gateway&rsquo;s transfers API queried by
+          the agent&rsquo;s own address.
+        </p>
+
+        <ul className="records">
+          {spend.rails.map(rail => (
+            <li className="record" key={rail.railId}>
+              <div>
+                <span className="record-family">{rail.railId}</span>
+                <div className="record-key">{rail.label}</div>
+              </div>
+              <div>
+                <p className={`record-value${rail.error ? ' is-unset' : ''}`}>
+                  {rail.error ? 'could not be read' : `${rail.count} settled · $${(rail.usd ?? 0).toFixed(6)}`}
+                </p>
+                <p className="record-note">{rail.error ?? rail.source}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <p className="section-note">
+          <b>This is not a running balance against the cap.</b> ${spend.totalUsd.toFixed(4)} settled
+          and a ${m.spendCapUsd ?? '?'} cap are two true numbers that do not subtract from each
+          other: these payments span several runs, and a quorum raised the cap partway through.
+          Presenting them as one ledger would be a tidier story and a false one. Per-run enforcement
+          lives in <span className="mono">buyer/mandate/</span>, where the agent refuses before it
+          pays.
+          {spend.topicIsOpen && spend.topic ? (
+            <>
+              {' '}
+              Topic <span className="mono">{spend.topic}</span> has <b>no submit key</b>, so anyone
+              may append to it and a receipt is a claim until checked against the ledger.{' '}
+              <span className="mono">npm run mcp</span>&rsquo;s <span className="mono">receipts</span>{' '}
+              tool does that check.
+            </>
+          ) : null}
+        </p>
+
+        {shown.length > 0 ? (
+          <ul className="payments">
+            {shown.map(payment => (
+              <li className="payment" key={payment.reference + payment.at}>
+                <span className="payment-rail">{payment.railId}</span>
+                <span className="payment-usd">
+                  {payment.usd === null ? '—' : `$${payment.usd.toFixed(6)}`}
+                </span>
+                <span className="payment-amount">{payment.amount}</span>
+                <span className="payment-at">{payment.at.replace('T', ' ').slice(0, 19)}</span>
+                <span className="payment-ref">
+                  {payment.href ? (
+                    <a href={payment.href} target="_blank" rel="noreferrer">
+                      {payment.reference.length > 26
+                        ? `${payment.reference.slice(0, 12)}…${payment.reference.slice(-8)}`
+                        : payment.reference}
+                    </a>
+                  ) : (
+                    payment.reference
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {spend.payments.length > shown.length ? (
+          <p className="section-note">
+            {spend.payments.length - shown.length} older payments not listed. All of them are on the
+            topic and in the Gateway API.
+          </p>
         ) : null}
       </section>
 
