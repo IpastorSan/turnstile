@@ -1,0 +1,40 @@
+# The two long-running Node services: the x402 seller service, and the evidence
+# server the CRE enclave fetches from. One image, two commands, because they
+# share the whole repo's import graph.
+#
+# Built from the REPOSITORY ROOT, like web/Dockerfile:
+#
+#   docker build -f deploy/Dockerfile.services -t turnstile-services .
+#
+# node:24 rather than 22. Both work -- `node:sqlite` is importable on 22.18+ --
+# but on 22 it emits an ExperimentalWarning on every start, and the API is only
+# stable from 24. Verified 2026-09-08 by running the import in both images.
+
+FROM node:24-alpine
+WORKDIR /repo
+ENV NODE_ENV=production
+
+# Dependencies first, so a source edit does not reinstall.
+#
+# .npmrc is NOT optional here. It sets legacy-peer-deps=true, without which npm
+# tries to resolve the non-optional react-native peer that @hiero-ledger/
+# cryptography drags in, and `npm ci` then fails with "Missing:
+# react-native@0.87.1 from lock file". The lockfile was written under those
+# rules, so it has to be verified under them. Leaving this out reproduced the
+# exact CI failure the file was added to fix.
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci --omit=dev
+
+# The services import across the repo rather than vendoring copies, so the
+# payment path, the analyst and the rails all have to come along.
+COPY rails ./rails
+COPY buyer ./buyer
+COPY seller ./seller
+COPY graph ./graph
+COPY mcp-turnstile ./mcp-turnstile
+COPY contracts/addresses.turnstile.sepolia.json ./contracts/
+COPY contracts/addresses.verdict.sepolia.json ./contracts/
+COPY contracts/addresses.verdict-rehearsal.sepolia.json ./contracts/
+
+# Overridden per service in compose.yaml.
+CMD ["node", "seller/service/server.ts"]

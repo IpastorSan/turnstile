@@ -1,118 +1,123 @@
-# Deploying the web app
+# Deploying Turnstile
 
-Date: 2026-09-07
-Issue: MOV-230
+One host runs everything: the Next.js app, the x402 seller service, the evidence
+server the CRE enclave fetches from, and Caddy in front of all three.
 
-**Status: not deployed.** No hosting credentials exist on the build machine — no
-Vercel, Netlify, Fly or Cloudflare CLI, and no token for any of them. Everything
-below is verified to work locally; the public URL is the one step that could not
-be taken. **The submission needs this URL** (ENS accepts "a video recording *or*
-a live demo link"; we want both), so this is a real open item, not a nicety.
+## Why one box rather than a serverless frontend
 
----
+Turnstile is not a frontend with an API. Two of its three services are
+long-running processes, and one of them is the thing the chain points at:
 
-## What is verified
-
-The production bundle was built and run in an isolated directory, with the
-repository's working store deliberately absent, to reproduce what a deployment
-actually sees:
-
-```
-$ cd web && npm run build && cp -r .next/static .next/standalone/web/.next/
-$ cp -r .next/standalone /tmp/standalone-test
-$ cd /tmp/standalone-test/web && PORT=3211 node server.js
-
-$ curl -s localhost:3211/api/sellers?limit=200 | jq -c '.result.priceSources'
-{"turnstile":1,"x402":0,"document":0,"ask_x402":97,"none":99}
-
-$ curl -s localhost:3211/api/offer/liquidity.turnstile.eth | jq -c '{ok,readAtBlock,linked}'
-{"ok":true,"readAtBlock":11654544,"linked":true}
-
-$ curl -s localhost:3211/ | grep -o 'class="cell is-[a-z]*"' | sort | uniq -c
-     97 class="cell is-ask"
-     99 class="cell is-none"
-      1 class="cell is-turnstile"
-```
-
-Zero server errors. The market page served all 197 agents from the committed
-snapshot, and the seller page read Sepolia live at block 11,654,544.
-
-### Three files are read by path, not imported
-
-`output: 'standalone'` does not find these on its own, and the failure mode is
-nasty — everything works in development and the deployed site 500s. They are
-pinned in `web/next.config.ts` under `outputFileTracingIncludes`:
-
-| File | Read by | Symptom if missing |
+| Service | What it is | Public? |
 |---|---|---|
-| `contracts/addresses.turnstile.sepolia.json` | `web/lib/ens.ts` | Seller page cannot resolve any name |
-| `graph/sink/schema.sql` | `openDb` on every connect | Market page 500s with `ENOENT` |
-| `web/data/**` | the snapshot store | Market page reports no store loaded |
+| `web` | Next.js. Market page, seller pages, `/api/sellers`, `/api/offer/:name` | yes |
+| `seller` | The x402-gated service. **This is what `agent-endpoint[mcp]` resolves to.** | yes |
+| `evidence` | Serves the evidence bundle the CRE enclave fetches. Bearer-gated | yes, for CRE |
 
-`graph/sink/schema.sql` was found only by running the standalone bundle in a
-clean directory. Do not remove that step from the release check.
+Deploying only the web app would leave the ENS record just as dead as it is now
+while looking finished, because the record does not point at the web app.
 
-### The snapshot is opened read-only
+Three further reasons the box wins here:
 
-`openDb()` executes `schema.sql` on every connect. The DDL is idempotent, but it
-is still a **write**: it mutates the database file, which showed up as
-`web/data/discovery.db` appearing modified in `git status` after merely serving
-a page. On the read-only filesystem most platforms give a server bundle, that
-same write fails outright and the market page goes down.
+- **Node version is ours to pick.** `web/lib/discovery.ts` imports `node:sqlite`.
+  That is importable on Node 22.18+ but only stable from 24, and a managed
+  platform's runtime is not something we choose. Both images were tested on
+  2026-09-08: 22 works with an `ExperimentalWarning`, 24 is clean. The images pin
+  24.
+- **x402 does facilitator round-trips** to Blocky402 and Circle Gateway. Cold
+  starts and function timeouts are a live risk during a recorded demo, and that
+  recording *is* the Hedera submission.
+- **Bazantic needs two stable public HTTPS URLs** for `--spec-url` and
+  `--endpoint`. One host serves both.
 
-`web/lib/discovery.ts` therefore opens the store with
-`new DatabaseSync(path, { readOnly: true })` and calls `findSellers` directly
-rather than going through `findSellersAt`. The web app only ever reads, and the
-snapshot already carries the schema, so there is nothing to migrate.
-
-Verified by `chmod 444 web/data/discovery.db` and serving from it: 197 agents,
-zero errors, file unchanged.
-
----
-
-## Docker — the portable path
+## Local
 
 ```bash
-docker build -f web/Dockerfile -t turnstile-web .   # from the REPO ROOT
-docker run -p 3210:3210 -e SEPOLIA_RPC_URL=https://... turnstile-web
+cd deploy
+docker compose up --build
 ```
 
-The build context must be the repository root: the app imports
-`seller/service/discovery.ts` and `graph/sink/ens.ts` directly rather than
-vendoring copies, so `web/` alone is not a complete input.
+Then <http://localhost>. No certificate, no DNS, nothing to provision: Caddy
+serves plain HTTP because `TURNSTILE_SITE_ADDRESS` defaults to
+`http://localhost`, and the `http://` prefix is what stops it trying to get a
+certificate for a name Let's Encrypt cannot validate.
 
-This runs on Fly, Railway, Render, or any host that takes a container.
+Credentials come from the **repo-root `.env`**, the same file every npm script
+reads. There is no second copy to keep in sync.
 
-## Vercel
-
-The app is a Next.js 16 app in a subdirectory of a repo it imports from, so:
-
-- **Root Directory:** `web`
-- **Include source files outside of the Root Directory:** **on**. Without it the
-  build cannot see `graph/`, `seller/` or `contracts/` and fails at compile.
-- **Environment variable:** `SEPOLIA_RPC_URL`
+Check it came up:
 
 ```bash
-npm i -g vercel && vercel login
-vercel --cwd web
+curl -s localhost/api/health            # web: which data dependencies it can reach
+curl -s localhost/seller-health         # seller service
+curl -si localhost/analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 | head -1   # expect 402
 ```
 
-## Required environment
+That last one returning `402 Payment Required` is the whole product in one line:
+the service is up, it knows its price, and it will not answer until it is paid.
 
-| Variable | Needed for | Missing behaviour |
-|---|---|---|
-| `SEPOLIA_RPC_URL` | Seller page, `/api/offer/:name` | The page states the resolver cannot be read. It does not serve a cached price. |
+## Live
 
-Nothing else is required. The discovery data ships in the image as
-`web/data/discovery.db`.
+1. Point an A record at the box. The hostname must match what
+   `agent-endpoint[mcp]` publishes on chain, currently
+   `turnstile.moveseventyeight.com`.
+2. `cp deploy/.env.example deploy/.env` and set
+   `TURNSTILE_SITE_ADDRESS=turnstile.moveseventyeight.com` — a **bare** hostname,
+   no scheme. That is what switches Caddy into automatic HTTPS.
+3. Copy the repo-root `.env` to the box. It is gitignored and never travels in
+   an image.
+4. `cd deploy && docker compose up -d --build`
 
-**Never set a private key on this deployment.** The web app only reads — it has
-no write path, and no route signs anything.
+Caddy provisions the certificate on the first request. Set the A record *before*
+starting, or issuance fails and backs off.
 
-## After deploying
+### Do not set the bare hostname until DNS resolves
 
-1. Check `GET /api/health` — it reports whether the store and the RPC are
-   reachable.
-2. Record the URL in `CHECKLIST.md` and in the submission copy.
-3. Re-cut the snapshot (`cd web && npm run snapshot`) before submitting, so the
-   directory shown is close to the judging date, and commit it.
+Caddy will keep retrying a certificate it cannot get, and the site stays down
+while it does. Local mode has no such failure mode, which is why it is the
+default rather than something you opt into.
+
+## Routing
+
+Caddy sends the paths each service actually serves, rather than a catch-all:
+
+| Path | Goes to |
+|---|---|
+| `/analyze/*`, `/receipts/*` | `seller:4021` |
+| `/seller-health` | `seller:4021` `/health` |
+| `/evidence/*` | `evidence:8787` |
+| everything else | `web:3210` |
+
+**A path nothing serves gets a 404 from the web app**, which is the honest
+outcome. That matters for one path in particular, below.
+
+## Known gap: the published endpoint path serves nothing
+
+`agent-endpoint[mcp]` publishes:
+
+```
+https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse
+```
+
+**Nothing in this repository serves `/…/sse`, and nothing is planned to.**
+`mcp-turnstile/server.ts` is a **stdio** MCP server — `StdioServerTransport`,
+run through `npx` — and there is no HTTP or SSE transport anywhere in the tree.
+The path was inherited from the placeholder URL and carried over unexamined when
+the host was repointed on 2026-09-08 (MOV-010).
+
+So even after this stack is live, an agent that follows the ENS record to that
+exact URL gets a 404 from the web app. The seller service is reachable and
+payable at `/analyze/:pool`; the record does not say so.
+
+Three ways to close it, none of them done:
+
+1. **Repoint the record to the base URL** and let clients use `/analyze/:pool`.
+   One hot-key write. Honest, but then the `[mcp]` protocol tag oversells what
+   is at the other end, because plain HTTP + x402 is not MCP.
+2. **Serve MCP over HTTP/SSE** at that path, wrapping the same four tools.
+   Real work, and it makes the record true as published.
+3. **Publish `agent-endpoint[web]`** alongside, per ENSIP-26's extensible key,
+   and leave `[mcp]` for whenever a remote transport exists.
+
+This is written down rather than quietly fixed because the record is already on
+chain and the choice costs a transaction either way.

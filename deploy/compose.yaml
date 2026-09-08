@@ -1,0 +1,88 @@
+# The whole of Turnstile on one host.
+#
+#   local   cd deploy && docker compose up --build
+#           then http://localhost
+#
+#   live    set TURNSTILE_SITE_ADDRESS to the real hostname in deploy/.env,
+#           point that hostname's A record at the box, and run the same command.
+#           Caddy provisions the certificate on first request.
+#
+# Secrets come from the repo-root .env, the same file every npm script reads, so
+# there is exactly one place credentials live and it is already gitignored.
+
+name: turnstile
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      # Overridden by deploy/.env when deploying for real.
+      TURNSTILE_SITE_ADDRESS: ${TURNSTILE_SITE_ADDRESS:-http://localhost}
+    depends_on:
+      web:
+        condition: service_healthy
+      seller:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      PORT: 3210
+      HOSTNAME: 0.0.0.0
+    expose:
+      - "3210"
+    healthcheck:
+      # /api/health reports which of the two data dependencies this deployment
+      # can actually reach, so it fails loudly rather than serving a blank page.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3210/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  seller:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.services
+    command: ["node", "seller/service/server.ts"]
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      PORT: 4021
+    expose:
+      - "4021"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4021/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  evidence:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.services
+    command: ["node", "seller/cre/evidence-server.ts"]
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      TURNSTILE_EVIDENCE_PORT: 8787
+    expose:
+      - "8787"
+
+volumes:
+  caddy_data:
+  caddy_config:

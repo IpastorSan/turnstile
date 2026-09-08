@@ -1,0 +1,17 @@
+# Keep the build context small and deterministic. Without this, every image
+# build ships ~1GB of node_modules and every worktree's build artefacts, and a
+# stale local node_modules can shadow what `npm ci` installs.
+node_modules
+**/node_modules
+.git
+.env
+.env.*
+!.env.example
+**/.next
+**/out
+**/target
+**/dist
+**/*.tsbuildinfo
+contracts/lib
+contracts/cache
+graph/sink/data
