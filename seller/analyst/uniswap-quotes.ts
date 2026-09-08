@@ -113,8 +113,11 @@ export interface QuoterOptions {
  *   - It throws outright at 1e21 and above, where `toFixed` itself switches to
  *     exponent notation: `(1e21).toFixed(18)` is `"1e+21"` and `BigInt("1e+21")`
  *     is a SyntaxError. A ladder rung of $10M against a token priced below
- *     ~1e-14 USD reaches that, and the throw is outside the per-rung `try`, so
- *     it takes the whole depth profile down rather than marking one rung.
+ *     ~1e-14 USD reaches that, and until MOV-246 the call was outside the
+ *     per-rung `try`, so a throw took the whole depth profile down rather than
+ *     marking one rung. It is inside the `try` now: this function still throws
+ *     on input it cannot convert — a non-finite `amountIn` from a zero or NaN
+ *     price included — and the caller records that as a failed rung.
  *   - The `Math.min(decimals, 18)` clamp it needs in order to stay inside
  *     `toFixed`'s range truncates the fraction of a token with more than 18
  *     decimals.
@@ -191,20 +194,22 @@ export async function fetchDepthFromQuoter(
 
   for (const notionalUSD of notionals) {
     const amountIn = notionalUSD / request.tokenInPriceUSD;
-    const rawIn = toRawAmount(amountIn, request.tokenIn.decimals);
-    if (rawIn === 0n) {
-      rungs.push({
-        notionalUSD,
-        amountIn,
-        amountOut: null,
-        executedRate: null,
-        ticksCrossed: null,
-        error: 'notional rounds to zero token units at this price and decimals',
-      });
-      continue;
-    }
 
     try {
+      // Inside the `try`, not above it. `amountIn` is
+      // `notionalUSD / tokenInPriceUSD`, so a `tokenInPriceUSD` of 0 gives
+      // Infinity and one of NaN gives NaN — and `toRawAmount` rejects both
+      // with a RangeError. Thrown from outside the `try` that would abort the
+      // whole ladder, which is the wrong failure mode for an analyst whose
+      // headline demo is a scam token: badly-priced and unpriced tokens are
+      // exactly what it exists to catch. A price we cannot use is a finding
+      // about this rung, handled the same way a revert is — recorded, and the
+      // remaining rungs still evaluated.
+      const rawIn = toRawAmount(amountIn, request.tokenIn.decimals);
+      if (rawIn === 0n) {
+        throw new Error('notional rounds to zero token units at this price and decimals');
+      }
+
       // Encode, `call`, decode — rather than `readContract`, which does work
       // here (see the ABI note above) but whose return type collapses to
       // `never` against a chain-agnostic `PublicClient`. The client has to stay
