@@ -200,6 +200,22 @@ even mid-feature.
 
 - **`.env` does not follow a worktree** (gitignored). Symlink it as step 1 or the worktree
   fails at runtime. `seller/secrets/*.enc` *is* tracked and does follow.
+- **Submodules do not follow a worktree either, and this one lies to you.**
+  `git worktree add` creates `contracts/lib/*` as five *empty* directories, so
+  `forge build` fails with `Source "@ens/contracts/utils/NameCoder.sol" not
+  found` — a remapping that resolves perfectly in the main worktree. The error
+  names a file, so it reads as a broken remapping or a Foundry version problem,
+  and an agent that hits it will report the repo as broken (one did, 2026-09-08,
+  after checking two forge versions and `forge clean`). It is neither: nothing
+  is checked out. Fix it with `git -C <worktree> submodule update --init
+  --recursive`, or create the worktree with `scripts/wt.sh new … --contracts`.
+  **`--recursive` is load-bearing** — `@ens/contracts/` maps into
+  `ens-contracts`, a submodule *inside* `contracts-v2`, so a plain `--init`
+  leaves exactly the path in the error message still missing. It is **not**
+  automatic: it re-clones from the network every time (~2.5 min, 154 MB, 11
+  nested submodules under `contracts-v2`), local alternates do not avoid it
+  (`submodule.alternateLocation=superproject` was measured — it still clones),
+  and most worktrees never compile Solidity. `wt.sh` warns loudly when it skips.
 - **Per-worktree installs are expensive.** Set `CARGO_TARGET_DIR=~/.cache/turnstile-target`
   globally and use a pnpm store, so six worktrees do not mean six full builds.
 - **`merge=union` is for appending, not editing.** `.gitattributes` sets it on `CHECKLIST.md`,
@@ -223,7 +239,7 @@ even mid-feature.
 commands:
 
 ```bash
-scripts/wt.sh new  MOV-215 messari-subgraph   # worktree + branch off dev + .env symlink
+scripts/wt.sh new  MOV-215 messari-subgraph   # worktree + branch off dev + .env symlink + submodules
 scripts/wt.sh done MOV-215                    # push, merge --no-ff into dev, remove worktree
 ```
 

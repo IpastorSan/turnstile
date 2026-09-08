@@ -2,9 +2,11 @@
 #
 # wt.sh — worktree helper for the Turnstile git workflow (see CLAUDE.md §7).
 #
-#   wt.sh new  MOV-215 messari-subgraph
+#   wt.sh new  MOV-215 messari-subgraph [--contracts]
 #       Creates ../turnstile-mov-215 on a new branch feat/mov-215-messari-subgraph
 #       cut from dev, symlinks the root .env into it, and prints the cd command.
+#       Submodules stay uninitialised unless --contracts is passed; the script
+#       says so rather than letting forge fail cryptically later.
 #
 #   wt.sh done MOV-215
 #       Pushes the branch to origin, merges it into dev with --no-ff in the main
@@ -23,7 +25,11 @@ warn() { printf '\033[33mwarn:\033[0m %s\n' "$*" >&2; }
 usage() {
   cat >&2 <<'USAGE'
 usage:
-  scripts/wt.sh new  <ISSUE-ID> <slug>   e.g. scripts/wt.sh new MOV-215 messari-subgraph
+  scripts/wt.sh new  <ISSUE-ID> <slug> [--contracts]
+        e.g. scripts/wt.sh new MOV-215 messari-subgraph
+        --contracts also checks out the git submodules, which forge needs and
+        which do not follow a worktree. Slow (minutes); skip it unless you are
+        compiling Solidity.
   scripts/wt.sh done <ISSUE-ID>          e.g. scripts/wt.sh done MOV-215
 USAGE
   exit 2
@@ -67,6 +73,18 @@ require_dev_checked_out() {
 # --- new ---------------------------------------------------------------------
 
 cmd_new() {
+  local want_submodules=0
+  local positional=()
+  local arg
+  for arg in "$@"; do
+    case "$arg" in
+      --contracts) want_submodules=1 ;;
+      -*) die "unknown flag '$arg'" ;;
+      *) positional+=("$arg") ;;
+    esac
+  done
+  set -- "${positional[@]}"
+
   [ $# -eq 2 ] || usage
   local raw_id="$1" slug="$2"
   local id branch wt_path
@@ -96,6 +114,29 @@ cmd_new() {
     fi
   done
   [ "$linked" -eq 1 ] || warn "no .env or .envrc at $REPO_ROOT to symlink — copy .envrc.example first"
+
+  # Submodules do NOT follow a worktree either: `git worktree add` creates the
+  # gitlink directories empty. Left unsaid, that surfaces later as a Foundry
+  # error naming a file, which reads like a broken remapping (see CLAUDE.md).
+  #
+  # Not initialised by default. It re-clones from the network every time --
+  # ~2.5 min and 154 MB per worktree, because contracts-v2 alone carries 11
+  # nested submodules -- and most worktrees never compile a contract. Local
+  # alternates do not avoid it (submodule.alternateLocation=superproject was
+  # measured; it still clones). So it is opt-in, and loud when skipped.
+  if [ -f "$REPO_ROOT/.gitmodules" ]; then
+    if [ "$want_submodules" -eq 1 ]; then
+      info "initialising submodules (recursive, from the network — a few minutes)"
+      git -C "$wt_path" submodule update --init --recursive \
+        || die "submodule init failed — forge will not build in $wt_path until it does"
+    else
+      warn "contracts/lib/* is EMPTY here — submodules do not follow a worktree."
+      warn "  Running forge? It will fail with a missing-source error that is NOT a"
+      warn "  remapping bug. Fix it with (note --recursive, it is load-bearing):"
+      warn "    git -C $wt_path submodule update --init --recursive"
+      warn "  Or pass --contracts to 'wt.sh new' next time."
+    fi
+  fi
 
   printf '\n  cd %s\n\n' "$wt_path"
 }
