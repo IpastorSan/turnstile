@@ -20,6 +20,28 @@ The `<desc>` accessibility text was updated to match. Nothing else in the
 diagram changed: both panels, the invariant banner and the whole request path
 are as MOV-230 drew them.
 
+**Correction (2026-09-08, MOV-005): the diagram was re-rendered again, and the
+two Cold rows above were superseded within hours of being written.** The MOV-000
+row replaced a false vendor claim with a false *custody* claim, so the labels it
+introduced are themselves now wrong.
+
+| Was (MOV-000) | Now (MOV-005) | Why |
+| --- | --- | --- |
+| Cold row title: `Cold key, held offline` | `Operator key, role-scoped` | The key is not held offline. `addresses.turnstile.sepolia.json` records `coldKey` and `deployer` as the same address, and its private key is `DEPLOYER_PRIVATE_KEY` in `.env`. |
+| Cold row line 2: `Held offline · not hardware-backed` | `Only key that may move the payout` | States what the chain enforces instead of what a laptop supposedly does. Provable: MOV-218's `setAddr` revert. |
+
+The `<desc>` text was updated a second time for the same reason.
+
+**This is the third correction to this diagram in two days, and the second where
+the picture outlived a fix to the prose it illustrates** (MOV-000 caught the
+Paymaster wording a day late; this one caught custody wording within hours).
+A `.png` is a claim surface that no `grep` can audit, so it needs checking by
+eye whenever a tier or a mechanism changes. Re-render with:
+
+```
+rsvg-convert -w 1200 docs/architecture.svg -o docs/architecture.png
+```
+
 Two things are drawn here because they are the two things a reader has to hold
 at once: **where the keys sit**, and **what happens when an agent buys an
 answer**. They are not independent — step 05 of the request path is the only
