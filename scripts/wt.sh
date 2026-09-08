@@ -119,11 +119,14 @@ cmd_new() {
   # gitlink directories empty. Left unsaid, that surfaces later as a Foundry
   # error naming a file, which reads like a broken remapping (see CLAUDE.md).
   #
-  # Not initialised by default. It re-clones from the network every time --
-  # ~2.5 min and 154 MB per worktree, because contracts-v2 alone carries 11
-  # nested submodules -- and most worktrees never compile a contract. Local
-  # alternates do not avoid it (submodule.alternateLocation=superproject was
-  # measured; it still clones). So it is opt-in, and loud when skipped.
+  # Not initialised by default. Measured end to end on 2026-09-08: 287s and
+  # >240 MB, re-cloned from the network. --recursive walks the whole transitive
+  # graph, which is four levels deep here -- verifiable-factory ->
+  # openzeppelin-contracts-upgradeable -> openzeppelin-contracts -> forge-std --
+  # so it pulls far more than the remappings actually reference. Local alternates
+  # do not avoid it (submodule.alternateLocation=superproject was measured; it
+  # still clones). Most worktrees never compile a contract, so this is opt-in,
+  # and loud when skipped.
   if [ -f "$REPO_ROOT/.gitmodules" ]; then
     if [ "$want_submodules" -eq 1 ]; then
       info "initialising submodules (recursive, from the network — a few minutes)"

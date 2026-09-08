@@ -145,7 +145,22 @@ touch the payout address, so the transaction that repairs the gap is the same on
 demonstrates the cold/hot split. Pair it with the rejected `setAddr` from the hot key and the
 ENS story tells itself in two transactions.
 
-Then Then Bazantic registration the same day, which needs the
+**OPEN DECISION — Ignacio's call, needed before Sept 14.** The live record
+`turnstile:operator-proof` on Sepolia still reads `ledger-key-ring`. The Ledger track is
+dropped (setup step 5), so that string describes nothing we do, and it is **cold-key
+writable only** — an edit cannot reach it, `PublishOffer.s.sol` publishes `cold-key-offline`
+now but the chain is unchanged.
+
+Recommendation: **rewrite it in this same session**, as a *third* transaction. It costs one
+cold-key signature and it earns its place — a judge who reads the record currently finds a
+false hardware claim, and the transaction that corrects it is itself the only demonstration
+in the whole demo of the cold key doing something only the cold key may do. Two transactions
+show what the hot key can and cannot do; a third shows the tier above it is real and not
+just prose. If the cold key is inconvenient to bring online that day, the fallback is to
+leave the annotation in `docs/ens-offer-records.md` and say so on camera — but that spends
+narration on an apology instead of a proof.
+
+Then Bazantic registration the same day, which needs the
 public `--spec-url` and `--endpoint` plus a browser session (`baz login`). See
 `docs/bazantic-gateway.md`.
 
@@ -170,10 +185,11 @@ whether the link was decoration.
    git show main:FEEDBACK.md | grep -c '^### 2026'    # expect >= 10
    ```
 4. Open the URL logged-out
-3. `substreams registry publish` for `graph/substreams/erc8004-agent-registry-v0.1.0.spkg`
-4. **Only now** submit the Uniswap feedback form — it requires a link to `FEEDBACK.md`, which
+5. `substreams registry publish` for `graph/substreams/erc8004-agent-registry-v0.1.0.spkg`
+   and `npm publish` for `uniswap-mcp`
+6. **Only now** submit the Uniswap feedback form — it requires a link to `FEEDBACK.md`, which
    404s for the reviewer while the repo is private
-5. Record videos against the live deployment, deriving live figures on camera
+7. Record videos against the live deployment, deriving live figures on camera
 
 **Sept 16 — submit.**
 
