@@ -1012,14 +1012,6 @@ a {
    the app that writes anything, and its success state is a refusal, so it is
    styled the way a passing check would be rather than the way an error is. */
 
-.band-note {
-  display: block;
-  margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--chalk-faint);
-}
-
 .rule-list {
   margin: 10px 0 0;
   padding: 0;
