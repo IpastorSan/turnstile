@@ -1097,3 +1097,56 @@ a {
   line-height: 1.5;
   color: var(--chalk-faint);
 }
+
+/* Settled payments on /mandate. A dense five-column ledger rather than cards:
+   the point is that there are a lot of them and each one is checkable. */
+
+.payments {
+  list-style: none;
+  margin: 22px 0 0;
+  padding: 0;
+  border-top: var(--rail);
+}
+
+.payment {
+  display: grid;
+  grid-template-columns: 108px 92px 128px 168px minmax(0, 1fr);
+  gap: 16px;
+  align-items: baseline;
+  padding: 9px 0;
+  border-bottom: var(--rail);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.payment-rail {
+  color: var(--chalk-faint);
+  letter-spacing: 0.04em;
+}
+
+.payment-usd {
+  color: var(--brass);
+  font-variant-numeric: tabular-nums;
+}
+
+.payment-amount,
+.payment-at {
+  color: var(--chalk-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.payment-ref {
+  color: var(--chalk-faint);
+  word-break: break-all;
+}
+
+.payment-ref a { color: var(--chalk-dim); }
+.payment-ref a:hover { color: var(--brass); }
+
+@media (max-width: 860px) {
+  .payment {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4px 14px;
+  }
+  .payment-at, .payment-ref { grid-column: 1 / -1; }
+}
