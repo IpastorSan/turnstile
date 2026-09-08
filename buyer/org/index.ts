@@ -11,8 +11,8 @@ export type { AuthorizationKey, AuthorizationPayload } from './authorization-key
 export { PRIVY_API_BASE, PrivyClient, PrivyError, credentialsFromEnv } from './privy.ts';
 export type { PrivyCredentials, RequestOptions } from './privy.ts';
 
-export { createKeyQuorum, onboardOperator } from './operators.ts';
-export type { KeyQuorum, OnboardOperatorOptions, Operator } from './operators.ts';
+export { createKeyQuorum, onboardOperator, registerOperator } from './operators.ts';
+export type { KeyQuorum, OnboardOperatorOptions, Operator, RegisteredOperator } from './operators.ts';
 
 export { createOrgWallet, getOrgWallet, signTransaction } from './org-wallet.ts';
 export type { OrgWallet, PrivyTransactionRequest } from './org-wallet.ts';
