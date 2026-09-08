@@ -16,3 +16,6 @@ export type { KeyQuorum, OnboardOperatorOptions, Operator } from './operators.ts
 
 export { createOrgWallet, getOrgWallet, signTransaction } from './org-wallet.ts';
 export type { OrgWallet, PrivyTransactionRequest } from './org-wallet.ts';
+
+export { DEMO_OPERATORS, loadOrgFromEnv, operatorFromEnv, orgIsConfigured } from './env.ts';
+export type { EnvOperator, OrgFromEnv } from './env.ts';

@@ -1006,3 +1006,102 @@ a {
   .rail-inner { height: auto; padding: 12px 0; flex-wrap: wrap; gap: 12px; }
   .nav { margin-left: 0; width: 100%; }
 }
+
+/* --- the mandate page ------------------------------------------------------
+   The warm tier, read live from Privy. The quorum probe is the only control in
+   the app that writes anything, and its success state is a refusal, so it is
+   styled the way a passing check would be rather than the way an error is. */
+
+.band-note {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--chalk-faint);
+}
+
+.rule-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rule-list li {
+  padding: 3px 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--chalk-dim);
+}
+
+.allow {
+  display: inline-block;
+  min-width: 52px;
+  color: var(--brass);
+  letter-spacing: 0.08em;
+}
+
+.probe {
+  margin: 18px 0 0;
+  padding: 20px;
+  border: var(--rail);
+  border-radius: var(--radius);
+  background: var(--enamel-850);
+}
+
+.probe-button {
+  padding: 11px 18px;
+  border: 1px solid var(--brass-deep);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--brass);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.probe-button:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--brass) 14%, transparent);
+}
+
+.probe-button:disabled {
+  cursor: progress;
+  color: var(--chalk-faint);
+  border-color: var(--enamel-700);
+}
+
+.probe-result {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border-left: 2px solid var(--enamel-600);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--chalk-dim);
+}
+
+.probe-result b {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* A refusal is the passing state here. */
+.probe-result.is-good {
+  border-left-color: var(--brass);
+  background: color-mix(in oklab, var(--brass) 7%, transparent);
+}
+.probe-result.is-good b { color: var(--brass); }
+
+/* Reached only if Privy accepted a single signature, which would be a finding. */
+.probe-result.is-bad {
+  border-left-color: var(--vermilion);
+  background: color-mix(in oklab, var(--vermilion) 9%, transparent);
+}
+.probe-result.is-bad b { color: var(--vermilion); }
+
+.probe-note {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--chalk-faint);
+}
