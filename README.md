@@ -18,9 +18,31 @@ actually best, and together they are one cold/warm/hot hierarchy.
 
 | Tier | Vendor | Holds | Frequency | May authorize |
 |---|---|---|---|---|
-| **Cold** | Ledger Key Ring (`wallet-cli ring`) | Seller operator identity; owns the ENSv2 name; seals upstream API keys | Once per lifecycle | Hot-key rotation, payout address change, price-ceiling raise |
+| **Cold** | A cold key held offline | Seller operator identity; owns the ENSv2 name | Once per lifecycle | Hot-key rotation, payout address change, price-ceiling raise |
 | **Warm** | Privy | Buyer **organization** wallet + mandate policy | Occasional | Issuing a mandate, raising a cap (quorum), adding an agent |
 | **Hot** | Circle / Arc Agent Stack | Buyer agent's spending wallet | Every query | Nothing. Spends *within* the mandate; **signs offchain and never submits a transaction**, so it pays exactly zero gas |
+
+**Correction (2026-09-08, MOV-000):** the Cold row previously named **Ledger Key
+Ring (`wallet-cli ring`)** as the vendor and claimed it "seals upstream API
+keys". Both are withdrawn — **we do not use a Ledger device and never got one
+working.** `wallet-cli ring init` fails on the only device available to us, a
+**Ledger Nano S** (the original 2016 model, EOL, firmware capped at 2.1.0): it
+creates the local member credentials and then fails at the device step with an
+untyped "unknown error". LKRP is the trustchain behind Ledger Recover, which has
+never supported the Nano S. It is not permissions (udev verified, `uaccess` tag
+present, hidraw readable), not transport (`genuine-check` returns a *typed*
+error, so the device does answer), and not the package — the model cannot do it.
+The Ledger prize track is **not pursued**; see `CHECKLIST.md`.
+
+**What is unchanged: the cold tier itself, and every other row.** Ledger was only
+ever going to be *where the cold key lives*, never *what makes it cold*. The
+cold/hot split is enforced by the resolver's role checks, and it is proven on
+chain rather than in prose — MOV-218 demonstrated the hot key's `setAddr` payout
+change **reverting** with `EACUnauthorizedAccountRoles`, live on Sepolia, with
+passing Forge tests and a fork test behind it. What falls is only the custody
+story: the cold key is held offline and is **not** hardware-backed. No substitute
+vendor is claimed.
+
 
 **Correction (2026-09-07, MOV-225):** the Hot row previously read "holds zero
 native token (Paymaster)". That is **wrong on Arc** — it names a mechanism that
@@ -163,7 +185,7 @@ gated.
 | `contracts/` | Foundry. ENSv2 subname registry + registrar, and `VerdictConsumer` — where the enclave's verdict settles (Sepolia) |
 | `graph/subgraph/` | Messari DEX AMM Extended v4.0.1 conformant subgraph |
 | `graph/substreams/` | Rust. Authored ERC-8004 agent-registry normalization module |
-| `seller/` | x402-gated service, Liquidity Analyst, CRE confidential workflow, Ledger-sealed secrets |
+| `seller/` | x402-gated service, Liquidity Analyst, CRE confidential workflow, `secrets/` (placeholder — no sealed blobs yet) |
 | `rails/` | `PaymentRail.ts` seam + Hedera x402 and Arc USDC implementations |
 | `buyer/` | `org/` the Privy org wallet and its key quorums, `mandate/` what the agent may spend, `watchdog/` the agent |
 | `mcp-turnstile/` | MCP server + `SKILL.md` — the reusable-infrastructure artifact |
