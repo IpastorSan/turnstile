@@ -4,15 +4,21 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 /**
- * The two routes marked `pending` are real routes with nothing real behind them
- * yet. They are marked in the navigation rather than hidden, because a judge
- * clicking through should find out what is not built from the site itself
- * rather than from a README.
+ * A route marked `pending` is a real route with nothing real behind it yet. They
+ * are marked in the navigation rather than hidden, because a judge clicking
+ * through should find out what is not built from the site itself rather than
+ * from a README.
+ *
+ * `/mandate` was marked pending until 2026-09-08 and no longer is: it reads the
+ * live organization from Privy, shows what the agent actually settled on both
+ * rails, and lets anyone create their own. `/onboard` is still pending, and
+ * genuinely blocked on a World Sandbox approval rather than on us.
  */
 const LINKS = [
   { href: '/', label: 'Market', pending: false },
   { href: '/seller', label: 'Seller', pending: false },
-  { href: '/mandate', label: 'Mandate', pending: true },
+  { href: '/mandate', label: 'Mandate', pending: false },
+  { href: '/mandate/new', label: 'Create', pending: false },
   { href: '/onboard', label: 'Onboard', pending: true },
 ];
 

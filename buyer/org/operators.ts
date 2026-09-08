@@ -120,16 +120,61 @@ export interface KeyQuorum {
  */
 export async function createKeyQuorum(
   privy: PrivyClient,
-  options: { displayName: string; members: readonly Operator[]; threshold: number },
+  options: { displayName: string; threshold: number } & (
+    | { members: readonly Operator[]; publicKeys?: never }
+    // For operators whose private key we never see: the browser generates the
+    // pair and sends only this. A quorum has only ever needed public keys —
+    // `members` was always reduced to `m.key.publicKey` on the next line — so
+    // this is the same call with the secret left out of the process entirely.
+    | { publicKeys: readonly string[]; members?: never }
+  ),
 ): Promise<KeyQuorum> {
-  const { displayName, members, threshold } = options;
-  if (members.length === 0) throw new Error('a key quorum needs at least one member');
-  if (threshold < 1 || threshold > members.length) {
-    throw new Error(`threshold ${threshold} is unsatisfiable with ${members.length} member(s) — it would lock the org out`);
+  const { displayName, threshold } = options;
+  const publicKeys = options.publicKeys ?? options.members!.map(m => m.key.publicKey);
+  if (publicKeys.length === 0) throw new Error('a key quorum needs at least one member');
+  if (threshold < 1 || threshold > publicKeys.length) {
+    throw new Error(`threshold ${threshold} is unsatisfiable with ${publicKeys.length} member(s) — it would lock the org out`);
   }
   return privy.post<KeyQuorum>('/v1/key_quorums', {
     display_name: displayName.slice(0, 50),
-    public_keys: members.map(m => m.key.publicKey),
+    public_keys: [...publicKeys],
     authorization_threshold: threshold,
   });
+}
+
+/** An operator Privy knows about, whose signing key we deliberately do not hold. */
+export interface RegisteredOperator {
+  handle: string;
+  role: string;
+  userId: string;
+  walletAddress: string;
+  /** base64 SPKI DER. The public half, and the only half that ever reaches us. */
+  publicKey: string;
+}
+
+/**
+ * Onboard an operator from a public key alone.
+ *
+ * `onboardOperator` generates the keypair server-side, which is right for
+ * `npm run privy:setup` on an operator's own machine and wrong for a hosted
+ * flow: it would mean this server briefly held the secret that authorises
+ * someone else's treasury. Here the browser generates the pair, keeps the
+ * private half, and sends only `publicKey`. There is no code path by which the
+ * secret reaches us, which is a stronger statement than promising not to log it.
+ */
+export async function registerOperator(
+  privy: PrivyClient,
+  options: { handle: string; role: string; email: string; publicKey: string },
+): Promise<RegisteredOperator> {
+  const user = await privy.post<PrivyUser>('/v1/users', {
+    linked_accounts: [{ type: 'email', address: options.email }],
+    wallets: [{ chain_type: 'ethereum' }],
+  });
+
+  const wallet = user.linked_accounts.find(account => account.type === 'wallet' && account.chain_type === 'ethereum');
+  if (!wallet?.address) {
+    throw new Error(`Privy created user ${user.id} without an embedded ethereum wallet — got ${JSON.stringify(user.linked_accounts.map(a => a.type))}`);
+  }
+
+  return { handle: options.handle, role: options.role, userId: user.id, walletAddress: wallet.address, publicKey: options.publicKey };
 }
