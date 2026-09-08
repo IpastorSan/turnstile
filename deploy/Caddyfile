@@ -1,0 +1,48 @@
+# One hostname serves all three services, because the ENS record commits us to
+# one: `agent-endpoint[mcp]` publishes a URL on $TURNSTILE_SITE_ADDRESS, and a
+# buyer's agent reads that record and nothing else. Splitting the seller service
+# onto a second subdomain would mean a second on-chain write to point at it.
+#
+# TURNSTILE_SITE_ADDRESS is the only thing that differs between local and live:
+#
+#   local  http://localhost      plain HTTP, no certificate, nothing to provision
+#   live   turnstile.moveseventyeight.com   Caddy gets a real cert automatically
+#
+# Caddy issues certificates only for a bare hostname, so the `http://` prefix is
+# what keeps it from trying to reach Let's Encrypt for "localhost" and failing.
+
+{$TURNSTILE_SITE_ADDRESS:http://localhost} {
+	encode gzip
+
+	# --- the seller service: everything a buyer touches to pay ---
+	# These are the real routes in seller/service/app.ts. They are listed
+	# explicitly rather than as a catch-all so that a path nobody serves gets an
+	# honest 404 from the web app instead of a confusing error from the seller.
+	handle /analyze/* {
+		reverse_proxy seller:4021
+	}
+	handle /receipts/* {
+		reverse_proxy seller:4021
+	}
+	handle /seller-health {
+		rewrite * /health
+		reverse_proxy seller:4021
+	}
+
+	# --- the evidence bundle the CRE enclave fetches ---
+	# Bearer-token gated inside the service itself; Caddy only routes.
+	handle /evidence/* {
+		reverse_proxy evidence:8787
+	}
+
+	# --- everything else is the Next.js app ---
+	# Market page, seller pages, /api/sellers, /api/offer/:name, /api/health.
+	handle {
+		reverse_proxy web:3210
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
