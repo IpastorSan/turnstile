@@ -212,8 +212,11 @@ even mid-feature.
   **`--recursive` is load-bearing** — `@ens/contracts/` maps into
   `ens-contracts`, a submodule *inside* `contracts-v2`, so a plain `--init`
   leaves exactly the path in the error message still missing. It is **not**
-  automatic: it re-clones from the network every time (~2.5 min, 154 MB, 11
-  nested submodules under `contracts-v2`), local alternates do not avoid it
+  automatic: measured end to end on 2026-09-08 at **287s and >240 MB**, re-cloned
+  from the network. `--recursive` walks the whole transitive graph, four levels
+  deep (`verifiable-factory` → `openzeppelin-contracts-upgradeable` →
+  `openzeppelin-contracts` → `forge-std`), so it fetches far more than the
+  remappings reference. Local alternates do not avoid it
   (`submodule.alternateLocation=superproject` was measured — it still clones),
   and most worktrees never compile Solidity. `wt.sh` warns loudly when it skips.
 - **Per-worktree installs are expensive.** Set `CARGO_TARGET_DIR=~/.cache/turnstile-target`
