@@ -200,14 +200,25 @@ even mid-feature.
 
 - **`.env` does not follow a worktree** (gitignored). Symlink it as step 1 or the worktree
   fails at runtime. `seller/secrets/*.enc` *is* tracked and does follow.
-- **Submodules do not follow a worktree either, and this one lies to you.**
+- **`forge` must be 1.8.1, and the directory named `stable` is NOT it.**
+  Foundry lives under `~/.config/.foundry` here (XDG, not `~/.foundry`).
+  `~/.config/.foundry/bin/forge` symlinks to **v1.8.1** and builds this repo
+  cleanly. But `~/.config/.foundry/versions/foundry-rs/foundry/stable/forge` is
+  **v1.5.1**, and 1.5.1 *cannot resolve this repo's remappings*: it fails with
+  `Source "@ens/contracts/utils/NameCoder.sol" not found` even on a fully
+  checked-out tree, then helpfully announces "Missing dependencies found.
+  Installing now..." and re-registers the submodules at the wrong paths.
+  Verified 2026-09-08 under an identical stripped environment: 1.8.1 exits 0,
+  1.5.1 exits 1. So put `~/.config/.foundry/bin` on `PATH`; **never** reach into
+  `versions/.../stable/` because `forge` is not on `PATH`. The name promises the
+  opposite of what it holds, and an agent that hits this reports the repo as
+  broken (one did, and its instinct to suspect the toolchain was right).
+- **Submodules do not follow a worktree either, and this one lies the other way.**
   `git worktree add` creates `contracts/lib/*` as five *empty* directories, so
-  `forge build` fails with `Source "@ens/contracts/utils/NameCoder.sol" not
-  found` — a remapping that resolves perfectly in the main worktree. The error
-  names a file, so it reads as a broken remapping or a Foundry version problem,
-  and an agent that hits it will report the repo as broken (one did, 2026-09-08,
-  after checking two forge versions and `forge clean`). It is neither: nothing
-  is checked out. Fix it with `git -C <worktree> submodule update --init
+  even forge 1.8.1 fails there with **the same** `NameCoder.sol` message — this
+  time because nothing is checked out and the remapping is fine. Two distinct
+  causes, one error string: check the binary's version *and* `ls contracts/lib/*/`
+  before suspecting the remapping table, which has never once been at fault. Fix it with `git -C <worktree> submodule update --init
   --recursive`, or create the worktree with `scripts/wt.sh new … --contracts`.
   **`--recursive` is load-bearing** — `@ens/contracts/` maps into
   `ens-contracts`, a submodule *inside* `contracts-v2`, so a plain `--init`
