@@ -153,14 +153,23 @@ permissions, not by a policy document. See
 |---|---|---|---|
 | **01 Discover** | ERC-8004 Identity Registry registrations, streamed cross-chain via Substreams into a queryable store | `graph/substreams/`, `graph/sink/` | **Live** — 197 agents, 3 chains |
 | **02 Read the offer** | The seller's ENSv2 resolver is read for `turnstile:price`, `turnstile:rails`, `agent-endpoint[mcp]` | `graph/sink/ens.ts`, `web/lib/ens.ts` | **Live** — read from Sepolia per request |
-| **03 Ask** | Buyer's agent calls the MCP endpoint named in `agent-endpoint[mcp]` | `mcp-turnstile/`, `seller/service/` | Tool live; **seller endpoint not deployed** (MOV-219/220) |
-| **04 402** | The endpoint answers `HTTP 402 Payment Required` with a quote that must match the posted price | `seller/service/` | **Not built** (MOV-219/220) |
-| **05 Pay** | The hot key settles on x402 or USDC on Arc, inside the mandate | `rails/PaymentRail.ts` | **Not built** |
-| **06 Answer** | The result is returned. The method that produced it is not. | `seller/analyst/`, `seller/cre/` | **Not built** |
+| **03 Ask** | Buyer's agent calls the MCP endpoint named in `agent-endpoint[mcp]` | `mcp-turnstile/`, `seller/service/` | **Live locally** — the service runs from the repo; the hosted address is not deployed until Sept 14 |
+| **04 402** | The endpoint answers `HTTP 402 Payment Required` with a quote that must match the posted price | `seller/service/` | **Live** (MOV-220) |
+| **05 Pay** | The hot key settles on x402 or USDC on Arc, inside the mandate | `rails/PaymentRail.ts` | **Live on both rails, with real money** (MOV-220, MOV-225) |
+| **06 Answer** | The result is returned. The method that produced it is not. | `seller/analyst/`, `seller/cre/` | **Live**, premium tier through the CRE enclave (MOV-227) |
 
-Steps 01 and 02 are live and demonstrable today; the market and seller pages in
-`web/` run on them. Steps 03–06 are the settlement half and are not built. This
-table is the honest state, not the intended one.
+**Correction (2026-09-08).** Rows 03 to 06 above read **Not built** until today,
+and the paragraph below them said so twice. That was accurate when written and
+stopped being accurate on 2026-09-07, when MOV-220 settled real HBAR through
+Blocky402 and MOV-225 settled real USDC on Arc. The table had become the
+*pessimistic* lie rather than the optimistic one, which is the rarer failure and
+just as wrong: a judge reading it would have concluded the settlement half did
+not exist.
+
+All six steps run today. The one real gap is deployment, not capability: the
+address in `agent-endpoint[mcp]` has no DNS record until the Sept 14 deploy, so
+step 03 works from the repo and not yet from the open internet. `CHECKLIST.md`
+tracks that as a live gap rather than a cosmetic one.
 
 ### Step 02 is the leg the registry cannot supply
 
