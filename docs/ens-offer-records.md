@@ -63,8 +63,15 @@ and the `cast` transcript further down is a faithful record of what the chain
 says — it has deliberately **not** been edited. But the string no longer
 describes anything we do: the Ledger track is **not pursued**, because
 `wallet-cli ring init` fails on our only device (a Ledger Nano S, which LKRP has
-never supported). We do not use a Ledger. Read that record as "a cold key held
-offline".
+never supported). We do not use a Ledger.
+
+**Further correction (2026-09-08, MOV-005).** The sentence here previously said
+to read that record as "a cold key held offline". That replacement was also
+false: `coldKey` and `deployer` are the same address in
+`addresses.turnstile.sepolia.json`, and its key is `DEPLOYER_PRIVATE_KEY` in
+`.env`. Read the record as **"the operator key, whose authority is role-scoped on
+chain"** — which is the provable claim, since the hot key's payout change reverts
+with `EACUnauthorizedAccountRoles`. Nothing about custody is claimed.
 
 Two consequences, both deliberate:
 

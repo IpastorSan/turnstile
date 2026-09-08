@@ -41,7 +41,7 @@ library TurnstileRegistry {
     ////////////////////////////////////////////////////////////////////////
 
     /// @notice Root roles held by the seller's operator identity — the cold tier
-    ///         (a key held offline), which owns the name and delegates from there.
+    ///         (a separate key holding the root roles), which owns the name and delegates from there.
     ///
     /// Both the regular role and its `_ADMIN` counterpart are granted for each
     /// capability, and the distinction is not cosmetic:
