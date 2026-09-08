@@ -224,6 +224,8 @@ $ node graph/sink/hydrate-sellers.ts
 liquidity.turnstile.eth
   price          0.07  ceiling 0.50  rails x402,usdc-arc
   mcp            https://mcp-eu.turnstile.xyz/liquidity.turnstile.eth/sse
+  # ^ superseded 2026-09-08 (MOV-010) -> turnstile.moveseventyeight.com/…
+  #   Transcript left verbatim; re-running hydrate-sellers prints the new host.
   payout         0x0Adca6e14bA956201D221feC767e4f24194bf5F2
   resolver       verified (impl 0x7E4B2d59938930168024201752EE5503df402303)
   agent link     eip155:11155111:0x8004a818bfb912233c491871b3d84c89a494bd9e/10127
@@ -387,13 +389,18 @@ nested object.
 
 ## Not verified
 
-- **The MCP endpoint in `agent-endpoint[mcp]` is still a placeholder host.**
-  `https://mcp-eu.turnstile.xyz/...` does not answer; MOV-219/220 land the real
-  service. The ENS record is real, the price is real, the thing at the other end
-  is not up yet.
+- **The MCP endpoint in `agent-endpoint[mcp]` is still an unresolved host.**
+  `https://turnstile.moveseventyeight.com/...` does not answer yet. The ENS
+  record is real, the price is real, the thing at the other end is not up. As of
+  2026-09-08 (MOV-010) it at least names a domain we own; it named
+  `mcp-eu.turnstile.xyz` before, which we do not.
 
-  **Still true, re-verified 2026-09-07 (MOV-229):** `curl` gets no DNS record for
-  `mcp-eu.turnstile.xyz`. The `get_offer` MCP tool now surfaces this as a
+  **Still true, re-verified 2026-09-08 (MOV-010):** the host has changed and the
+  finding has not. `mcp-eu.turnstile.xyz` had no DNS record on 2026-09-07
+  (MOV-229); `turnstile.moveseventyeight.com` has none today. Both were checked
+  the same way. The tool's behaviour is identical either way, which is the
+  useful part: it reports the failure it actually observes rather than a host it
+  was configured with. The `get_offer` MCP tool surfaces this as a
   first-class result rather than a footnote — it reports the $0.07 price *and*
   `purchasable: false` naming the DNS failure, so an agent cannot mistake a
   published price for a payable quote. `mcp-turnstile/examples/transcript.md`

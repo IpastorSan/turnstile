@@ -173,3 +173,12 @@ WHAT THIS PROVED
   neither seller's name, price, payout account or response schema before it ran.
   No API key was used at any point by either the buyer or the MCP server.
 ```
+
+---
+
+**Note (2026-09-08, MOV-010).** This transcript is left verbatim. The endpoint it
+shows, `https://mcp-eu.turnstile.xyz/…`, was repointed to
+`https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse` after it was
+recorded. The finding the transcript demonstrates is unaffected and still
+reproduces: the tool reports `purchasable: false` naming the DNS failure, because
+the new host does not resolve yet either.

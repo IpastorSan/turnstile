@@ -138,15 +138,35 @@ and reads Sepolia live, delete it. Preview URLs are unguessable, so exposure is 
 **Sept 14 — real deploy, stays up.** Then, **on camera**, the **hot key** updates
 `agent-endpoint[mcp]` to point at it.
 
-That record currently resolves to `https://mcp-eu.turnstile.xyz/…`, which **has no DNS
-record** (MOV-229, re-verified 2026-09-07). The seller service is real and runs from the repo;
-the hosted address does not exist. A judge who reads only the ENS record finds nothing to pay,
-so this is a live gap in the ENS submission rather than a cosmetic one.
+That record pointed at `https://mcp-eu.turnstile.xyz/…` until 2026-09-08, and **`turnstile.xyz`
+is not ours** — it resolves to third-party AWS. MOV-010 repointed it to
+`https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse` with the hot key, tx
+[`0x6736b3b2…8c66`](https://sepolia.etherscan.io/tx/0x6736b3b2125d7d030be5fb70c5343342d98cc44ab2dd38b2451667926b818c66),
+block 11662532. The new host **does not resolve yet** either, so a judge reading only the ENS
+record still finds nothing to pay. The gap is now on a domain we control and can close with the
+deploy, which is the point. **The Sept 14 beat is therefore no longer "repair a dead record" —
+see the note below.**
 
-Fixing it *is* the demo beat: the hot key may move where the service lives and may **not**
-touch the payout address, so the transaction that repairs the gap is the same one that
-demonstrates the cold/hot split. Pair it with the rejected `setAddr` from the hot key and the
-ENS story tells itself in two transactions.
+**The Sept 14 beat, restated after MOV-010.** The original plan was that repairing the dead
+record *was* the demo, because the hot key may move where the service lives and may **not**
+touch the payout address. MOV-010 spent that transaction early, for a reason that could not
+wait: the old host sat on a domain owned by someone else, and leaving it there was a live
+hazard, not a cosmetic one.
+
+The beat survives intact, because the hot key can repoint as often as it likes and the point
+was never the *first* write:
+
+1. On camera, the hot key repoints `agent-endpoint[mcp]` from the unresolved
+   `turnstile.moveseventyeight.com` placeholder to the **live deployment**. Same authority,
+   same key, and now the record goes from not answering to answering while a judge watches.
+2. The same key attempts `setAddr` on the payout address and is **rejected** by
+   `EACUnauthorizedAccountRoles`.
+
+Two transactions, one key, one allowed and one refused. That is a stronger pairing than the
+original, because the allowed one now visibly *works* at the end rather than merely being
+written. MOV-010's own tx
+([`0x6736b3b2…8c66`](https://sepolia.etherscan.io/tx/0x6736b3b2125d7d030be5fb70c5343342d98cc44ab2dd38b2451667926b818c66))
+is a third data point available if a judge asks how often this record moves.
 
 **OPEN DECISION — Ignacio's call, needed before Sept 14.** The live record
 `turnstile:operator-proof` on Sepolia still reads `ledger-key-ring`. The Ledger track is
