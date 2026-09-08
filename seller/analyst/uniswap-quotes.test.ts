@@ -44,8 +44,10 @@ describe('toRawAmount', () => {
   test('handles the exponent notation String() switches to at the extremes', () => {
     // `(1e21).toFixed(18)` is "1e+21" and `BigInt("1e+21")` throws, so the old
     // conversion did not merely round this rung wrong — it took the whole depth
-    // profile down, because toRawAmount is called outside the per-rung try. A
-    // $10M rung against a token priced below ~1e-14 USD reaches 1e21.
+    // profile down, because until MOV-246 toRawAmount was called outside the
+    // per-rung try. A $10M rung against a token priced below ~1e-14 USD reaches
+    // 1e21. Both halves are fixed now: the conversion handles the value, and
+    // the call site treats a throw as one failed rung.
     assert.throws(() => BigInt((1e21).toFixed(18)), SyntaxError);
     assert.equal(toRawAmount(1e21, 18), 10n ** 39n);
     assert.equal(toRawAmount(1e-7, 18), 100_000_000_000n);
@@ -71,7 +73,10 @@ describe('toRawAmount', () => {
 
   test('rejects negative and non-finite input instead of producing a bigint', () => {
     // A zero or NaN tokenInPriceUSD makes amountIn non-finite. The old version
-    // threw here too, but as a SyntaxError from inside BigInt.
+    // threw here too, but as a SyntaxError from inside BigInt. Throwing is
+    // correct — there is no raw amount for Infinity — and the `fetchDepth...`
+    // block below is where that throw is turned into a failed rung rather than
+    // a dead profile.
     assert.throws(() => toRawAmount(-1, 18), RangeError);
     assert.throws(() => toRawAmount(Number.NaN, 18), RangeError);
     assert.throws(() => toRawAmount(Number.POSITIVE_INFINITY, 18), RangeError);
@@ -101,5 +106,246 @@ describe('toRawAmount', () => {
     // ordinary ladder against an unusually priced token.
     assert.equal(String(1e-7), '1e-7');
     assert.equal(String(1e21), '1e+21');
+  });
+});
+
+// A price the analyst cannot use must fail one rung, not the profile.
+//
+// `amountIn` is `notionalUSD / tokenInPriceUSD`, so a price of 0 gives Infinity
+// and a price of NaN gives NaN, and `toRawAmount` rejects both. Until MOV-246
+// that conversion sat above the per-rung `try`, so the RangeError escaped the
+// loop and `fetchDepthFromQuoter` threw instead of returning — no rungs, no
+// depth profile, no verdict.
+//
+// That is the wrong failure mode for this product specifically. The analyst's
+// headline demo is a scam-token pool whose fake USDT declares 18 decimals
+// against the real 6; badly-priced and unpriced tokens are precisely what it
+// exists to catch. A pool that reverts on every rung already yields AVOID with
+// the evidence intact, and an unusable price now behaves the same way.
+
+import type { PublicClient } from 'viem';
+import { encodeFunctionResult, decodeFunctionData, parseAbi } from 'viem';
+
+import { fetchDepthFromQuoter } from './uniswap-quotes.ts';
+import { assess } from './scoring.ts';
+import type { AnalystInput, DepthProfile, PoolFacts } from './types.ts';
+
+const QUOTER_ABI = parseAbi([
+  'function quoteExactInputSingle((address tokenIn, address tokenOut, uint256 amountIn, uint24 fee, uint160 sqrtPriceLimitX96)) returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate)',
+]);
+
+const AT_BLOCK = 25_925_000n;
+
+const TOKEN_OUT = {
+  address: '0x2222222222222222222222222222222222222222',
+  symbol: 'WETH',
+  decimals: 18,
+} as const;
+
+function tokenIn(decimals: number) {
+  return { address: '0x1111111111111111111111111111111111111111', symbol: 'SCAM', decimals };
+}
+
+const LADDER = [1_000, 10_000, 100_000];
+
+function requestAt(tokenInPriceUSD: number, notionalsUSD = LADDER, decimalsIn = 18) {
+  return {
+    tokenIn: tokenIn(decimalsIn),
+    tokenOut: TOKEN_OUT,
+    feeTier: 3000,
+    tokenInPriceUSD,
+    notionalsUSD,
+    now: 1_787_631_581,
+  };
+}
+
+/**
+ * A QuoterV2 that always fills, at a flat 1 tokenOut per 2500 tokenIn. Flat and
+ * always-filling is the point: a rung missing from the result is missing
+ * because the analyst never asked for it, not because the pool said no, so
+ * these tests measure the loop rather than the stub. The scaling is done in
+ * whole-token space and re-encoded at `decimalsOut` so a rung of a couple of
+ * raw input units still returns a non-zero output.
+ */
+function fillingQuoter(decimalsIn = 18, decimalsOut = TOKEN_OUT.decimals) {
+  const amountsIn: bigint[] = [];
+  const client = {
+    getBlockNumber: async () => AT_BLOCK,
+    call: async ({ data }: { data: `0x${string}` }) => {
+      const { args } = decodeFunctionData({ abi: QUOTER_ABI, data });
+      const rawIn = (args as readonly [{ amountIn: bigint }])[0].amountIn;
+      amountsIn.push(rawIn);
+      const rawOut = (rawIn * 10n ** BigInt(decimalsOut)) / (2500n * 10n ** BigInt(decimalsIn));
+      return {
+        data: encodeFunctionResult({
+          abi: QUOTER_ABI,
+          functionName: 'quoteExactInputSingle',
+          result: [rawOut, 0n, 1, 100_000n],
+        }),
+      };
+    },
+  } as unknown as PublicClient;
+  return { client, amountsIn };
+}
+
+describe('fetchDepthFromQuoter survives a price it cannot use', () => {
+  test('a healthy price fills every rung — the control for the cases below', async () => {
+    const { client, amountsIn } = fillingQuoter();
+    const depth = await fetchDepthFromQuoter(requestAt(2), { client });
+
+    assert.equal(depth.rungs.length, 3);
+    assert.deepEqual(depth.rungs.map((r) => r.error), [undefined, undefined, undefined]);
+    // $1,000 at $2 is 500 tokens; the harness quotes, it does not pretend to.
+    assert.deepEqual(amountsIn, [500n * 10n ** 18n, 5_000n * 10n ** 18n, 50_000n * 10n ** 18n]);
+  });
+
+  test('a tokenInPriceUSD of 0 marks every rung failed instead of throwing', async () => {
+    const { client, amountsIn } = fillingQuoter();
+
+    // The assertion that matters is that this resolves at all. Before MOV-246
+    // it rejected with a RangeError out of toRawAmount and there was no profile
+    // to inspect.
+    const depth = await fetchDepthFromQuoter(requestAt(0), { client });
+
+    assert.equal(depth.rungs.length, 3, 'every rung asked for is present');
+    for (const rung of depth.rungs) {
+      assert.equal(rung.amountOut, null);
+      assert.equal(rung.executedRate, null);
+      assert.match(rung.error ?? '', /non-negative finite number, got Infinity/);
+    }
+    assert.deepEqual(amountsIn, [], 'no unusable amount reached the quoter');
+    // The profile is otherwise whole: provenance survives, and the price that
+    // broke it is carried through for the scorer to name.
+    assert.equal(depth.atBlock, Number(AT_BLOCK));
+    assert.equal(depth.notionalPricing.priceUSD, 0);
+  });
+
+  test('a tokenInPriceUSD of NaN does the same', async () => {
+    const { client } = fillingQuoter();
+    const depth = await fetchDepthFromQuoter(requestAt(Number.NaN), { client });
+
+    assert.equal(depth.rungs.length, 3);
+    for (const rung of depth.rungs) {
+      assert.equal(rung.amountOut, null);
+      assert.match(rung.error ?? '', /non-negative finite number, got NaN/);
+    }
+    assert.ok(Number.isNaN(depth.notionalPricing.priceUSD));
+  });
+
+  test('a rung the price breaks does not stop the rungs after it', async () => {
+    // The direct proof that the loop keeps walking past a rung the price
+    // broke. A price of $1e12 against a 6-decimal token — the shape of a pool
+    // whose reported price is off by the 18-vs-6 decimals gap — puts the small
+    // rungs below one raw unit while the large ones still convert, so failures
+    // and fills are interleaved in one ladder.
+    const { client, amountsIn } = fillingQuoter(SKEWED.decimalsIn);
+    const depth = await fetchDepthFromQuoter(skewedRequest(), { client });
+
+    assert.equal(depth.rungs.length, 4);
+    assert.match(depth.rungs[0]!.error ?? '', /rounds to zero token units/);
+    assert.match(depth.rungs[1]!.error ?? '', /rounds to zero token units/);
+    assert.equal(depth.rungs[2]!.error, undefined);
+    assert.equal(depth.rungs[3]!.error, undefined);
+    assert.ok(depth.rungs[2]!.amountOut! > 0 && depth.rungs[3]!.amountOut! > 0);
+    assert.equal(amountsIn.length, 2, 'only the two convertible rungs were quoted');
+  });
+});
+
+/** The mispriced-token ladder: two rungs below one raw unit, two above. */
+const SKEWED = {
+  priceUSD: 1e12,
+  decimalsIn: 6,
+  notionals: [1_000, 10_000, 1_000_000, 10_000_000],
+} as const;
+
+function skewedRequest() {
+  return requestAt(SKEWED.priceUSD, [...SKEWED.notionals], SKEWED.decimalsIn);
+}
+
+/** A pool shaped like the scam-token pool the demo opens on. */
+function scamPool(): PoolFacts {
+  const headTs = 1_787_631_581;
+  return {
+    address: '0x83cff3334e2d00d98416ad72fc383b77a242e169',
+    name: 'Uniswap v3 SCAM/WETH 0.3%',
+    protocol: 'Uniswap v3',
+    network: 'MAINNET',
+    tokens: [
+      { ...tokenIn(18), priceUSD: null, balance: 1_000_000_000, balanceUSD: null },
+      { ...TOKEN_OUT, priceUSD: 2_500, balance: 4, balanceUSD: 10_000 },
+    ],
+    createdTimestamp: headTs - 3 * 86_400,
+    totalValueLockedUSD: 3_000_000_000,
+    cumulativeVolumeUSD: 12_000,
+    cumulativeSupplySideRevenueUSD: 36,
+    feeTierPct: 0.3,
+    positionCount: 1,
+    openPositionCount: 1,
+    tick: 0,
+    hourly: [],
+    source: {
+      label: 'test',
+      endpoint: 'test',
+      transport: 'http',
+      blockNumber: 25_831_581,
+      blockTimestamp: headTs,
+    },
+  };
+}
+
+describe('the verdict renders on a ladder the price broke', () => {
+  async function verdictFrom(request: ReturnType<typeof requestAt>) {
+    const { client } = fillingQuoter(request.tokenIn.decimals);
+    const depth: DepthProfile = await fetchDepthFromQuoter(request, { client });
+    const input: AnalystInput = { pool: scamPool(), depth, now: 1_787_631_581 };
+    return { depth, verdict: assess(input) };
+  }
+
+  test('every rung unpriced still produces a rated verdict, not an exception', async () => {
+    const { verdict } = await verdictFrom(requestAt(0));
+
+    assert.equal(verdict.rating, 'AVOID');
+    const executable = verdict.signals.find((s) => s.id === 'executable-depth')!;
+    assert.equal(executable.verdict, 'fail');
+    // The evidence names the price that broke it and keeps every rung's reason,
+    // which is the whole point of failing the rung rather than the profile.
+    assert.match(executable.evidence['notional priced with'] ?? '', /SCAM at \$0\.000000/);
+    for (const notional of ['$1.0k', '$10.0k', '$100.0k']) {
+      assert.match(executable.evidence[notional] ?? '', /did not execute — .*finite number/);
+    }
+
+    // slippage-curve declines to double-count it, exactly as it does when the
+    // quoter reverts on every rung.
+    const curve = verdict.signals.find((s) => s.id === 'slippage-curve')!;
+    assert.equal(curve.verdict, 'unknown');
+    assert.match(curve.headline, /Only 0 of 3 quoted sizes filled/);
+
+    assert.ok(verdict.summary.length > 0);
+    assert.ok(verdict.confidence >= 0 && verdict.confidence <= 1);
+  });
+
+  test('NaN reaches the same verdict', async () => {
+    const { verdict } = await verdictFrom(requestAt(Number.NaN));
+    assert.equal(verdict.rating, 'AVOID');
+    assert.equal(verdict.signals.find((s) => s.id === 'executable-depth')!.verdict, 'fail');
+  });
+
+  test('a partial ladder is scored on the rungs that did fill', async () => {
+    // Two rungs failed on the price and two filled. The verdict is rendered
+    // from the survivors rather than discarded.
+    const { depth, verdict } = await verdictFrom(skewedRequest());
+
+    assert.equal(depth.rungs.filter((r) => r.amountOut !== null).length, 2);
+    const executable = verdict.signals.find((s) => s.id === 'executable-depth')!;
+    assert.notEqual(executable.verdict, 'unknown');
+    assert.match(executable.evidence['$1.0k'] ?? '', /did not execute/);
+    assert.match(executable.evidence['$1.00M'] ?? '', /WETH, slippage/);
+
+    // Two rungs filled, so the curve has the two points it needs and is read
+    // rather than skipped — a partial ladder is scored, not discarded.
+    const curve = verdict.signals.find((s) => s.id === 'slippage-curve')!;
+    assert.notEqual(curve.verdict, 'unknown');
+    assert.ok(verdict.summary.length > 0);
+    assert.ok(verdict.caveats.length > 0, 'the verdict says what it did not get');
   });
 });
