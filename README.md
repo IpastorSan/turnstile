@@ -11,6 +11,23 @@ Turnstile fixes both ends: sellers publish a priced service at an ENSv2 subname
 where the resolver record *is* the offer, and buyers issue a mandate their agent
 spends inside but can never widen.
 
+```bash
+npm run demo      # one query: discovered, priced from chain, paid on both rails, answered
+npm run verify    # 405 tests: 315 node, 90 Forge, 13 of them forked against live Sepolia
+```
+
+**Every claim in this README is linked to a transaction or marked as unproven, in
+[`docs/EVIDENCE.md`](./docs/EVIDENCE.md).** That page has a "what is not live"
+section, and two rows that tell you not to cite something as attested when it
+is not. Start there if you are here to check rather than to read.
+
+| | |
+|---|---|
+| Real money settled | HBAR on Hedera via Blocky402, USDC on Arc via Circle Gateway. Same query, both rails, same answer |
+| Enforced on chain | The hot key's payout change **reverts**. Fork test against live Sepolia, not a mock |
+| Zero gas, provably | The spending agent's nonce is still 0 after eleven payments |
+| Measured, not asserted | 197 real ERC-8004 registrations read; exactly **one** publishes a price you can read before you call it |
+
 ## The three key tiers
 
 Three wallet vendors is not three ways to do one thing. Each sits where it is
@@ -18,109 +35,15 @@ actually best, and together they are one cold/warm/hot hierarchy.
 
 | Tier | Vendor | Holds | Frequency | May authorize |
 |---|---|---|---|---|
-| **Cold** | A separate key. Custody is **not** cold today, see below | Seller operator identity; owns the ENSv2 name | Once per lifecycle | Hot-key rotation, payout address change, price-ceiling raise |
+| **Cold** | A separate key. Custody is **not** cold today, see [`CORRECTIONS.md`](./CORRECTIONS.md) | Seller operator identity; owns the ENSv2 name | Once per lifecycle | Hot-key rotation, payout address change, price-ceiling raise |
 | **Warm** | Privy | Buyer **organization** wallet + mandate policy | Occasional | Issuing a mandate, raising a cap (quorum), adding an agent |
 | **Hot** | Circle / Arc Agent Stack | Buyer agent's spending wallet | Every query | Nothing. Spends *within* the mandate; **signs offchain and never submits a transaction**, so it pays exactly zero gas |
 
-**Correction (2026-09-08, MOV-000):** the Cold row previously named **Ledger Key
-Ring (`wallet-cli ring`)** as the vendor and claimed it "seals upstream API
-keys". Both are withdrawn — **we do not use a Ledger device and never got one
-working.** `wallet-cli ring init` fails on the only device available to us, a
-**Ledger Nano S** (the original 2016 model, EOL, firmware capped at 2.1.0): it
-creates the local member credentials and then fails at the device step with an
-untyped "unknown error". LKRP is the trustchain behind Ledger Recover, which has
-never supported the Nano S. It is not permissions (udev verified, `uaccess` tag
-present, hidraw readable), not transport (`genuine-check` returns a *typed*
-error, so the device does answer), and not the package — the model cannot do it.
-The Ledger prize track is **not pursued**; see `CHECKLIST.md`.
-
-**What is unchanged: the cold tier itself, and every other row.** Ledger was only
-ever going to be *where the cold key lives*, never *what makes it cold*. The
-cold/hot split is enforced by the resolver's role checks, and it is proven on
-chain rather than in prose — MOV-218 demonstrated the hot key's `setAddr` payout
-change **reverting** with `EACUnauthorizedAccountRoles`, live on Sepolia, with
-passing Forge tests and a fork test behind it. What falls is only the custody
-story: the cold key is **not** hardware-backed. No substitute vendor is
-claimed.
-
-**Correction (2026-09-08, MOV-005): "held offline" was not true, and this row
-said it in four files.** When the Ledger track was dropped, the Cold row's vendor
-became "A cold key held offline". That traded an unverifiable vendor claim for an
-unverifiable *custody* claim. `contracts/addresses.turnstile.sepolia.json` records
-`coldKey` and `deployer` as the **same address**
-(`0x0Adca6e14bA956201D221feC767e4f24194bf5F2`), and its private key is
-`DEPLOYER_PRIVATE_KEY` in `.env` on the working laptop, loaded by every deploy
-script. It is not offline in any sense.
-
-**What is true, and is the claim worth making.** The tiers are a separation of
-*authority*, not of custody, and that separation is real and enforced by the
-chain rather than by our prose:
-
-- Two distinct keys exist. `0x0Adca6e1…f5F2` holds the root roles on
-  `liquidity.turnstile.eth`. The hot key `0x16244874…6367` holds roles scoped to
-  exactly two records, `agent-endpoint[mcp]` and `turnstile:price`.
-- The hot key **cannot** move the payout address. MOV-218 demonstrated its
-  `setAddr` reverting with `EACUnauthorizedAccountRoles`, live on Sepolia, with
-  Forge tests and a fork test behind it.
-
-So: say "a separate key holds the only roles that can move the payout address,
-and the chain enforces it". Do **not** say cold storage, hardware, or offline.
-Making the custody genuinely cold means generating that key on an offline machine
-and keeping it out of `.env` entirely, signing the rare cold-tier transactions
-air-gapped. That is not done, and claiming it would be the same mistake twice.
-
-
-
-**Correction (2026-09-07, MOV-225):** the Hot row previously read "holds zero
-native token (Paymaster)". That is **wrong on Arc** — it names a mechanism that
-does not exist in this design, and it cannot be true on a chain where USDC *is*
-the gas token. The row above replaces it with a stronger claim, and the evidence
-for it is on chain.
-
-**The claim, and how to falsify it.** The hot wallet signs an EIP-3009
-authorization offchain and **never submits a transaction**, so it pays exactly
-zero gas — Circle Gateway's batcher submits, and pays. The proof is the wallet's
-**nonce**, because a wallet that has never broadcast a transaction has never paid
-a wei of gas, and a nonce cannot be faked or back-dated. After **eleven** settled
-payments:
-
-```
-agent 0x0633a193017939Bb1eB242982397224c66948e2F
-  eth_getTransactionCount   0        <-- never submitted anything
-  eth_getBalance            0
-  USDC.balanceOf            0
-                            read at block 60943091, 2026-09-07T17:33:02Z
-```
-
-Anyone can re-run that against `https://rpc.testnet.arc.network` and get the same
-answer at that block. `scripts/arc-paid-request.ts` prints it before and after
-every run, so a regression fails visibly instead of quietly.
-
-**Why the old wording was incoherent** (supporting detail, not the claim). USDC
-is Arc's native gas token, so `eth_getBalance(a)` and `USDC.balanceOf(a)` are two
-views of one balance at two precisions — the ERC-20 view truncates 18 dp to 6.
-Measured on **our own** org wallet, one block before it funded the mandate:
-
-```
-0xdFe3088aC34e7329006407C246C9F6D7534B2aC5
-  eth_getBalance   20000000000000000000   (18 dp) = 20.000000 USDC
-  USDC.balanceOf              20000000   ( 6 dp) = 20.000000 USDC
-                   read at block 60938781, 2026-09-07T16:56:10Z
-```
-
-A wallet holding zero native token therefore holds zero USDC and can pay nobody.
-There is no Paymaster anywhere in Turnstile, and there never was one — the word
-was carried over from a chain where gas and payment are different assets.
-
-The hot wallet's Gateway balance is funded by the **warm tier** calling
-`depositFor(amount, agent)`: the org pays the deposit's gas and the resulting
-balance belongs to the agent. That is this table's own hierarchy expressed in one
-contract call — the hot key cannot deposit, withdraw or widen its allowance,
-because each is a transaction and it has no gas for one.
-
-**What is unchanged:** every other row, and the invariant below the table. Only
-the mechanism named in the Hot row was wrong.
-
+Every claim in that table is either proven on chain or marked as not proven, in
+[`docs/EVIDENCE.md`](./docs/EVIDENCE.md). Three of these rows have been corrected
+during the build, including one where the Cold row claimed offline custody we do
+not have; the full record with dates and reasons is in
+[`CORRECTIONS.md`](./CORRECTIONS.md).
 
 The property that matters: **the key that spends can never raise its own limit.**
 
