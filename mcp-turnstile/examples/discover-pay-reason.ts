@@ -19,7 +19,8 @@
 //
 // Both sellers run on this machine. That is not a shortcut — it is the finding.
 // `liquidity.turnstile.eth` publishes `agent-endpoint[mcp]` pointing at
-// `https://mcp-eu.turnstile.xyz/…`, and that host does not resolve. Act 1 shows
+// `https://turnstile.moveseventyeight.com/…`, and that host does not resolve
+// yet (repointed 2026-09-08, MOV-010; it named a domain we do not own before). Act 1 shows
 // the MCP server reporting exactly that, refusing to call the offer purchasable,
 // and only then buying from the address the seller actually serves at. A demo
 // that skipped straight to the working URL would have hidden the one thing a

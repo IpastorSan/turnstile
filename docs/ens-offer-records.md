@@ -172,6 +172,9 @@ $ cast call $R "text(bytes32,string)(string)" $N "agent-context"
 
 $ cast call $R "text(bytes32,string)(string)" $N "agent-endpoint[mcp]"
 "https://mcp-eu.turnstile.xyz/liquidity.turnstile.eth/sse"
+# ^ superseded 2026-09-08 (MOV-010). Left verbatim: it is a faithful record of
+#   what the chain returned that day. Current value:
+#   "https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse"
 
 $ cast call $R "text(bytes32,string)(string)" $N \
     "agent-registration[0x0001000003aa36a7148004a818bfb912233c491871b3d84c89a494bd9e][10127]"
@@ -498,9 +501,10 @@ downloaded twice. If `forge` disappears again, that is where it is.
   readable from both ends. ERC-8004 clients that expect an HTTPS agent-card URL
   will not follow it. ENSIP-27 (`/.well-known/agent.json`) is the likely landing
   place and was not implemented here.
-- **The MCP endpoint URL does not resolve.** `https://mcp-eu.turnstile.xyz/…` is
-  a placeholder until MOV-219/220 land the real service. The record is real; the
-  host is not.
+- **The MCP endpoint URL does not resolve.**
+  `https://turnstile.moveseventyeight.com/…` has no DNS record until the deploy.
+  The record is real; the host is not up. Repointed 2026-09-08 (MOV-010) from
+  `mcp-eu.turnstile.xyz`, which sat on a domain we do not own.
 - **Etherscan verification.** The resolver proxy is a factory-deployed clone;
   verification of the clone was not attempted. `verifyContract` from the factory
   is the stronger check and it passes.
@@ -515,3 +519,21 @@ downloaded twice. If `forge` disappears again, that is where it is.
   What survives is the caveat that actually mattered: **neither key here is
   hardware-backed, and the cold signer is a stand-in.** The cold/hot *split* is
   real and enforced on chain regardless of what holds either key.
+
+**Update (2026-09-08, MOV-010): the record now points at
+`https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`.** Written
+by the **hot key** `0x16244874…6367` in
+[`0x6736b3b2…8c66`](https://sepolia.etherscan.io/tx/0x6736b3b2125d7d030be5fb70c5343342d98cc44ab2dd38b2451667926b818c66)
+(block 11662532), which is exactly the authority that key has and no more: the
+payout address and the price were read back unchanged in the same check.
+
+**Why it moved, and it is not only that the old host was down.** `turnstile.xyz`
+is **not ours** — it resolves to `44.232.173.249` / `52.40.42.113`, third-party
+AWS. Publishing a record into a domain someone else controls is worse than
+publishing a dead one: if that owner ever adds an `mcp-eu` host, our ENS record
+silently points buyers at their server. `moveseventyeight.com` is ours.
+
+**The new host does not resolve yet either.** `turnstile.moveseventyeight.com`
+has no DNS record until the deploy. So the endpoint is still not answering, and
+nothing below that says the service is unreachable has stopped being true. What
+changed is that the gap is now on a domain we can close.

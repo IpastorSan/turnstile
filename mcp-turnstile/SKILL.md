@@ -276,8 +276,8 @@ real hole in the design and it is reported in every `receipts` result rather tha
 papered over.
 
 **The endpoint published on chain is not deployed.** `liquidity.turnstile.eth`
-publishes `agent-endpoint[mcp]` pointing at `https://mcp-eu.turnstile.xyz/…`,
-which does not resolve. The seller's service is real and runs from this
+publishes `agent-endpoint[mcp]` pointing at
+`https://turnstile.moveseventyeight.com/…`, which does not resolve yet. The seller's service is real and runs from this
 repository; the hosted address is not up. The worked example shows the tool
 catching exactly this before it shows anything working.
 

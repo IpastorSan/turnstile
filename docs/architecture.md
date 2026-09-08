@@ -265,10 +265,12 @@ runs as unreachable document origins come back.)*
 ## Not verified
 
 - **The MCP endpoint published on chain does not answer.**
-  `agent-endpoint[mcp]` resolves to `https://mcp-eu.turnstile.xyz/...`, which is
-  a placeholder host. The ENS record is real and readable; the service behind it
-  is MOV-219/220 and is not deployed. The seller page says so on the page rather
-  than only here.
+  `agent-endpoint[mcp]` resolves to
+  `https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`, which has
+  no DNS record until the deploy. The ENS record is real and readable; the
+  service behind it runs from this repo and is not hosted. The seller page says
+  so on the page rather than only here. **Changed 2026-09-08 (MOV-010)** from
+  `mcp-eu.turnstile.xyz`, a host on a domain we do not own.
 - ~~**Steps 04–06 have never been executed end to end.** There is no settlement
   receipt anywhere in the system, which is also why discovery's ranking is a
   labelled placeholder rather than settled volume.~~
