@@ -122,7 +122,7 @@ abstract contract OfferFixture is TurnstileFixture {
                 price: "0.05",
                 priceCeiling: "0.50",
                 rails: "x402,usdc-arc",
-                operatorProof: "cold-key-offline",
+                operatorProof: "operator-key-role-scoped",
                 payout: payout,
                 agentRegistryChainId: SEPOLIA_CHAIN_ID,
                 agentRegistry: ERC8004_IDENTITY_REGISTRY_SEPOLIA,

@@ -48,7 +48,7 @@ import {PermissionedResolverLib} from "@ens/v2/resolver/libraries/PermissionedRe
 /// That is exactly the granularity the cold/warm/hot invariant in `CLAUDE.md`
 /// needs:
 ///
-/// * **Cold key** (held offline) holds root roles on the resolver. It owns the
+/// * **Operator key** (custody is not cold today) holds root roles on the resolver. It owns the
 ///   name, publishes the offer, rotates the hot key, changes the payout address,
 ///   and raises `turnstile:price-ceiling`.
 /// * **Hot key** (the seller's day-to-day signer) is authorized on exactly two

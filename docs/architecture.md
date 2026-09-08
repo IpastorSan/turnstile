@@ -35,7 +35,7 @@ actually best, and together they are one cold/warm/hot hierarchy.
 
 | Tier | Vendor | Holds | Frequency | May authorize |
 |---|---|---|---|---|
-| **Cold** | A cold key held offline | Seller operator identity; owns the ENSv2 name | Once per lifecycle | Hot-key rotation, payout address change, price-ceiling raise |
+| **Cold** | A separate key. Custody is **not** cold today, see below | Seller operator identity; owns the ENSv2 name | Once per lifecycle | Hot-key rotation, payout address change, price-ceiling raise |
 | **Warm** | Privy | Buyer **organization** wallet + mandate policy | Occasional | Issuing a mandate, raising a cap (quorum), adding an agent |
 | **Hot** | Circle / Arc Agent Stack | Buyer agent's spending wallet | Every query | Nothing. Spends *within* the mandate; **signs offchain and never submits a transaction**, so it pays exactly zero gas |
 
@@ -57,8 +57,35 @@ cold/hot split is enforced by the resolver's role checks, and it is proven on
 chain rather than in prose — MOV-218 demonstrated the hot key's `setAddr` payout
 change **reverting** with `EACUnauthorizedAccountRoles`, live on Sepolia, with
 passing Forge tests and a fork test behind it. What falls is only the custody
-story: the cold key is held offline and is **not** hardware-backed. No substitute
-vendor is claimed.
+story: the cold key is **not** hardware-backed. No substitute vendor is
+claimed.
+
+**Correction (2026-09-08, MOV-005): "held offline" was not true, and this row
+said it in four files.** When the Ledger track was dropped, the Cold row's vendor
+became "A cold key held offline". That traded an unverifiable vendor claim for an
+unverifiable *custody* claim. `contracts/addresses.turnstile.sepolia.json` records
+`coldKey` and `deployer` as the **same address**
+(`0x0Adca6e14bA956201D221feC767e4f24194bf5F2`), and its private key is
+`DEPLOYER_PRIVATE_KEY` in `.env` on the working laptop, loaded by every deploy
+script. It is not offline in any sense.
+
+**What is true, and is the claim worth making.** The tiers are a separation of
+*authority*, not of custody, and that separation is real and enforced by the
+chain rather than by our prose:
+
+- Two distinct keys exist. `0x0Adca6e1…f5F2` holds the root roles on
+  `liquidity.turnstile.eth`. The hot key `0x16244874…6367` holds roles scoped to
+  exactly two records, `agent-endpoint[mcp]` and `turnstile:price`.
+- The hot key **cannot** move the payout address. MOV-218 demonstrated its
+  `setAddr` reverting with `EACUnauthorizedAccountRoles`, live on Sepolia, with
+  Forge tests and a fork test behind it.
+
+So: say "a separate key holds the only roles that can move the payout address,
+and the chain enforces it". Do **not** say cold storage, hardware, or offline.
+Making the custody genuinely cold means generating that key on an offline machine
+and keeping it out of `.env` entirely, signing the rare cold-tier transactions
+air-gapped. That is not done, and claiming it would be the same mistake twice.
+
 
 
 **Correction (2026-09-07, MOV-225):** the Hot row previously read "holds zero
