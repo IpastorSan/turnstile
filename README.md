@@ -113,9 +113,13 @@ The short version of the request path:
    Substreams    turnstile:price                           USDC on Arc  the method
 ```
 
-**Steps 01 and 02 are live and browsable.** The market and seller pages run on
-them against real registrations. Steps 03–06 are the settlement half and are not
-built yet; `docs/architecture.md` says which issue delivers each.
+**All six steps run today**, and the settlement half moves real money: HBAR
+through Blocky402 on Hedera, and USDC on Arc through Circle Gateway
+nanopayments, with the same query answered identically over both rails. Every
+transaction is linked in [`CHECKLIST.md`](./CHECKLIST.md). The one real gap is
+deployment rather than capability: the address published in `agent-endpoint[mcp]`
+has no DNS record yet, so step 03 works from the repo and not from the open
+internet. `docs/architecture.md` gives the per-step state.
 
 ## The web app
 
@@ -128,7 +132,8 @@ npm run dev        # http://localhost:3210
 |---|---|
 | `/` | Market. All 197 real ERC-8004 registrations across Base, mainnet and Sepolia, filterable by capability, chain, price ceiling and x402 support. |
 | `/seller/[name]` | One seller's ENSv2 records, read from Sepolia on every request. Nothing cached, nothing hard-coded. |
-| `/mandate`, `/onboard` | Labelled placeholders. Blocked on MOV-228 and MOV-223; deliberately not faked. |
+| `/mandate` | Labelled placeholder. The mandate itself is **live** and exercised from the CLI (`npm run privy:mandate`); it is the *page* that is not built. See [`docs/privy-mandate.md`](./docs/privy-mandate.md). |
+| `/onboard` | Labelled placeholder, genuinely blocked: World Sandbox approval has not arrived, so there is no credential to verify against. Deliberately not faked. |
 | `GET /api/sellers` | The discovery query over HTTP — the same engine the MCP tool calls. |
 | `GET /api/offer/:name` | One seller's offer, read live from chain. |
 | `GET /api/health` | Which of the two data dependencies this deployment can actually reach. |
