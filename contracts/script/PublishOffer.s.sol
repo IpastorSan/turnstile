@@ -58,7 +58,7 @@ interface IAgentIdentityRegistry {
 /// | `TURNSTILE_PRICE`               | no       | `0.05`                                 |
 /// | `TURNSTILE_PRICE_CEILING`       | no       | `0.50`                                 |
 /// | `TURNSTILE_RAILS`               | no       | `x402,usdc-arc`                        |
-/// | `TURNSTILE_OPERATOR_PROOF`      | no       | `ledger-key-ring`                      |
+/// | `TURNSTILE_OPERATOR_PROOF`      | no       | `cold-key-offline`                     |
 /// | `TURNSTILE_AGENT_REGISTRY`      | no       | ERC-8004 `IdentityRegistry` on Sepolia |
 /// | `TURNSTILE_AGENT_ID`            | no       | registers a new one and records it     |
 ///
@@ -347,7 +347,12 @@ contract PublishOffer is Script {
                 price: vm.envOr("TURNSTILE_PRICE", string("0.05")),
                 priceCeiling: vm.envOr("TURNSTILE_PRICE_CEILING", string("0.50")),
                 rails: vm.envOr("TURNSTILE_RAILS", string("x402,usdc-arc")),
-                operatorProof: vm.envOr("TURNSTILE_OPERATOR_PROOF", string("ledger-key-ring")),
+                // 2026-09-08, MOV-000: this default was "ledger-key-ring". The Ledger
+                // track is not pursued (see CLAUDE.md), so publishing that string would
+                // assert hardware we do not have. NOTE: the record already live on
+                // Sepolia still reads "ledger-key-ring" — rewriting it is a cold-key
+                // transaction, tracked in docs/ens-offer-records.md.
+                operatorProof: vm.envOr("TURNSTILE_OPERATOR_PROOF", string("cold-key-offline")),
                 payout: cfg.payout,
                 agentRegistryChainId: block.chainid,
                 agentRegistry: cfg.agentRegistry,

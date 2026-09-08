@@ -48,12 +48,12 @@ import {PermissionedResolverLib} from "@ens/v2/resolver/libraries/PermissionedRe
 /// That is exactly the granularity the cold/warm/hot invariant in `CLAUDE.md`
 /// needs:
 ///
-/// * **Cold key** (Ledger Key Ring) holds root roles on the resolver. It owns the
+/// * **Cold key** (held offline) holds root roles on the resolver. It owns the
 ///   name, publishes the offer, rotates the hot key, changes the payout address,
 ///   and raises `turnstile:price-ceiling`.
 /// * **Hot key** (the seller's day-to-day signer) is authorized on exactly two
 ///   part resources: `agent-endpoint[mcp]` and `turnstile:price`. It can move its
-///   endpoint and reprice, every day, without a Ledger. It cannot touch the
+///   endpoint and reprice, every day, without the cold key. It cannot touch the
 ///   payout address, the ceiling, the context, or anything else — and because it
 ///   is never granted `ROLE_SET_TEXT_ADMIN`, it cannot grant itself more either.
 ///
@@ -256,8 +256,8 @@ library TurnstileOffer {
     ///         `PermissionedResolver.multicall`.
     ///
     /// @dev Returned as calldata rather than executed so the whole offer lands in
-    ///      one transaction — which matters when the signer is a Ledger and every
-    ///      extra transaction is another physical confirmation.
+    ///      one transaction — which matters when the signer is a cold key and
+    ///      every extra transaction is another offline signing ceremony.
     function publishCalls(bytes32 node, Offer memory offer)
         internal
         pure
