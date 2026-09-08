@@ -162,11 +162,18 @@ cmd_done() {
   [ "$branch" != "dev" ] && [ "$branch" != "main" ] || die "refusing to operate on '$branch'"
 
   # Nothing half-finished gets merged.
-  [ -z "$(git -C "$wt_path" status --porcelain)" ] \
+  #
+  # --ignore-submodules=dirty is deliberate. `submodule update --init --recursive`
+  # reliably leaves the submodule work trees dirty (nested checkouts, build
+  # droppings), which is not our change and must not block a merge -- it blocked
+  # two in a row on 2026-09-08 and each needed a manual `submodule foreach reset`.
+  # It still reports a moved submodule POINTER, which is a real change to the
+  # superproject and should stop us.
+  [ -z "$(git -C "$wt_path" status --porcelain --ignore-submodules=dirty)" ] \
     || die "$wt_path has uncommitted changes — commit them first"
 
   require_dev_checked_out
-  [ -z "$(git -C "$REPO_ROOT" status --porcelain)" ] \
+  [ -z "$(git -C "$REPO_ROOT" status --porcelain --ignore-submodules=dirty)" ] \
     || die "the main worktree has uncommitted changes — commit or stash them first"
 
   git remote get-url origin >/dev/null 2>&1 \
