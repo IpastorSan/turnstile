@@ -1,7 +1,7 @@
 # Evidence
 
 One row per claim, one link per row. Everything here is on a public chain or a
-public endpoint, and every link was checked on 2026-09-08.
+public endpoint, and every link was checked on 2026-09-09.
 
 Where something is **not** proven, this page says so in the same table rather
 than in a footnote. Two rows do exactly that, and they are the two worth reading
@@ -10,8 +10,26 @@ first if you are looking for the seam.
 **Verify the whole repo in one command:**
 
 ```bash
-npm run verify      # 315 node tests + 90 Forge tests, including 13 fork tests against live Sepolia
+npm run verify      # 426 node tests + 90 Forge tests, including 13 fork tests against live Sepolia
 ```
+
+**Read it rather than run it:** [`walkthrough/index.html`](../walkthrough/index.html)
+is six pages covering the same ground, each figure below shown as the screen it
+came from. There is a [48-second recording](./walkthrough.mp4) too.
+
+## The screens these claims describe
+
+Every image is the live stack, captured 2026-09-09, waiting on real data rather
+than a timer — a shot taken on page load would show a structurally complete page
+with none of the thing it exists to show.
+
+| Screen | Shows | Image |
+|---|---|---|
+| Market | 197 registrations; one readable price | [`market.png`](./screenshots/market.png) |
+| Seller | `liquidity.turnstile.eth` resolved live from Sepolia, block number moving on reload | [`seller.png`](./screenshots/seller.png) |
+| Mandate | both key quorums, the policy, and 25 settled payments across two rails | [`mandate.png`](./screenshots/mandate.png) |
+| Create a mandate | operator keys generated in the browser, never sent to the server | [`mandate-new.png`](./screenshots/mandate-new.png) |
+| Onboard | Selfie Check as an abuse control, not a login | [`onboard.png`](./screenshots/onboard.png) |
 
 **Run the product end to end in one command:**
 
