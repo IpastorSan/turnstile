@@ -199,7 +199,7 @@ export function MandateView({
             <li className="record" key={rail.railId}>
               <div>
                 <span className="record-family">{rail.railId}</span>
-                <div className="record-key">{rail.label}</div>
+                <div className="record-key is-prose">{rail.label}</div>
               </div>
               <div>
                 <p className={`record-value${rail.error ? ' is-unset' : ''}`}>
