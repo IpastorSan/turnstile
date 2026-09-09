@@ -10,4 +10,6 @@ export { OPERATOR_ACTION, nullifierFrom, signRpContext, verifyProof, worldConfig
 export type { RpContext, VerifiedProof, VerifyOutcome, WorldConfig } from './world.ts';
 
 export { mayClaim, recordVerification, standingFor, verificationFor } from './store.ts';
+export { operatorIsVerified, operatorStanding } from './operator.ts';
+export type { OperatorStanding } from './operator.ts';
 export type { HumanStanding, VerificationRow } from './store.ts';

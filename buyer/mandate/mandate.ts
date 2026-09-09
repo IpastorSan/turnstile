@@ -136,19 +136,26 @@ export interface Refusal {
 }
 
 /**
- * The `verified_operator_only` gate, in the only honest form available today.
+ * The `verified_operator_only` gate.
  *
- * MOV-223 will replace the `false` branch with a World proof-of-personhood
- * check. Until it can, an enabled flag **refuses**: a gate wired to nothing that
- * returns "allowed" is worse than no gate, because it reads as a control in the
- * demo and is not one.
+ * Pure on purpose: it takes the answer rather than fetching it, so the payment
+ * path does not reach into a database and this stays testable without one. The
+ * supplier is `identity/`, which reads `world_verification` — a row written only
+ * after World's Developer Portal verified a real proof.
+ *
+ * **A refusal is still the default.** `operatorIsVerified` defaults to `false`,
+ * so a caller that forgets to supply it gets a refusal rather than a pass. A
+ * gate that fails open reads as a control in a demo and is not one.
+ *
+ * Live since 2026-09-09 (MOV-223). Before then the `false` branch was the only
+ * honest behaviour, because nothing could answer the question at all.
  */
 export function verifiedOperatorGate(mandate: Mandate, operatorIsVerified = false): Refusal | null {
   if (!mandate.verifiedOperatorOnly) return null;
   if (operatorIsVerified) return null;
   return {
     code: 'operator_not_verified',
-    detail: 'the mandate requires a verified operator, and proof-of-personhood is not wired up yet (MOV-223, blocked on World Sandbox approval)',
+    detail: 'the mandate requires an operator who has proved they are a person, and this seller has no World verification on file',
   };
 }
 

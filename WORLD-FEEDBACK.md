@@ -20,6 +20,24 @@ Append-only (`merge=union`): add at the end, never rewrite an existing entry.
 
 ## Docs and integration flow
 
+### 2026-09-09 — the integration path is right, but it is assembled from four pages that do not link to each other
+- **Where:** `world-id/idkit/integrate`, `world-id/idkit/credentials`, `world-id/id/testing`, `api-reference/create-incognito-action`
+- **Expected / Actual:** expected one page taking me from credentials to a verified proof. Actually the four facts I needed were on four pages: `signRequest` lives on *integrate*, `selfieCheckLegacy()` on *credentials*, the verify URL on *testing*, and the action on an *api-reference* page I only found by search. None links to the next.
+- **Cost:** about forty minutes of reading, most of it spent not knowing whether I had all the pieces. The failure mode is not being stuck, it is *believing you are done* and finding out at the widget.
+- **Fix we'd suggest:** one "Selfie Check, end to end" page: create the app, register the RP, create the action, sign a context, mount the widget, verify. Even as a list of links in order.
+
+### 2026-09-09 — the docs never say an action has to exist, or where to make one
+- **Where:** `world-id/id/getting-started`
+- **Expected / Actual:** it says *"Keep these values: `app_id`, `rp_id`, `signing_key`"* and then shows `action: "my-action"` in every snippet. Nothing says that string names a resource you must create first, or where. I only found `POST /api/v2/create-action/{app_id}` through a search engine.
+- **Cost:** would have been an opaque failure at the first real proof, after the code was already written and looked correct.
+- **Fix we'd suggest:** in getting-started, one line: "`action` must be created in the Developer Portal under Incognito Actions before a proof will verify."
+
+### 2026-09-09 — two API hosts and two API versions, in the same integration
+- **Where:** verify is `https://developer.world.org/api/v4/verify/{rp_id}`; creating an action is `https://developer.worldcoin.org/api/v2/create-action/{app_id}`
+- **Expected / Actual:** expected one host. Got `world.org` v4 for the runtime call and `worldcoin.org` v2 for the admin call, addressed by two different identifiers (`rp_id` in the path for one, `app_id` for the other).
+- **Cost:** low, but it reads as an unfinished migration and made me double-check I had not pasted a stale URL from an old tutorial.
+- **Fix we'd suggest:** if `worldcoin.org` is legacy, say so on the page that still documents it.
+
 How the documentation reads end to end, and how it maps onto actually wiring
 Selfie Check into a running app.
 
@@ -33,7 +51,25 @@ Selfie Check into a running app.
 
 ### Debugging
 
+### 2026-09-09 — the 401 on create-action is exactly what an error should be
+- **Where:** `POST /api/v2/create-action/{app_id}` with no credentials
+- **Expected / Actual:** `{"code":"unauthorized","detail":"API key is required.","attribute":"api_key"}`. It names the thing that is missing and the field it goes in.
+- **Cost:** none. I probed the endpoint deliberately to learn its auth requirement and the response taught me in one call.
+- **Fix we'd suggest:** nothing. This is the standard the rest of the surface should be held to, and it is worth saying so rather than only reporting faults.
+
 ## Sandbox
+
+### 2026-09-09 — Selfie Check needs two separate approvals and they are documented apart
+- **Where:** `world-id/sandbox/testing-selfie-check` versus the Sandbox access form
+- **Expected / Actual:** expected "get Sandbox access" to be the gate. Actually there are two: Sandbox environment access, *and* a Selfie Check (Beta) feature flag on the specific app, requested through a World point of contact. The second is one sentence on the testing page, and I found it only after already having the first.
+- **Cost:** two days of believing the track was one approval away when it was two. The plan carried a wrong assumption for that whole period.
+- **Fix we'd suggest:** put both gates in one checklist on the Sandbox landing page, with how to request each. A developer needs to know the full set on day one, because these have human latency and cannot be parallelised after the fact.
+
+### 2026-09-09 — the Sandbox app is a third gate, and it needs a phone
+- **Where:** `world-id/sandbox/testing-selfie-check`
+- **Expected / Actual:** testing needs the Sandbox build of World App, via TestFlight or a private Google Play link, not the public app. Distinct from both approvals above.
+- **Cost:** it means no part of the proof flow can be exercised from a laptop, so everything up to the widget is verifiable and the last step is not.
+- **Fix we'd suggest:** state the three prerequisites together — environment access, feature flag, app build — near the top of the Sandbox section.
 
 ### States
 
@@ -47,11 +83,35 @@ Selfie Check into a running app.
 
 ## What was confusing
 
+### 2026-09-09 — `signRequest` returns camelCase, `RpContext` consumes snake_case
+- **Where:** `@worldcoin/idkit-core/signing` → `signRequest()`, and the `rp_context` prop on `IDKitRequestWidget`
+- **Expected / Actual:** `signRequest` returns `{ sig, nonce, createdAt, expiresAt }`. The context the widget wants is `{ rp_id, nonce, created_at, expires_at, signature }`. Three of the five keys change name between producing and consuming them, including `sig` → `signature`.
+- **Cost:** none for us, because I read both shapes before writing the mapping. But spreading the result — `{ ...signRequest(...), rp_id }`, which is the obvious thing to write — produces a context that is fully populated, structurally valid, and rejected. That is a silent failure with no clue pointing at field names.
+- **Fix we'd suggest:** either have `signRequest` return the context shape directly, or export a `toRpContext(signed, rpId)` helper so nobody hand-maps it. Failing both, show the mapping explicitly in the integrate snippet instead of `rpSig.nonce`-style access that hides the rename.
+
+### 2026-09-09 — `max_verifications` defaults to 1, which silently becomes your app's abuse policy
+- **Where:** `POST /api/v2/create-action`, `max_verifications` (default 1)
+- **Expected / Actual:** our whole model is *N listings per human, refused on N+1, by us, with a reason*. At the default, World refuses the second verification first, and the limit a user hits is World's rather than ours. The two are indistinguishable from the outside.
+- **Cost:** caught before creating the action, only because I went looking for the parameter's default. Had I taken the default, the product's core control would have been invisible behind World's, and the demo would have shown the wrong system saying no.
+- **Fix we'd suggest:** the field name reads like a safety limit, so a default of 1 is defensible — but the docs should say plainly that it caps verifications *per person*, and that apps implementing their own per-person policy want 0. One sentence next to the parameter.
+
 ## What was missing
 
 ## What was broken
 
+### 2026-09-09 — three documentation URLs returned 404 while being linked or indexed
+- **Where:** `docs.world.org/world-id/id/cloud-verification`, `docs.world.org/world-id/idkit/rp-context`, `docs.world.org/api-reference/create-incognito-action`
+- **Expected / Actual:** all three 404. The last is the canonical reference for creating an action and appears in search results; I had to reconstruct its contract from a search summary and then confirm the shape by probing the live endpoint.
+- **Cost:** roughly twenty minutes, and it moved me from reading documentation to reverse-engineering an API — on the one call whose parameter defaults turned out to matter most.
+- **Fix we'd suggest:** these are reachable from search and presumably from older docs; redirect them rather than 404, and check `api-reference/*` as a group.
+
 ## What was hard to test
+
+### 2026-09-09 — everything except the proof is testable; the proof needs a human and a phone
+- **Where:** the whole flow
+- **Expected / Actual:** we could test context signing, credential validation, the verify route's failure paths, the nullifier extraction and the entire listing-limit rule offline, with 11 unit tests against a real SQLite store. What cannot be tested without a person holding a phone is the one step that makes any of it true.
+- **Cost:** acceptable, and arguably correct — proof of personhood should be hard to automate. But it means CI can never cover the integration end to end, and a regression in the widget or the portal contract would only surface manually.
+- **Fix we'd suggest:** a sandbox test identity that returns a deterministic, clearly-fake nullifier over the API without a device would make the seam between "our code is right" and "the proof is real" testable in CI. The simulator covers World ID generally; something equivalent for Selfie Check would close this.
 
 ## The Graph — Subgraph Studio (MOV-215, 2026-09-07)
 
