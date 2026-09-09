@@ -63,6 +63,17 @@ export interface ReceiptsResult {
    * message is a claim until verified.
    */
   submitKey: string | null;
+  /**
+   * Why the topic could not be read, or `null` when it was.
+   *
+   * Every failure here is answered with an *empty* result rather than a throw
+   * (see the tests), which is right for a caller rendering a page — but it makes
+   * "the mirror node is down" and "the topic holds no receipts" the same object.
+   * A caller that reports a total cannot tell those apart from `totals` alone,
+   * and reporting `$0 settled` for an outage is a claim the read cannot support.
+   * This field is the difference. Added 2026-09-09, MOV-262.
+   */
+  unreadable: string | null;
   receipts: ReceiptEntry[];
   totals: {
     receipts: number;
@@ -194,8 +205,10 @@ export async function readReceipts(options: ReceiptsOptions = {}): Promise<Recei
     'The topic id has to be supplied, so a caller is trusting whoever supplied it.',
   ];
 
+  // Every caller of `empty` is a failed read, and its note is the reason, so
+  // the reason is also what `unreadable` carries.
   const empty = (extraNote: string): ReceiptsResult => ({
-    topic, mirrorNode, submitKey: null, receipts: [],
+    topic, mirrorNode, submitKey: null, unreadable: extraNote, receipts: [],
     totals: { receipts: 0, settledUsd: 0, byPayee: [], byRail: {} },
     window: null,
     notes: [...notes, extraNote],
@@ -299,6 +312,7 @@ export async function readReceipts(options: ReceiptsOptions = {}): Promise<Recei
     topic,
     mirrorNode,
     submitKey,
+    unreadable: null,
     receipts: entries,
     totals: {
       receipts: entries.length,

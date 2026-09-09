@@ -153,13 +153,19 @@ export class SubgraphMcpClient {
   }
 
   async #call(tool: string, args: Record<string, unknown>): Promise<string> {
-    await this.connect();
     let result;
     try {
+      // `connect()` is inside the try deliberately. It used to be above it, so
+      // a failed SSE handshake escaped as the SDK's own SseError — the single
+      // class of failure that did not become a SubgraphMcpError, and therefore
+      // the one where an operator learned nothing about *which* of five tools
+      // they were waiting on. Found by MOV-263's coverage pass; fixed in
+      // MOV-269.
+      await this.connect();
       result = await this.#client.callTool({ name: tool, arguments: args });
     } catch (error) {
       // Routing failures (unknown deployment, unreachable indexer) come back as
-      // JSON-RPC errors, not as tool results.
+      // JSON-RPC errors, not as tool results. Handshake failures arrive here too.
       throw new SubgraphMcpError(tool, error instanceof Error ? error.message : String(error));
     }
     const text = textOf(result);

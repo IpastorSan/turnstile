@@ -13,13 +13,31 @@ spends inside but can never widen.
 
 ```bash
 npm run demo      # one query: discovered, priced from chain, paid on both rails, answered
-npm run verify    # 405 tests: 315 node, 90 Forge, 13 of them forked against live Sepolia
+npm run verify    # 516 tests: 426 node, 90 Forge, 13 of them forked against live Sepolia
 ```
+
+**Not installing anything?** [**Read the walkthrough**](./walkthrough/index.html) —
+six pages, one idea each, about fifteen minutes. It goes from the problem to a
+settled payment on two chains without leaving the browser, and every page ends
+with either a transaction you can open or a sentence saying we did not prove it.
+Pages three and five are where this project is weakest; they are on the page
+rather than hidden.
+
+![The market page: 197 real ERC-8004 registrations across Base, mainnet and Sepolia, of which exactly one publishes a price you can read before calling it](./docs/screenshots/market.png)
+
+*The whole problem in one screen. 197 real registrations; one posts a price on
+chain, 97 will answer if you ask and none do, 99 have no price at all. Captured
+2026-09-09 from a dated snapshot.*
 
 **Every claim in this README is linked to a transaction or marked as unproven, in
 [`docs/EVIDENCE.md`](./docs/EVIDENCE.md).** That page has a "what is not live"
 section, and two rows that tell you not to cite something as attested when it
 is not. Start there if you are here to check rather than to read.
+
+There is also a [48-second screen recording](./docs/walkthrough.mp4) of the
+product being used, ending on a cap raise being refused. It is scripted rather
+than performed, so it can be re-recorded after any change — and it is **not** a
+submission video: no audio, no narration.
 
 | | |
 |---|---|
@@ -82,7 +100,7 @@ npm run dev        # http://localhost:3210
 |---|---|
 | `/` | Market. All 197 real ERC-8004 registrations across Base, mainnet and Sepolia, filterable by capability, chain, price ceiling and x402 support. |
 | `/seller/[name]` | One seller's ENSv2 records, read from Sepolia on every request. Nothing cached, nothing hard-coded. |
-| `/mandate` | Labelled placeholder. The mandate itself is **live** and exercised from the CLI (`npm run privy:mandate`); it is the *page* that is not built. See [`docs/privy-mandate.md`](./docs/privy-mandate.md). |
+| `/mandate` | **Live.** Reads the org wallet, both key quorums, the mandate policy and the allowlist from Privy on request, plus a per-rail ledger of what the agent has actually spent. `/mandate/new` issues your own — operator signing keys are generated in your browser and never sent. See [`docs/privy-mandate.md`](./docs/privy-mandate.md). **Correction (2026-09-09, MOV-266):** this row read "Labelled placeholder … it is the *page* that is not built". That was true until 2026-09-08 and is not now. |
 | `/onboard` | Labelled placeholder, genuinely blocked: World Sandbox approval has not arrived, so there is no credential to verify against. Deliberately not faked. |
 | `GET /api/sellers` | The discovery query over HTTP — the same engine the MCP tool calls. |
 | `GET /api/offer/:name` | One seller's offer, read live from chain. |

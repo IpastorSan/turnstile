@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 · The problem — Turnstile walkthrough</title>
+<meta name="description" content="197 real ERC-8004 registrations read across three chains. Exactly one publishes a price you can read before you call it.">
+<link rel="stylesheet" href="assets/walkthrough.css">
+</head>
+<body>
+<div class="sheet">
+
+  <header class="masthead">
+    <a class="masthead-mark" href="index.html">Turnstile</a>
+    <span class="masthead-where">Walkthrough &middot; ETHOnline 2026</span>
+    <span class="masthead-count">01 / 06</span>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow">The problem</p>
+    <h1>197 agents. One posts a price.</h1>
+    <p class="lede">
+      An agent that sells onchain analysis cannot be discovered, cannot state a
+      price you can read before calling it, and cannot sell an <em>edge</em>
+      without publishing the method. This is not an argument. It is a count.
+    </p>
+  </div>
+
+  <main class="prose">
+
+    <figure class="fig fig-wide">
+      <img src="../docs/screenshots/market.png"
+           alt="The Turnstile market page. A headline reads 197 agents, one posts a price. Below it, a bar of 197 ticks with a single brass tick at the left, and three counters: 1 posted on chain, 97 askable and none answer, 99 no price at all.">
+      <figcaption>
+        The market page, reading the live discovery store. The bar is one tick
+        per registration; the single brass tick at the far left is the only
+        agent in the directory whose price can be read before you call it. The
+        ranking banner underneath says the ordering is registration recency and
+        carries no reputation signal &mdash; the page labels its own placeholder
+        rather than implying a score it has not earned.
+        <span class="fig-date">Captured 2026-09-09 from a 2026-09-07 directory snapshot.</span>
+      </figcaption>
+    </figure>
+
+    <p>
+      <span class="newthought">Every agent on that page is real.</span> They are
+      ERC-8004 Identity Registry registrations, read off Base, Ethereum mainnet
+      and Sepolia through an authored Substreams module &mdash; not fixtures, not
+      a seeded demo database.<span class="sidenote-ref"></span>
+      <span class="sidenote">
+        119 on Base, 40 on Sepolia, 38 on mainnet. Re-read them yourself with
+        <code>npm run discover</code>; the count drifts by a few between runs as
+        unreachable document origins come back.
+      </span>
+      Of the 197, exactly one publishes a price a buyer&rsquo;s agent can read
+      from chain and act on, and it is ours. That single number is the whole
+      reason this project exists, so it is the first thing on the page and the
+      first thing in the evidence file.
+    </p>
+
+    <div class="claim">
+      <p class="claim-label">Claim</p>
+      <p class="claim-statement">
+        197 real ERC-8004 registrations were read across three chains. Exactly
+        one of them publishes a readable price.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Proof</dt>
+        <dd>
+          The discovery store, built by an authored ERC-8004 Substreams module
+          over Base, mainnet and Sepolia. Counts verified 2026-09-07 against the
+          live store.
+        </dd>
+        <dt>Rerun it</dt>
+        <dd><code>npm run discover</code> &mdash; the same query the market page and the MCP tool both call.</dd>
+        <dt>Where</dt>
+        <dd>
+          <a href="../docs/architecture.md">
+            <code>docs/architecture.md</code> &rarr; <em>Step 02 is the leg the registry cannot supply</em>
+          </a>, and the row in <a href="../docs/EVIDENCE.md"><code>docs/EVIDENCE.md</code></a>.
+        </dd>
+      </dl>
+    </div>
+
+    <h2>Why a registry cannot fix this</h2>
+
+    <p>
+      The obvious objection is that the registry should carry the price. It
+      cannot, and the reason is structural rather than an oversight anyone is
+      about to correct. EIP-8004 <code>registration-v1</code> <strong>has no
+      price field</strong>. Under x402 the quote is returned dynamically, in the
+      body of an <code>HTTP 402</code> response, which means it only exists once
+      somebody has already made the call. There is nothing on chain for a
+      registry to carry, so a registry that wanted to carry it would have to
+      invent a field and then persuade 197 agents to fill it in.
+    </p>
+
+    <p>
+      Split the 197 by how &mdash; if at all &mdash; you could learn what they
+      charge, and the shape of the gap is exact:
+    </p>
+
+    <table class="tbl tbl-measure">
+      <thead>
+        <tr><th>Price source</th><th>What it means for a buyer</th><th class="num">Agents</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>turnstile</code></td>
+          <td>An ENSv2 <code>turnstile:price</code> record. Read it from chain, compare it, decide before you call</td>
+          <td class="num"><strong>1</strong></td>
+        </tr>
+        <tr>
+          <td><code>x402</code></td>
+          <td>A live 402 quote we actually fetched</td>
+          <td class="num">0</td>
+        </tr>
+        <tr>
+          <td><code>document</code></td>
+          <td>A price written into the registration document</td>
+          <td class="num">0</td>
+        </tr>
+        <tr>
+          <td><code>ask_x402</code></td>
+          <td>Advertises x402 support. The price is knowable in principle, but only by calling</td>
+          <td class="num">97</td>
+        </tr>
+        <tr>
+          <td><code>none</code></td>
+          <td>No price, and no route to one</td>
+          <td class="num">99</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      The 97 are the interesting row.<span class="sidenote-ref"></span>
+      <span class="sidenote">
+        The remaining 84 of the 97 publish no endpoint at all, so there is
+        nothing to ask. Advertising a payment standard and exposing a payable
+        surface turn out to be different things.
+      </span>
+      They advertise <code>x402Support</code>, so in theory a buyer could ask
+      them. Only 13 publish an endpoint that <em>can</em> be asked, and
+      <strong>none of those 13 returned a 402</strong> when we asked. Comparison
+      shopping across this market is not expensive today. It is unavailable.
+    </p>
+
+    <p class="note">
+      This is a measurement of a young standard, not a complaint about it.
+      ERC-8004 does the job it set out to do &mdash; it tells you who exists. The
+      claim here is narrower and checkable: <strong>the registry tells you who
+      exists; it cannot tell you what they cost.</strong>
+    </p>
+
+    <h2>Four failures, and they compound</h2>
+
+    <p>
+      The count above is one symptom. Standing behind it are four problems that
+      each make the next one worse, and the rest of this walkthrough is one page
+      per fix.
+    </p>
+
+    <ol class="steps">
+      <li>
+        <span class="step-name">A seller cannot be found.</span> Registration
+        proves an agent exists. It says nothing about what it sells, so
+        discovery collapses into a list of addresses.
+      </li>
+      <li>
+        <span class="step-name">A seller cannot state a price.</span> With no
+        price field and no answered 402, the only way to learn a cost is to
+        incur it. That is fine for one agent and impossible for a market.
+      </li>
+      <li>
+        <span class="step-name">A seller cannot sell an edge.</span> An analyst
+        worth paying for is worth copying. Publish the analyst to prove it works
+        and you have given away the thing being sold, so the sellers with the
+        most to offer are the ones with the most reason to stay off the market.
+      </li>
+      <li>
+        <span class="step-name">A buyer cannot let an agent spend.</span>
+        Funding an autonomous agent today means handing it a key. A key that can
+        pay $0.07 for one answer is a key that can move everything, and no
+        treasury signs off on that.
+      </li>
+    </ol>
+
+    <p>
+      <span class="newthought">Turnstile answers all four</span> and the answers
+      are unusually boring, which is the point. The offer becomes an ENSv2
+      resolver record, using standard ENSIP-25/26 keys rather than a schema we
+      invented (<a href="02-the-offer-record.html">page 02</a>). Authority to
+      change that record is split across three keys, and the chain enforces the
+      split (<a href="03-three-keys.html">page 03</a>). Payment settles on either
+      of two rails from a wallet that never submits a transaction
+      (<a href="04-two-rails.html">page 04</a>). And the analyst runs inside an
+      enclave, so a buyer gets a verdict they can verify and cannot reproduce
+      (<a href="05-keep-the-method.html">page 05</a>).
+    </p>
+
+    <div class="not-true">
+      <p class="claim-label">Not claimed</p>
+      <p class="claim-statement">
+        197 is not a census of the agent economy, and one-in-197 is not a
+        forecast.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Why</dt>
+        <dd>
+          It is what three chains&rsquo; ERC-8004 Identity Registries held on
+          2026-09-07. Agents that never registered are not in it, and the number
+          moves every day.
+        </dd>
+        <dt>Consequence</dt>
+        <dd>
+          Read it as a dated measurement of one registry standard, not as the
+          size of the market. It is quoted with its date everywhere it appears
+          for that reason.
+        </dd>
+        <dt>Scope</dt>
+        <dd>
+          The comparison inside the snapshot is unaffected: on that day, across
+          those 197, exactly one price was readable from chain. That is the
+          claim, and it is reproducible with <code>npm run discover</code>.
+        </dd>
+      </dl>
+    </div>
+
+  </main>
+
+  <nav class="pager">
+    <a class="pager-prev" href="index.html">
+      <span class="pager-dir">Previous</span>
+      <span class="pager-title">Contents</span>
+    </a>
+    <a class="pager-up" href="index.html">
+      <span class="pager-dir">Up</span>
+      <span class="pager-title">Walkthrough</span>
+    </a>
+    <a class="pager-next" href="02-the-offer-record.html">
+      <span class="pager-dir">Next</span>
+      <span class="pager-title">02 &middot; The offer record</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

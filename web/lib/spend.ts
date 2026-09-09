@@ -14,6 +14,15 @@
 //                address. There are no HCS receipts for this rail -- only the
 //                Hedera rail publishes them -- so this is the only record.
 //
+// **Correction (2026-09-09, MOV-262):** this file claimed below that "each
+// failure is contained" and that a rail which could not be read reports an error
+// rather than a zero. That was true of the Arc rail and **not** of the Hedera
+// one: `readReceipts` answers an unreachable mirror node with an empty result
+// rather than a throw, so an outage arrived as a fulfilled read and rendered as
+// "$0 settled on Hedera" with no error at all. The claim is now true of both
+// rails — see the `unreadable` check below and `spend.test.ts`, which pins the
+// property in both directions.
+//
 // **What this is not.** It is not one mandate's running balance. The payments
 // below span several demo runs, and the cap was raised by a quorum partway
 // through, so "total settled" and "current cap" are two true numbers that do not
@@ -88,7 +97,19 @@ export async function readSpend(agentAddress: string): Promise<SpendState> {
     })(),
   ]);
 
-  if (hedera.status === 'fulfilled') {
+  // A rejected promise is not the only way the Hedera rail fails, and assuming
+  // it was is the bug this guards. `readReceipts` answers an unreachable mirror
+  // node with an *empty* result and a note rather than a throw, so an outage
+  // arrived here as a fulfilled read of zero receipts and rendered as "$0
+  // settled on Hedera" — precisely the "could not read" / "never paid" collapse
+  // this file's header says it avoids. `unreadable` carries the reason.
+  // (Fixed 2026-09-09, MOV-262; web/lib/spend.test.ts pins both directions.)
+  const hederaError =
+    hedera.status === 'rejected'
+      ? ((hedera.reason as Error)?.message ?? 'the mirror node could not be read')
+      : hedera.value.unreadable;
+
+  if (hedera.status === 'fulfilled' && !hederaError) {
     const r = hedera.value;
     topic = r.topic;
     topicIsOpen = r.submitKey === null;
@@ -110,13 +131,18 @@ export async function readSpend(agentAddress: string): Promise<SpendState> {
       });
     }
   } else {
+    // `topic` is still worth showing — the page can name the topic it failed to
+    // read — but `topicIsOpen` stays false, because a failed read learned
+    // nothing about the submit key and "anyone can append" is not a claim to
+    // make from an outage.
+    if (hedera.status === 'fulfilled') topic = hedera.value.topic;
     rails.push({
       railId: 'hedera-x402',
       label: 'HBAR on Hedera testnet, settled through Blocky402',
       count: 0,
       usd: null,
       source: 'HCS topic, via the public mirror node',
-      error: (hedera.reason as Error)?.message ?? 'the mirror node could not be read',
+      error: hederaError ?? 'the mirror node could not be read',
     });
   }
 

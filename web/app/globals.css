@@ -807,6 +807,15 @@ a {
   line-height: 1.5;
 }
 
+/* `break-all` is right for an ENS key or a hash, which have no word boundaries
+   worth keeping, and wrong for a sentence. The mandate page puts prose in this
+   slot and it rendered "Blocky40 2" and "nano payments" — caught in a
+   screenshot, which is the only way this class of bug ever gets caught. */
+.record-key.is-prose {
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
 .record-family {
   display: inline-block;
   font-size: 9.5px;

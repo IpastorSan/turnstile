@@ -107,6 +107,9 @@ uniswap-quotes.ts   Live depth-at-size: QuoterV2, and the Trading API behind a k
 analyst.ts          Orchestration and rendering. The importable API.
 analyst-cli.ts      Terminal front end
 scoring.test.ts     15 tests, most pinning a bug that live data found
+subgraph-mcp.test.ts  The MCP client, against a stubbed SSE + JSON-RPC server
+subgraph.test.ts      The two sources and the decoding, against a fake SubgraphSource
+uniswap-quotes.test.ts  The amount conversion and fetchDepthFromQuoter
 ```
 
 ### `scoring.ts` is pure, and that is a requirement rather than a style
@@ -366,6 +369,15 @@ are all against `scoring.ts`". That has been wrong since MOV-245 added
 issue — `fetchDepthFromQuoter` itself, against a stub `PublicClient` rather than
 a real one. **Still true, and the part that matters:** every test runs offline,
 with no network and no key.
+
+**Update (2026-09-09, MOV-263):** the list above is longer again —
+`subgraph-mcp.test.ts` and `subgraph.test.ts` were the repo's two least-covered
+files (41.70% and 50.91% line) and are now at 100% line. Both still run offline:
+the MCP client is driven through a stubbed `globalThis.fetch` that speaks SSE and
+JSON-RPC back to the real SDK transport, and the decoding tests pass a fake
+`SubgraphSource`. **No Graph API key is needed for any of them**, which matters
+because the key-optional behaviour documented above is itself now asserted rather
+than only described.
 
 Most of them exist because a live run produced a wrong answer and they now pin
 the fix — sparse snapshots, the zero-to-90% slippage cliff, a pool where every

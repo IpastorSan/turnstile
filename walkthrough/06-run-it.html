@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06 · Run it — Turnstile walkthrough</title>
+<meta name="description" content="One docker compose up, three commands that prove it, and where each piece of the code lives.">
+<link rel="stylesheet" href="assets/walkthrough.css">
+</head>
+<body>
+<div class="sheet">
+
+  <header class="masthead">
+    <a class="masthead-mark" href="index.html">Turnstile</a>
+    <span class="masthead-where">Walkthrough &middot; ETHOnline 2026</span>
+    <span class="masthead-count">06 / 06</span>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow">Run it</p>
+    <h1>Fifteen minutes, on your own machine</h1>
+    <p class="lede">
+      One <code>docker compose up</code> brings up the whole system behind one
+      hostname. Three commands prove the three claims. The shortest of them
+      returns <code>402 Payment Required</code>, which is this entire product in
+      one line.
+    </p>
+  </div>
+
+  <main class="prose">
+
+    <h2>Bring it up</h2>
+
+    <div class="terminal"><code>$ git clone https://github.com/IpastorSan/turnstile
+$ cd turnstile
+$ cp .envrc.example .envrc          # then fill in SEPOLIA_RPC_URL
+
+$ cd deploy
+$ docker compose up --build         # then open http://localhost</code></div>
+    <p class="terminal-cap">
+      The compose file is <code>deploy/compose.yaml</code>, not the repo root.
+      Secrets come from the repo-root <code>.env</code> &mdash; the same file
+      every npm script reads, so there is exactly one place credentials live.
+    </p>
+
+    <p>
+      <span class="newthought">Four services behind one hostname,</span> because
+      the ENS record commits us to one: <code>agent-endpoint[mcp]</code>
+      publishes a URL, and a buyer&rsquo;s agent reads that record and nothing
+      else. Caddy routes <code>/analyze/*</code> and <code>/receipts/*</code> to
+      the seller service, <code>/evidence/*</code> to the CRE evidence server,
+      and everything else to the web app.<span class="sidenote-ref"></span>
+      <span class="sidenote">
+        The routes are listed explicitly rather than as a catch-all, so a path
+        nobody serves gets an honest 404 from the web app instead of a confusing
+        error from the seller.
+      </span>
+      Going live is the same command with one variable changed
+      (<code>TURNSTILE_SITE_ADDRESS</code>) and a DNS record pointed at the box.
+    </p>
+
+    <p class="note">
+      Without <code>SEPOLIA_RPC_URL</code> the seller page says so rather than
+      serving a cached price, and <code>/api/health</code> reports which of the
+      two data dependencies this deployment can actually reach. A page that
+      cannot read the chain should look broken, not confident.
+    </p>
+
+    <h2>The three commands</h2>
+
+    <ol class="steps">
+      <li>
+        <span class="step-name">See the 402.</span> The whole product in one
+        response: a quote a buyer can check against the posted price before
+        paying anything.
+        <div class="terminal"><code>$ npm run serve            # seller service on :4021
+$ curl -i http://localhost:4021/analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640</code></div>
+        <p class="terminal-cap">
+          Returns <code>HTTP 402</code> with a <code>PAYMENT-REQUIRED</code>
+          header and the same challenge object as the body &mdash; the header is
+          what the protocol reads, the body is what a human with
+          <code>curl</code> sees, and a test asserts they are deep-equal. This is
+          x402 <strong>v2</strong>, not v1&rsquo;s <code>X-PAYMENT</code>
+          spelling. Under compose the same route is
+          <code>http://localhost/analyze/&hellip;</code>.
+        </p>
+      </li>
+      <li>
+        <span class="step-name">Pay for one answer, on both rails.</span>
+        Discovery, a price read from Sepolia, a 402, two settlements and one
+        verdict.
+        <div class="terminal"><code>$ npm run demo</code></div>
+        <p class="terminal-cap">
+          Prints the agent&rsquo;s nonce and balances before and after, so the
+          zero-gas claim from <a href="04-two-rails.html">page 04</a> either
+          holds in front of you or fails visibly. Needs funded testnet
+          credentials in <code>.env</code>; without them it stops and says which
+          one is missing.
+        </p>
+      </li>
+      <li>
+        <span class="step-name">Check the whole repo.</span>
+        <div class="terminal"><code>$ npm run verify</code></div>
+        <p class="terminal-cap">
+          516 tests: 426 node, 90 Forge, 13 of them forked against live Sepolia
+          &mdash; including the <code>setAddr</code> revert that
+          <a href="03-three-keys.html">page 03</a> rests on. Forge must be
+          <strong>1.8.1</strong>; the contracts need
+          <code>git submodule update --init --recursive</code> first.
+        </p>
+      </li>
+    </ol>
+
+    <div class="claim">
+      <p class="claim-label">Claim</p>
+      <p class="claim-statement">
+        Every claim in this walkthrough is reproducible from this repository, or
+        is marked as not proven.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Proof</dt>
+        <dd>
+          One row per claim, one link per row, in
+          <a href="../docs/EVIDENCE.md"><code>docs/EVIDENCE.md</code></a>,
+          including a <em>What is not live</em> section.
+        </dd>
+        <dt>Withdrawn</dt>
+        <dd>
+          <a href="../CORRECTIONS.md"><code>CORRECTIONS.md</code></a> &mdash;
+          what turned out to be wrong, what replaced it, and the date. Nothing
+          deleted from the record.
+        </dd>
+        <dt>Licence</dt>
+        <dd>
+          MIT, and built from scratch at this event. The commit history shows it
+          rather than asserting it.
+        </dd>
+      </dl>
+    </div>
+
+    <h2>Two surfaces worth opening</h2>
+
+    <figure class="fig fig-wide">
+      <img src="../docs/screenshots/mandate-new.png"
+           alt="The create-a-mandate page. A form for an organization name and spend cap, then two operator rows with handle, role and email, and a button reading Generate keys here and create the organization.">
+      <figcaption>
+        <code>/mandate/new</code> &mdash; issuing your own mandate rather than
+        reading ours. The operators&rsquo; signing keys are generated in the
+        browser and never sent: only the public halves reach the server, which is
+        all a Privy key quorum consumes, and the server refuses the request
+        outright if a private key appears in it. Two operators minimum, because
+        funding the agent takes one signature and raising the cap takes two, and
+        that asymmetry is the only thing standing between an agent and its own
+        spending limit.
+        <span class="fig-date">Captured 2026-09-09.</span>
+      </figcaption>
+    </figure>
+
+    <figure class="fig fig-wide">
+      <img src="../docs/screenshots/onboard.png"
+           alt="The onboard page, headed Prove a human is behind it. Sections explain that Selfie Check is not a login, that it allows three listings per person, and a Verify with World Selfie Check button described as a medium-assurance credential.">
+      <figcaption>
+        <code>/onboard</code> &mdash; the abuse model. A registry anyone can
+        write to is a registry anyone can flood, so proof of personhood caps how
+        much of the market one person may occupy: three listings, and the fourth
+        is refused. The nullifier is verified on the backend and never returned
+        to the page, because a nullifier handed to a browser would let anyone
+        correlate listings to a human. The button does not work yet &mdash; see
+        below.
+        <span class="fig-date">Captured 2026-09-09.</span>
+      </figcaption>
+    </figure>
+
+    <div class="not-true">
+      <p class="claim-label">Not claimed</p>
+      <p class="claim-statement">
+        World Selfie Check is not live. No agent in this system has ever been
+        verified, and the page above is a labelled placeholder.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Why</dt>
+        <dd>
+          Sandbox access, the Selfie Check Beta flag and the Sandbox mobile app
+          are all pending approvals we do not control. There is no credential to
+          verify against.
+        </dd>
+        <dt>Consequence</dt>
+        <dd>
+          <code>world_verification</code> is empty, so every agent on the market
+          page reports <code>unknown</code> &mdash; <strong>never</strong>
+          <code>unverified</code>. Absence of a proof is not evidence of a failed
+          one, and reporting it as a failure would be a claim we have not earned.
+        </dd>
+        <dt>Scope</dt>
+        <dd>
+          The abuse model, the three-listing cap and the
+          <code>verifiedOperatorOnly</code> mandate flag are all implemented and
+          tested; what is missing is the credential that would populate them.
+          Deliberately not faked.
+        </dd>
+      </dl>
+    </div>
+
+    <h2>Where the code lives</h2>
+
+    <table class="tbl">
+      <thead>
+        <tr><th>Path</th><th>Step</th><th>What it is</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>graph/substreams/</code></td>
+          <td>01</td>
+          <td>The authored ERC-8004 agent-registry normalization module. Rust, one pipeline across four networks</td>
+        </tr>
+        <tr>
+          <td><code>graph/sink/</code></td>
+          <td>01</td>
+          <td>The store, plus document resolution and ENS hydration</td>
+        </tr>
+        <tr>
+          <td><code>contracts/</code></td>
+          <td>02</td>
+          <td>The ENSv2 name, the resolver and the ENSIP-25/26 offer records &mdash; plus the fork tests</td>
+        </tr>
+        <tr>
+          <td><code>mcp-turnstile/</code></td>
+          <td>03</td>
+          <td>The MCP server a buyer&rsquo;s agent calls: 4 tools and a <code>SKILL.md</code></td>
+        </tr>
+        <tr>
+          <td><code>seller/service/</code></td>
+          <td>04</td>
+          <td>The 402 flow. Names no chain, and a test fails the build if it starts to</td>
+        </tr>
+        <tr>
+          <td><code>rails/PaymentRail.ts</code></td>
+          <td>05</td>
+          <td>The rail seam. <code>rails/hedera-x402/</code> and <code>rails/arc-usdc/</code> implement it</td>
+        </tr>
+        <tr>
+          <td><code>buyer/mandate/</code></td>
+          <td>05</td>
+          <td>Per-run mandate enforcement &mdash; the agent refuses before it pays</td>
+        </tr>
+        <tr>
+          <td><code>seller/cre/</code></td>
+          <td>06</td>
+          <td>The confidential workflow, the evidence server and the settlement CLI</td>
+        </tr>
+        <tr>
+          <td><code>web/</code></td>
+          <td>01, 02</td>
+          <td>Market, seller, mandate and onboard pages. Live reads, no cache</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      <span class="newthought">That is the whole walkthrough.</span> Six pages,
+      six claims, and four things we said we had not proved: the hosted endpoint
+      does not resolve, custody is not cold, the settled verdict is not
+      DON-attested, and World verification is not live. Every one of them is
+      somewhere a judge would eventually have found it. Putting them in the same
+      typeface as the wins is the only version of this document worth reading.
+    </p>
+
+  </main>
+
+  <nav class="pager">
+    <a class="pager-prev" href="05-keep-the-method.html">
+      <span class="pager-dir">Previous</span>
+      <span class="pager-title">05 &middot; Keep the method</span>
+    </a>
+    <a class="pager-up" href="index.html">
+      <span class="pager-dir">Up</span>
+      <span class="pager-title">Walkthrough</span>
+    </a>
+    <span class="pager-next pager-empty">
+      <span class="pager-dir">Next</span>
+      <span class="pager-title">&mdash;</span>
+    </span>
+  </nav>
+
+</div>
+</body>
+</html>

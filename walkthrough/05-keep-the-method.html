@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05 · Keep the method — Turnstile walkthrough</title>
+<meta name="description" content="The analyst runs in an enclave over a sealed calibration. A buyer gets a verdict they can verify against a hash and cannot reproduce — and the settled verdict is not DON-attested.">
+<link rel="stylesheet" href="assets/walkthrough.css">
+</head>
+<body>
+<div class="sheet">
+
+  <header class="masthead">
+    <a class="masthead-mark" href="index.html">Turnstile</a>
+    <span class="masthead-where">Walkthrough &middot; ETHOnline 2026</span>
+    <span class="masthead-count">05 / 06</span>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow">Keep the method</p>
+    <h1>Sell the answer, keep the method</h1>
+    <p class="lede">
+      Page 01&rsquo;s third failure: publishing the analyst reveals the analyst,
+      so the sellers with the most to offer have the most reason to stay off the
+      market. A confidential workflow answers both halves &mdash; the buyer
+      cannot reconstruct the method, and cannot be defrauded either.
+    </p>
+  </div>
+
+  <main class="prose">
+
+    <p>
+      <span class="newthought">A verdict you have to take on trust</span> is
+      worth nothing, and a method you have to publish to prove is worth nothing
+      once published. Those pull in opposite directions, which is why most
+      &ldquo;sell your model&rdquo; designs quietly pick one. An attested enclave
+      splits the difference at exactly the right seam: <strong>the shape of the
+      judgement is public, and the calibration is not</strong>.
+    </p>
+
+    <table class="tbl">
+      <thead>
+        <tr><th></th><th>What</th><th>How it gets in</th><th>Confidential?</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>in</td>
+          <td>The seller&rsquo;s <strong>calibration</strong> &mdash; the tuned thresholds</td>
+          <td>Vault DON secret</td>
+          <td><strong>Yes</strong></td>
+        </tr>
+        <tr>
+          <td>in</td>
+          <td>The <strong>evidence bundle</strong> &mdash; 9,218 bytes of subgraph history and live depth</td>
+          <td>Confidential HTTP, gated on a Vault-held bearer token</td>
+          <td><strong>Yes</strong></td>
+        </tr>
+        <tr>
+          <td>in</td>
+          <td>The <strong>scorer</strong> &mdash; <code>seller/analyst/scoring.ts</code></td>
+          <td>Compiled into the workflow binary</td>
+          <td>No, deliberately</td>
+        </tr>
+        <tr>
+          <td>out</td>
+          <td>Rating, confidence, two 7-bit signal masks, <code>keccak256(evidence)</code></td>
+          <td><code>writeReport</code> to chain</td>
+          <td>Public</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      That third row is the one it would be easy to overclaim, so: <strong>the
+      workflow binary is not confidential.</strong> The Workflow DON supplies it
+      to the enclave, and it is MIT and readable in this repo. What the enclave
+      protects is the <em>data</em> the binary computes over.<span class="sidenote-ref"></span>
+      <span class="sidenote">
+        Which is the right way round. A public scorer is what makes a verdict
+        auditable rather than an oracle: you can see which seven signals, which
+        are structural, and how one structural failure forces
+        <code>AVOID</code>.
+      </span>
+    </p>
+
+    <p>
+      The calibration is the edge, and it is what live data buys.
+      <code>activeHourFailShare</code> is 0.2 rather than 0.1 only because a real
+      TRUMP/WETH run said so &mdash; three traded hours out of twenty-four,
+      $1.54 of volume between them, coming back as merely &ldquo;bursty&rdquo; at
+      the looser threshold. A constant compiled into the binary would have been
+      published; a <code>Calibration</code> argument can arrive from a Vault.
+    </p>
+
+    <h2>Where the sealed calibration changes the answer</h2>
+
+    <p>
+      This is the demonstration that the confidentiality is load-bearing rather
+      than decorative. Run the same pool through the public scorer and through
+      the sealed one and you get two different verdicts:
+    </p>
+
+    <div class="terminal"><code>evidence: 9218 bytes for Uniswap v3 USDC/WETH 0.05%,
+          keccak256 0x60caa3841046ee545a5a91881ba92e5ce201a49048f3d3ec08ad5369c2bd02c2
+verdict:  CAUTION at 75% confidence; warning on depth-vs-tvl, slippage-curve
+public calibration says ACCEPTABLE at 75%, the sealed one says CAUTION at 75%
+          -- this is the difference the Vault secret bought</code></div>
+    <p class="terminal-cap">
+      From <code>cre workflow simulate</code>, 2026-09-07. Anyone can run the
+      public scorer on this pool and get <code>ACCEPTABLE</code>. The premium
+      verdict is <code>CAUTION</code>, and the difference is the thing being
+      sold.
+    </p>
+
+    <div class="claim">
+      <p class="claim-label">Claim</p>
+      <p class="claim-statement">
+        The verdict that settled on Sepolia is byte-identical to the one the
+        enclave produced.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Proof</dt>
+        <dd>
+          Same evidence hash
+          <span class="addr">0x60caa384&hellip;02c2</span> over the same 9,218
+          bytes, same rating (<code>CAUTION</code>), same confidence
+          (<code>7500</code> bp), same fail and warn masks. Read back off chain
+          after the write, not asserted.
+        </dd>
+        <dt>Transaction</dt>
+        <dd>
+          <a href="https://sepolia.etherscan.io/tx/0x8ee33bb38563ed88836eaf6e2b7011c1350ef64390f7307691da24bd45e909b8">0x8ee33bb3&hellip;e909b8</a>
+          &mdash; success, block 11654749, gas 170327.
+        </dd>
+        <dt>Why it holds</dt>
+        <dd>
+          <code>assess()</code> is a total function of its arguments, so the same
+          evidence and the same calibration give the same verdict inside a TEE
+          and outside one. The rehearsal exercises that rather than asserting it.
+        </dd>
+        <dt>Rerun it</dt>
+        <dd>
+          <code>npm run settle</code>, and
+          <a href="../docs/cre-confidential-workflow.md"><code>docs/cre-confidential-workflow.md</code></a>
+          for the full transcript.
+        </dd>
+      </dl>
+    </div>
+
+    <p>
+      What a buyer gets, then, is a verdict plus <code>keccak256</code> of the
+      exact evidence bundle it was computed over. They can check that the chain
+      commits to the bundle they were handed, and they still cannot reproduce the
+      judgement, because the thresholds that produced it never left the Vault.
+      That is the whole trade.
+    </p>
+
+    <h2>What we are not claiming</h2>
+
+    <p>
+      This is the second of the two places this project is weakest, and like the
+      first it is on the page at full size. A judge will check the forwarder;
+      better that they find this paragraph first.
+    </p>
+
+    <div class="not-true">
+      <p class="claim-label">Not claimed</p>
+      <p class="claim-statement">
+        That settled verdict is <strong>not</strong> DON-attested. Our own key
+        delivered it, and the production consumer would reject it.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Why</dt>
+        <dd>
+          Two separate gates, and being exact about them matters more than a
+          green tick. <code>cre workflow deploy</code> needs deployment access
+          &mdash; <code>cre account access</code> answered <em>&ldquo;Deployment
+          access is not yet enabled for your organization&rdquo;</em> on
+          2026-09-07 &mdash; and Confidential Workflows is separately in private
+          beta. Neither gates <code>simulate</code>, which is why everything
+          above ran.
+        </dd>
+        <dt>Consequence</dt>
+        <dd>
+          The transaction linked above went to the <strong>rehearsal</strong>
+          consumer
+          <span class="addr">0xEE72d3d0E4b090eBB8Db6abc26547bcd1fc9C5F2</span>,
+          whose forwarder is the seller&rsquo;s own key. Do not cite it as
+          attested. The enclave works and the settlement works; the link between
+          them is signed by us, not by the DON.
+        </dd>
+        <dt>Checked in code</dt>
+        <dd>
+          <code>AttestationStrength</code> has four values rather than being a
+          boolean, and run against the rehearsal consumer today it reports
+          <code>self-delivered</code> &mdash; in a sentence a buyer can act on.
+          Collapsing those four into <code>verified: true</code> is the one bug
+          that would make the premium tier worthless.
+        </dd>
+        <dt>Scope</dt>
+        <dd>
+          The production consumer
+          <a href="https://sepolia.etherscan.io/address/0xfE95CD0f710DDC5ceED0e93c4e25412Dc3d8eEeA">0xfE95CD0f&hellip;eEeA</a>
+          exists, is Etherscan-verified, and is gated on the real CRE Forwarder
+          <span class="addr">0xF8344CFd&hellip;4482</span>. <strong>Nothing has
+          settled into it</strong>, and it would refuse the write above. That is
+          the point of deploying it: the honest claim has an address.
+        </dd>
+      </dl>
+    </div>
+
+    <table class="tbl tbl-measure">
+      <thead>
+        <tr><th>AttestationStrength</th><th>What it means</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>attested</code></td><td>The CRE Forwarder, from a pinned workflow id. The full claim</td></tr>
+        <tr><td><code>forwarded-ungated</code></td><td>The CRE Forwarder, but the consumer would accept any workflow this owner deploys</td></tr>
+        <tr><td><code>self-delivered</code></td><td>Not the CRE Forwarder. Somebody wrote this by hand &mdash; <strong>this is what we report today</strong></td></tr>
+        <tr><td><code>none</code></td><td>Nothing has settled for this pool</td></tr>
+      </tbody>
+    </table>
+
+    <p class="note">
+      A related piece of the same discipline: an unjudged pool reads
+      <code>INSUFFICIENT_DATA</code>, never <code>ACCEPTABLE</code> &mdash; on
+      chain too, where <code>verdictOf()</code> reverts rather than returning a
+      zero struct, because a zeroed <code>Verdict</code> decodes as
+      <code>ACCEPTABLE</code> at 0% confidence. Silence must not read as
+      approval, in a struct any more than in a document.
+    </p>
+
+  </main>
+
+  <nav class="pager">
+    <a class="pager-prev" href="04-two-rails.html">
+      <span class="pager-dir">Previous</span>
+      <span class="pager-title">04 &middot; Two rails</span>
+    </a>
+    <a class="pager-up" href="index.html">
+      <span class="pager-dir">Up</span>
+      <span class="pager-title">Walkthrough</span>
+    </a>
+    <a class="pager-next" href="06-run-it.html">
+      <span class="pager-dir">Next</span>
+      <span class="pager-title">06 &middot; Run it</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

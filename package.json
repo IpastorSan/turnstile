@@ -31,7 +31,9 @@
     "arc:setup": "node scripts/arc-setup.ts",
     "arc:pay": "node scripts/arc-paid-request.ts",
     "arc:receipts": "node scripts/arc-receipts.ts",
-    "ingest-receipts": "node graph/sink/ingest-receipts.ts"
+    "ingest-receipts": "node graph/sink/ingest-receipts.ts",
+    "capture": "node scripts/capture.ts",
+    "video": "node scripts/walkthrough-video.ts"
   },
   "dependencies": {
     "@circle-fin/x402-batching": "^3.4.0",
@@ -49,6 +51,7 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^24.0.0",
+    "playwright": "^1.63.0",
     "typescript": "^5.9.0"
   }
 }

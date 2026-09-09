@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 · Two rails — Turnstile walkthrough</title>
+<meta name="description" content="The same query paid on Hedera and on Arc, same verdict both times. Sub-cent payments batch into one transaction, and the spending agent's nonce is still 0.">
+<link rel="stylesheet" href="assets/walkthrough.css">
+</head>
+<body>
+<div class="sheet">
+
+  <header class="masthead">
+    <a class="masthead-mark" href="index.html">Turnstile</a>
+    <span class="masthead-where">Walkthrough &middot; ETHOnline 2026</span>
+    <span class="masthead-count">04 / 06</span>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow">Two rails</p>
+    <h1>One query, paid two ways, answered the same</h1>
+    <p class="lede">
+      Real HBAR on Hedera and real USDC on Arc, in one run, against one URL, for
+      the same verdict. The seller service does not know which chain it was paid
+      on &mdash; a test fails the build if any file on the payment path names
+      one.
+    </p>
+  </div>
+
+  <main class="prose">
+
+    <figure class="fig fig-wide">
+      <img src="../docs/screenshots/mandate.png"
+           alt="The mandate page, read live from Privy. Header tiles show a $1 spend cap, $0.1 max per query, 2 rails, and $1.0550 settled to date across 25 payments. Below: the organization wallet, two quorums with different thresholds, the policy and an allowlist; then a per-rail spend breakdown and a ledger of individual payments with their transaction links.">
+      <figcaption>
+        The mandate page, read live from Privy when it was requested. The four
+        tiles are permission and spend side by side: a $1 cap, a $0.10 per-query
+        ceiling, two rails, and $1.0550 actually settled across 25 payments. The
+        two quorum rows are the control &mdash; they have different thresholds on
+        purpose, so the people who can spend are not the people who decide how
+        much. The ledger at the bottom is one row per payment with the
+        transaction it landed in.
+        <span class="fig-date">Captured 2026-09-09 07:25:50 UTC.</span>
+      </figcaption>
+    </figure>
+
+    <p>
+      <span class="newthought">Neither rail is read from a database of ours.</span>
+      Hedera receipts come off a public consensus topic through the mirror node;
+      Arc settlements come from Circle Gateway&rsquo;s transfers API, queried by
+      the agent&rsquo;s own address. Both are third-party surfaces that would
+      contradict us if we were wrong.
+    </p>
+
+    <table class="tbl tbl-measure">
+      <thead>
+        <tr><th>Rail</th><th>Settled</th><th class="num">Payments</th><th class="num">Value</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>hedera-x402</code></td>
+          <td>HBAR on Hedera testnet, through Blocky402</td>
+          <td class="num">12</td>
+          <td class="num">$0.840000</td>
+        </tr>
+        <tr>
+          <td><code>arc-usdc</code></td>
+          <td>USDC on Arc, batched through Circle Gateway nanopayments</td>
+          <td class="num">13</td>
+          <td class="num">$0.215000</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="terminal-cap">
+      As read from the mirror node and the Gateway transfers API, 2026-09-09.
+      The eleven Arc payments linked below are the subset settled by 2026-09-07,
+      when <a href="../docs/EVIDENCE.md"><code>docs/EVIDENCE.md</code></a> pinned
+      their batch transactions; the count grows every time the demo runs.
+    </p>
+
+    <p class="note">
+      $1.0550 settled and a $1 cap are two true numbers that do not subtract from
+      each other, and presenting them as one running balance would be a tidier
+      story and a false one. These payments span several runs, and a quorum
+      raised the cap partway through. Per-run enforcement lives in
+      <code>buyer/mandate/</code>, where the agent refuses before it pays.
+    </p>
+
+    <div class="claim">
+      <p class="claim-label">Claim</p>
+      <p class="claim-statement">
+        The same query settled over both rails in one run, and returned the same
+        verdict both times.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Proof</dt>
+        <dd>
+          Arc authorization <code>fa4ca648-863c-4f61-9a1e-2953eb789f7f</code> and
+          Hedera transaction
+          <span class="addr">0.0.7162784@1788800327.098234984</span>. One run,
+          one URL, one verdict.
+        </dd>
+        <dt>Where</dt>
+        <dd>
+          <a href="https://hashscan.io/testnet/transaction/0.0.7162784@1788800327.098234984">HashScan</a>
+          &middot;
+          <a href="../docs/arc-nanopayments.md"><code>docs/arc-nanopayments.md</code></a>
+        </dd>
+        <dt>Enforced</dt>
+        <dd>
+          <a href="../seller/service/no-chain-code.test.ts"><code>seller/service/no-chain-code.test.ts</code></a>
+          fails the build if any file on the payment path names a chain, a
+          vendor, an asset or a chain library. It caught this for real on a
+          merge.
+        </dd>
+        <dt>Rerun it</dt>
+        <dd><code>npm run demo</code></dd>
+      </dl>
+    </div>
+
+    <h2>The first paid request</h2>
+
+    <p>
+      Worth pinning separately, because a first settlement is the one that proves
+      the rail exists at all rather than that it repeats.
+    </p>
+
+    <div class="claim">
+      <p class="claim-label">Claim</p>
+      <p class="claim-statement">
+        A real paid request settled on Hedera testnet, and the buyer paid no gas.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Proof</dt>
+        <dd>
+          <span class="addr">0.0.7162784@1788791855.758948636</span> &mdash;
+          0.84367844 HBAR ($0.07) from <code>0.0.10408012</code> to
+          <code>0.0.10403961</code>. The buyer&rsquo;s account moves by exactly
+          the price, not one tinybar more.
+        </dd>
+        <dt>Where</dt>
+        <dd>
+          <a href="https://hashscan.io/testnet/transaction/0.0.7162784@1788791855.758948636">HashScan</a>
+          &middot;
+          <a href="https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1788791855-758948636">mirror node</a>
+        </dd>
+        <dt>Receipts</dt>
+        <dd>
+          HCS topic <code>0.0.10408013</code>, which has <strong>no submit
+          key</strong> &mdash; so anyone may append to it, and a receipt is a
+          claim until checked against the ledger. The
+          <code>receipts</code> MCP tool does that check.
+          <a href="https://hashscan.io/testnet/topic/0.0.10408013">Read them with no key</a>.
+        </dd>
+      </dl>
+    </div>
+
+    <h2>Sub-cent payments, and the nonce that proves it</h2>
+
+    <p>
+      A $0.0005 query cannot pay for its own settlement. The deposit that funded
+      this entire mandate cost <strong>0.0019 USDC</strong> in gas &mdash; about
+      four times the price of one nanopayment. Circle Gateway makes that work by
+      inverting who submits: the payer signs an EIP-3009 authorization
+      <em>offchain</em>, Gateway credits the seller immediately and returns an
+      authorization id, and Circle&rsquo;s batcher redeems many authorizations in
+      one on-chain transaction later.<span class="sidenote-ref"></span>
+      <span class="sidenote">
+        Which is why a settlement returns a <strong>UUID, not a transaction
+        hash</strong>. The hash does not exist yet when the buyer gets its
+        answer. <code>npm run arc:receipts -- --ours</code> resolves an
+        authorization into the batch it eventually landed in.
+      </span>
+    </p>
+
+    <p>
+      That inversion is what makes the hot tier on
+      <a href="03-three-keys.html">page 03</a> checkable rather than asserted. A
+      wallet that has never broadcast a transaction has never paid a wei of gas,
+      and a nonce cannot be faked or back-dated:
+    </p>
+
+    <div class="terminal"><code>agent 0x0633a193017939Bb1eB242982397224c66948e2F
+  eth_getTransactionCount   0        &lt;-- never submitted anything
+  eth_getBalance            0
+  USDC.balanceOf            0
+                            read at block 60943091, 2026-09-07T17:33:02Z</code></div>
+    <p class="terminal-cap">
+      After eleven settled payments. Re-run it against
+      <code>https://rpc.testnet.arc.network</code> and get the same answer at
+      that block. <code>scripts/arc-paid-request.ts</code> prints this before and
+      after every run, so a regression fails visibly.
+    </p>
+
+    <div class="claim">
+      <p class="claim-label">Claim</p>
+      <p class="claim-statement">
+        Sub-cent payments batch into one transaction, and the spending agent pays
+        exactly zero gas.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Proof</dt>
+        <dd>
+          Seven payments in
+          <a href="https://testnet.arcscan.app/tx/0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1">block 60940635</a>
+          (22 payments in total, including other Gateway users&rsquo;, 0.133111
+          USDC moved, gas paid by Circle&rsquo;s batcher), and four more in
+          <a href="https://testnet.arcscan.app/tx/0xe50b8be63a2fe102c70de3b62a43251fbfcac1d8ca93f9f1760dd3c7a7985c39">block 60942503</a>
+          &mdash; so the first was not a fluke.
+        </dd>
+        <dt>Nonce</dt>
+        <dd>
+          <a href="https://testnet.arcscan.app/address/0x0633a193017939Bb1eB242982397224c66948e2F">Agent 0x0633a193&hellip;8e2F on ArcScan</a>,
+          still 0 after all eleven.
+        </dd>
+        <dt>Funded by</dt>
+        <dd>
+          The warm tier, calling <code>depositFor(0.25 USDC, agent)</code> &mdash;
+          <a href="https://testnet.arcscan.app/tx/0xe031e97c80b6aefc3e8b851fdab7d33d8cdef2ed47037f1ecff4abc5a0cffc1c">the deposit transaction</a>.
+          The org pays the gas; the balance belongs to the agent.
+        </dd>
+      </dl>
+    </div>
+
+    <h2>Before you open a block explorer</h2>
+
+    <div class="not-true">
+      <p class="claim-label">Not claimed</p>
+      <p class="claim-statement">
+        The Arc payout address reads 0 USDC on chain, and always will. Nothing
+        went wrong.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Why</dt>
+        <dd>
+          Circle Gateway credits a <strong>Gateway balance</strong>, not the
+          wallet. The seller was credited 0.144500 USDC as of 2026-09-07, and
+          none of it is visible as an ERC-20 balance at
+          <span class="addr">0x0Adca6e14bA956201D221feC767e4f24194bf5F2</span>.
+        </dd>
+        <dt>Consequence</dt>
+        <dd>
+          A judge who opens ArcScan on the payout address and stops there will
+          conclude nothing settled. Check it with
+          <code>npm run arc:setup -- --status</code>, or open the two batch
+          transactions linked above, which are on chain.
+        </dd>
+        <dt>Scope</dt>
+        <dd>
+          This is how Gateway works, not a limitation of ours &mdash; and it is
+          the flip side of the batching that makes a $0.0005 payment possible at
+          all. The Hedera rail has no equivalent gap: HBAR moves account to
+          account and shows up on HashScan.
+        </dd>
+      </dl>
+    </div>
+
+    <p class="note">
+      One identifier trap, since it cost this project a day in the opposite
+      direction. Arc has two names and both are correct in their own place:
+      <code>eip155:5042002</code> is the CAIP-2 the x402 wire wants, and
+      <code>arcTestnet</code> is the chain name the Circle SDK wants. Passing
+      either to the other throws.
+      <code>rails/arc-usdc/config.ts</code> holds both and says which is which.
+    </p>
+
+  </main>
+
+  <nav class="pager">
+    <a class="pager-prev" href="03-three-keys.html">
+      <span class="pager-dir">Previous</span>
+      <span class="pager-title">03 &middot; Three keys</span>
+    </a>
+    <a class="pager-up" href="index.html">
+      <span class="pager-dir">Up</span>
+      <span class="pager-title">Walkthrough</span>
+    </a>
+    <a class="pager-next" href="05-keep-the-method.html">
+      <span class="pager-dir">Next</span>
+      <span class="pager-title">05 &middot; Keep the method</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>
