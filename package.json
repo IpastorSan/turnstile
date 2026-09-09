@@ -32,7 +32,8 @@
     "arc:pay": "node scripts/arc-paid-request.ts",
     "arc:receipts": "node scripts/arc-receipts.ts",
     "ingest-receipts": "node graph/sink/ingest-receipts.ts",
-    "capture": "node scripts/capture.ts"
+    "capture": "node scripts/capture.ts",
+    "video": "node scripts/walkthrough-video.ts"
   },
   "dependencies": {
     "@circle-fin/x402-batching": "^3.4.0",
