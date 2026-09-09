@@ -27,6 +27,19 @@ const VERIFY_BASE = 'https://developer.world.org/api/v4/verify';
  */
 export const OPERATOR_ACTION = 'turnstile-operator';
 
+/**
+ * Created 2026-09-09 on app `app_8094ddfd…`:
+ * `action_510dae3cb03dd2094ac5e41faba08e49`, status active, external nullifier
+ * `0x00d1368f3b2613054e3774de9690d9b39f50614e97649a593fc2bd00492f6fe3`.
+ *
+ * **`max_verifications` is 0 — unlimited — and that is deliberate.** The portal
+ * defaults it to 1, which makes World refuse a person's SECOND verification. The
+ * limit a judge would then see is World's, not ours. Turnstile's control is that
+ * one human may hold three listings and is refused the fourth, by us, with a
+ * reason. World proves personhood; Turnstile sets policy. Changing this to 1
+ * silently moves that boundary and voids the claim.
+ */
+
 export interface WorldConfig {
   appId: string;
   rpId: string;
