@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03 · Three keys — Turnstile walkthrough</title>
+<meta name="description" content="Cold, warm and hot, and what each may authorise. The hot key's payout change reverts on live Sepolia — and custody is not cold, which we say here rather than let you find.">
+<link rel="stylesheet" href="assets/walkthrough.css">
+</head>
+<body>
+<div class="sheet">
+
+  <header class="masthead">
+    <a class="masthead-mark" href="index.html">Turnstile</a>
+    <span class="masthead-where">Walkthrough &middot; ETHOnline 2026</span>
+    <span class="masthead-count">03 / 06</span>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow">Three keys</p>
+    <h1>The key that spends can never raise its own limit</h1>
+    <p class="lede">
+      Three keys, three frequencies, three sets of things each may authorise.
+      The split is not a policy document: the resolver&rsquo;s role checks
+      enforce it, and the proof is a transaction that <em>fails</em>.
+    </p>
+  </div>
+
+  <main class="prose">
+
+    <p class="epigraph">
+      Authority flows downward only. If a change would let the hot tier widen its
+      own mandate, rotate a key, or move a payout address, the change is wrong.
+    </p>
+
+    <p>
+      <span class="newthought">Three wallet vendors is not three ways</span> to
+      do one thing. Each sits where it is actually best, and together they are
+      one hierarchy. What matters in the table below is the last column, because
+      that is the column the chain enforces.
+    </p>
+
+    <table class="tbl">
+      <thead>
+        <tr><th>Tier</th><th>Who holds it</th><th>How often it signs</th><th>May authorise</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Cold</strong></td>
+          <td>A separate key. Custody is <strong>not</strong> cold today &mdash; see below</td>
+          <td>Once per lifecycle</td>
+          <td>Hot-key rotation, payout address change, price-ceiling raise</td>
+        </tr>
+        <tr>
+          <td><strong>Warm</strong></td>
+          <td>Privy server wallet, owned by a 1-of-2 ops quorum</td>
+          <td>Occasionally</td>
+          <td>Issuing a mandate, raising a cap (needs a separate 2-of-2 board quorum), adding an agent</td>
+        </tr>
+        <tr>
+          <td><strong>Hot</strong></td>
+          <td>Circle / Arc Agent Stack &mdash; the buyer agent&rsquo;s spending wallet</td>
+          <td>Every query</td>
+          <td><strong>Nothing.</strong> It spends <em>within</em> the mandate, signs offchain, and never submits a transaction</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      Every row of that table has been corrected at least once during this build,
+      and the full record of what was withdrawn and why is in
+      <a href="../CORRECTIONS.md"><code>CORRECTIONS.md</code></a>. That file is
+      linked here on purpose. A judge who finds a retraction we hid stops
+      believing the rest of the page.
+    </p>
+
+    <h2>The proof is a transaction that fails</h2>
+
+    <p>
+      Two distinct keys exist on the seller side. The operator key
+      <span class="addr">0x0Adca6e1&hellip;bf5F2</span> holds the root roles on
+      <span class="addr">liquidity.turnstile.eth</span>. The hot key
+      <span class="addr">0x16244874&hellip;186367</span> holds roles scoped to
+      exactly two records &mdash; <code>agent-endpoint[mcp]</code> and
+      <code>turnstile:price</code> &mdash; and to nothing else.<span class="sidenote-ref"></span>
+      <span class="sidenote">
+        <code>PermissionedResolver</code> scopes roles by
+        <code>resource(node, part)</code>, where <code>part</code> identifies a
+        record type. That is what makes a role scopeable to one text key on one
+        name rather than to the whole name.
+      </span>
+    </p>
+
+    <p>
+      So the seller can reprice all day from a key sitting in a hot wallet, and
+      that same key cannot move where the money goes. Asking it to try produces
+      this:
+    </p>
+
+    <div class="terminal"><code>$ cast call $R "setAddr(bytes32,address)" $N 0x...dEaD --from $TURNSTILE_HOT_KEY
+Error: execution reverted:
+  EACUnauthorizedAccountRoles(
+    87140393317148622081856579921496229094570723339484417348903196786160147430199,
+    1,
+    0x16244874881c60881CEA827fe856Ea91d3186367
+  )</code></div>
+    <p class="terminal-cap">
+      Live Sepolia, 2026-09-07. <code>1</code> is <code>ROLE_SET_ADDR</code>; the
+      resource is the name-level one, which is where <code>onlyPartRoles</code>
+      reverts once no part-scoped grant matched.
+    </p>
+
+    <div class="claim">
+      <p class="claim-label">Claim</p>
+      <p class="claim-statement">
+        The hot key cannot move the payout address, cannot raise its own price
+        ceiling, and cannot grant itself the roles to do either.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Proof</dt>
+        <dd>
+          Three separate reverts on live Sepolia:
+          <code>EACUnauthorizedAccountRoles</code> on <code>setAddr</code>, the
+          same on <code>setText("turnstile:price-ceiling")</code>, and
+          <code>EACCannotGrantRoles</code> on all three self-grant routes.
+        </dd>
+        <dt>Test</dt>
+        <dd>
+          <code>testFork_hotKeyCannotChangeThePayoutOnChain</code> in
+          <a href="../contracts/test/fork/SepoliaOffer.t.sol"><code>contracts/test/fork/SepoliaOffer.t.sol</code></a>
+          &mdash; a fork test against live Sepolia, not a mock.
+        </dd>
+        <dt>And still works</dt>
+        <dd>
+          <code>testFork_hotKeyCanStillReprice</code> and
+          <code>testFork_hotKeyIsStillScopedToTwoRecords</code>, so the
+          restriction is scoped rather than a dead key.
+        </dd>
+        <dt>Where</dt>
+        <dd>
+          <a href="../docs/ens-offer-records.md"><code>docs/ens-offer-records.md</code></a>
+          &rarr; <em>Live proof: what the hot key can and cannot do</em>
+        </dd>
+      </dl>
+    </div>
+
+    <p>
+      A stolen hot key costs this seller a wrong price for as long as it takes
+      the operator key to rotate it. It cannot cost them a single payment. That
+      is a much smaller claim than &ldquo;our keys are secure&rdquo;, and unlike
+      that claim it is one you can falsify in an afternoon.
+    </p>
+
+    <h2>The same shape on the buyer&rsquo;s side</h2>
+
+    <p>
+      The seller half is enforced by a resolver; the buyer half is enforced by a
+      Privy policy and by the absence of gas. The buyer&rsquo;s organisation
+      wallet &mdash; a Privy server wallet at
+      <span class="addr">0x3De96375140717193f52c220Df5Ec460971cbE84</span>
+      &mdash; funds the agent by calling
+      <code>depositFor(amount, agent)</code>: the org pays the deposit&rsquo;s
+      gas, and the resulting Gateway balance belongs to the agent.
+    </p>
+
+    <p>
+      Two quorums own the two halves, and the difference between them
+      <em>is</em> the control. A 1-of-2 operations quorum owns the wallet, so
+      funding the agent takes one signature. A separate 2-of-2 board quorum owns
+      the mandate policy, so raising the cap takes two &mdash; and Privy returns
+      <code>401</code> when only one is offered.<span class="sidenote-ref"></span>
+      <span class="sidenote">
+        Verified live rather than described: <code>npm run privy:mandate</code>
+        performs the refusal and then the two-signature success. The transcript
+        and two on-chain transactions are in
+        <a href="../docs/privy-mandate.md"><code>docs/privy-mandate.md</code></a>.
+      </span>
+      The agent itself, meanwhile, holds no gas at all, so it cannot deposit,
+      withdraw or widen its allowance even if it wanted to &mdash; each of those
+      is a transaction, and it cannot submit one.
+    </p>
+
+    <h2>What we are not claiming</h2>
+
+    <p>
+      This is the first of the two places this project is weakest, and it is here
+      at full size rather than in a footnote.
+    </p>
+
+    <div class="not-true">
+      <p class="claim-label">Not claimed</p>
+      <p class="claim-statement">
+        Custody is not cold. The operator key is the same address as the
+        deployer, and its private key sits in <code>.env</code> on a working
+        laptop.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Why</dt>
+        <dd>
+          <a href="../contracts/addresses.turnstile.sepolia.json"><code>addresses.turnstile.sepolia.json</code></a>
+          records <code>coldKey</code> and <code>deployer</code> as the same
+          address, <span class="addr">0x0Adca6e14bA956201D221feC767e4f24194bf5F2</span>,
+          and that key is <code>DEPLOYER_PRIVATE_KEY</code>, loaded by every
+          deploy script. It is not offline in any sense.
+        </dd>
+        <dt>Consequence</dt>
+        <dd>
+          What the tiers separate is <strong>authority</strong>, not custody. Do
+          not read the word &ldquo;cold&rdquo; in the table above as cold
+          storage, hardware, or an air gap. Compromise that laptop and you have
+          the operator key.
+        </dd>
+        <dt>Scope</dt>
+        <dd>
+          The authority split is unaffected and is the claim worth making: a
+          separate key holds the only roles that can move the payout address, and
+          the chain enforces it &mdash; that is the revert above, and it is real.
+          Making custody genuinely cold means generating that key on an offline
+          machine, keeping it out of <code>.env</code>, and signing the rare
+          cold-tier transactions air-gapped. That is not done.
+        </dd>
+        <dt>History</dt>
+        <dd>
+          This row previously named a Ledger device, and then claimed
+          &ldquo;held offline&rdquo;. Both were withdrawn, dated, in
+          <a href="../CORRECTIONS.md"><code>CORRECTIONS.md</code></a>. We got
+          this wrong twice; saying so is cheaper than being found out once.
+        </dd>
+      </dl>
+    </div>
+
+    <p class="note">
+      One more honest edge, smaller than the above. The ceiling binds by
+      convention at read time, not mechanically at write time: the resolver
+      enforces <em>who may write which key</em>, and comparing
+      <code>turnstile:price</code> against
+      <code>turnstile:price-ceiling</code> is the buyer&rsquo;s agent&rsquo;s
+      job &mdash; two <code>text()</code> calls. Making it bind on chain means
+      routing the hot key&rsquo;s writes through a gatekeeper contract that holds
+      the grant and rejects <code>price &gt; ceiling</code>. That is a clean
+      follow-up and deliberately not done here, because it changes who holds the
+      authorization.
+    </p>
+
+  </main>
+
+  <nav class="pager">
+    <a class="pager-prev" href="02-the-offer-record.html">
+      <span class="pager-dir">Previous</span>
+      <span class="pager-title">02 &middot; The offer record</span>
+    </a>
+    <a class="pager-up" href="index.html">
+      <span class="pager-dir">Up</span>
+      <span class="pager-title">Walkthrough</span>
+    </a>
+    <a class="pager-next" href="04-two-rails.html">
+      <span class="pager-dir">Next</span>
+      <span class="pager-title">04 &middot; Two rails</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

@@ -628,6 +628,16 @@ pre code,
   padding-right: 0;
 }
 
+/* A column of counts. Right-aligned and tabular, so the reader compares digit
+   places rather than reading five separate numbers — the whole point of the
+   1 / 0 / 0 / 97 / 99 table on page 01 is the shape of the column. Put it on
+   both the th and the td, or the header floats away from its own figures. */
+.tbl .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* ==========================================================================
    Steps — the request path, or any ordered flow
    ========================================================================== */
