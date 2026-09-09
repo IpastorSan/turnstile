@@ -7,7 +7,7 @@ own and can be evaluated without the other two. Written for MOV-226.
 |---|---|---|---|
 | 1 | A Messari-conformant AMM subgraph over Uniswap v3 | [`graph/subgraph/`](../graph/subgraph) | Yes — it is a deployed endpoint anyone can query |
 | 2 | `uniswap-mcp`, an MCP server + SKILL over the Uniswap stack | [`uniswap-mcp/`](../uniswap-mcp) | Yes — self-contained directory, no repo imports |
-| 3 | A fix to an official Uniswap repo | `Uniswap/uniswap-ai` | It *is* upstream |
+| 3 | A defect we reported in an official Uniswap repo, **fixed and merged by Uniswap** | [`uniswap-ai#148`](https://github.com/Uniswap/uniswap-ai/issues/148) → [`#149`](https://github.com/Uniswap/uniswap-ai/pull/149) | It *is* upstream, and it is shipped |
 
 Rough edges found along the way are in [`FEEDBACK.md`](../FEEDBACK.md), which is
 Uniswap-only by convention; Graph observations live in
@@ -102,11 +102,45 @@ is the exception with both a different factory and a different QuoterV2.
 
 ---
 
-## 3. Upstream PR — `Uniswap/uniswap-ai`
+## 3. Upstream — `Uniswap/uniswap-ai`, reported by us and **merged**
 
-**Branch:** `IpastorSan:fix/quoter-static-call-ethers-v6`
-**Title:** `fix(uniswap-trading): quote through eth_call, not ethers v5 callStatic`
-**Scope:** prose only, 5 files, +42 / −10
+**Update (2026-09-09, MOV-271): this shipped.** This section previously
+described a PR we intended to open from `IpastorSan:fix/quoter-static-call-ethers-v6`.
+What actually happened is better, and the record should say so precisely rather
+than flatteringly:
+
+| | |
+|---|---|
+| **Our report** | [`Uniswap/uniswap-ai#148`](https://github.com/Uniswap/uniswap-ai/issues/148) — opened by `IpastorSan`, **closed 2026-09-08T14:27:58Z** |
+| **Their fix** | [`Uniswap/uniswap-ai#149`](https://github.com/Uniswap/uniswap-ai/pull/149) — **MERGED 2026-09-08T14:27:57Z**, 7 files, +51 / −14 |
+| **Authored by** | `wkoutre`, a Uniswap maintainer — **not us** |
+| **Landed in** | the skill, its docs page, the plugin `CLAUDE.md`, **both eval rubrics**, and a plugin version bump |
+
+**We did not write the merged code, and saying otherwise would be the easiest
+overclaim available here.** We filed the analysis; a maintainer verified it,
+wrote the change on their side so the version bump and docs sync could land in
+one commit, and [linked back to our issue](https://github.com/Uniswap/uniswap-ai/issues/148#issuecomment-5586501199):
+
+> "Thanks for this — it's correct, and the writeup made it trivial to confirm.
+> Verified on our side: `callStatic` shows up in six places … I'm writing it up
+> on our side rather than cherry-picking, so the plugin version bump and the
+> docs sync land in the same commit — **but the shape is yours and the PR will
+> link back here.** … Appreciate you taking the time to verify it live against
+> mainnet instead of just flagging the name."
+
+Two things that came out of their verification and not ours, worth recording
+because they make the finding larger than we filed it:
+
+1. **Six occurrences, not the five we found** — the count included both eval
+   rubrics, so the grader was rewarding code that throws.
+2. **The origin is Uniswap's own documentation.** Their [v4 quoting
+   guide](https://developers.uniswap.org/docs/sdks/v4/guides/swapping/quoting)
+   still uses `callStatic`, and the skill inherited it from there. The skill was
+   not wrong on its own; it was faithfully copying a doc that was.
+
+The analysis as filed follows.
+
+**Scope as filed:** prose only, 5 files, +42 / −10
 
 [`Uniswap/uniswap-ai`](https://github.com/Uniswap/uniswap-ai) is Uniswap's
 official "AI tools for building on Uniswap — skills, plugins, and agents"
