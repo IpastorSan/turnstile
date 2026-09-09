@@ -93,9 +93,11 @@ function stubRpc(chain: Chain): typeof globalThis.fetch {
       case 'ownerOf':
         if (chain.owner === undefined) return reply('0x');
         return reply(encodeAddress(chain.owner));
-      default:
-        throw new Error(`unstubbed call ${call.functionName}`);
     }
+    // Unreachable while ABI matches the five functions above — `decodeFunctionData`
+    // throws on anything else — but a silent fallthrough here would be a stub
+    // answering `undefined` to a call nobody noticed was added.
+    throw new Error('unstubbed contract call');
   }) as typeof globalThis.fetch;
 }
 
