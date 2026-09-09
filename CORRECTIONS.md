@@ -114,3 +114,36 @@ because each is a transaction and it has no gas for one.
 
 **What is unchanged:** every other row, and the invariant below the table. Only
 the mechanism named in the Hot row was wrong.
+
+---
+
+**Correction (2026-09-09, MOV-262):** `web/lib/spend.ts` claimed that "each
+failure is contained" and that a rail which could not be read reports an error
+rather than a zero, so that "we could not read Arc" and "the agent has never paid
+on Arc" stay distinguishable. **That was true of the Arc rail and not of the
+Hedera one.** `readReceipts` answers an unreachable mirror node with an *empty
+result and a note* rather than a throw — deliberately, and its own tests pin that
+— so an outage arrived at `Promise.allSettled` as a **fulfilled** read of zero
+receipts. The /mandate page would have rendered "0 payments, $0.00 settled on
+Hedera" with no error shown, which is the exact collapse the module exists to
+prevent, in the one place a judge reads a settled-volume number.
+
+Found by writing the test the claim implied, which is the only reason it was
+found at all: the branch fires only when the mirror node is down, and it never
+was during a demo.
+
+**Fixed in the same branch.** `ReceiptsResult` gained `unreadable: string | null`
+— set on all three failed-read paths (no topic configured, a non-2xx answer, an
+unreachable node) and `null` on a real read — and `readSpend` now treats a
+fulfilled-but-unreadable Hedera read as a failure, reporting `usd: null` with the
+reason. It also no longer reports `topicIsOpen` from a failed read, since one
+learns nothing about the submit key and "anyone can append" is not a property to
+infer from an outage.
+
+**What is unchanged:** the Arc rail, which always behaved as documented because
+its Gateway client throws; the containment design itself, which was right; and
+`readReceipts`' choice to answer a page-rendering caller with an empty result
+rather than a throw. Only the Hedera rail's *detection* of that result was
+missing. `web/lib/spend.test.ts` now pins the property in both directions, with
+a genuinely-empty topic as the negative control so `null` and `0` stay different
+answers.
