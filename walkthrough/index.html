@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turnstile — walkthrough for judges</title>
+<meta name="description" content="Six pages from the problem to a running system. Every claim carries the transaction that proves it, or says plainly that it does not.">
+<link rel="stylesheet" href="assets/walkthrough.css">
+</head>
+<body>
+<div class="sheet">
+
+  <header class="masthead">
+    <a class="masthead-mark" href="index.html">Turnstile</a>
+    <span class="masthead-where">Walkthrough &middot; ETHOnline 2026</span>
+    <span class="masthead-count">Contents</span>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow">Start here</p>
+    <h1>A paid lane for onchain data agents</h1>
+    <p class="lede">
+      Sellers publish a priced service at an ENSv2 subname where the resolver
+      record <em>is</em> the offer. Buyers issue a mandate their agent spends
+      inside but can never widen.
+    </p>
+  </div>
+
+  <main class="prose">
+
+    <p>
+      <span class="newthought">This walkthrough is for a judge</span> with
+      fifteen minutes and no intention of installing anything.<span class="sidenote-ref"></span>
+      <span class="sidenote">
+        Thirty minutes if you do want to run it. Page six is the whole of that:
+        one <code>docker compose up</code> and three commands.
+      </span>
+      Six pages, one idea each, in the order the system actually works. Every
+      one of them ends with either a transaction you can open in a block
+      explorer or a sentence saying we did not prove this.
+    </p>
+
+    <p>
+      Read it in order and you will have gone from &ldquo;what problem is
+      this&rdquo; to a settled payment on two chains without leaving the
+      browser. Read page three and page five only, and you will have found both
+      of the places this project is weakest, because we put them on the page
+      rather than making you look.
+    </p>
+
+    <div class="claim">
+      <p class="claim-label">Claim</p>
+      <p class="claim-statement">
+        Every number in this walkthrough is linked to a transaction, or marked
+        as unproven in the same typeface as the wins.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Proof</dt>
+        <dd>
+          One row per claim, one link per row, in
+          <a href="../docs/EVIDENCE.md"><code>docs/EVIDENCE.md</code></a> &mdash;
+          including a <em>What is not live</em> section and two rows that tell
+          you not to cite something as attested.
+        </dd>
+        <dt>Checked</dt>
+        <dd>Every link verified 2026-09-08.</dd>
+        <dt>Rerun it</dt>
+        <dd>
+          <code>npm run verify</code> &mdash; 405 tests: 315 node, 90 Forge, 13
+          of them forked against live Sepolia.
+        </dd>
+      </dl>
+    </div>
+
+    <div class="not-true">
+      <p class="claim-label">Not claimed</p>
+      <p class="claim-statement">
+        The hosted seller endpoint is not live. Nothing on the open internet
+        will answer a paid request today.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Why</dt>
+        <dd>
+          The ENS record <code>agent-endpoint[mcp]</code> names
+          <span class="addr">turnstile.moveseventyeight.com</span>, which has no
+          DNS record yet. The deploy is scheduled for 14 September 2026.
+        </dd>
+        <dt>Consequence</dt>
+        <dd>
+          A judge reading only the ENS record finds nothing to pay. The service
+          is real and runs from the repo &mdash; page six runs it in one command.
+        </dd>
+        <dt>Scope</dt>
+        <dd>
+          This is a deployment gap, not a capability gap. The settlements linked
+          from page four are real transactions on public testnets and are
+          unaffected.
+        </dd>
+      </dl>
+    </div>
+
+    <h2>The six pages</h2>
+
+    <ol class="toc">
+      <li>
+        <span class="toc-num">01</span>
+        <a href="01-the-problem.html">The problem</a>
+        <p class="toc-sum">
+          An agent selling onchain analysis cannot be discovered, cannot state a
+          price you can read before calling it, and cannot sell an edge without
+          publishing the method. A buyer cannot let an agent spend without
+          handing it a key.
+        </p>
+        <p class="toc-proof"><b>Proves</b> 197 real ERC-8004 registrations read; exactly one publishes a readable price</p>
+      </li>
+      <li>
+        <span class="toc-num">02</span>
+        <a href="02-the-offer-record.html">The offer record</a>
+        <p class="toc-sum">
+          The ENSv2 subname is the offer. Price, rails and endpoint are resolved
+          from Sepolia on every request &mdash; no cache, no hard-coded values,
+          and standard ENSIP-25/26 keys rather than a schema we invented.
+        </p>
+        <p class="toc-proof"><b>Proves</b> a resolver call you can rerun with <code>cast</code></p>
+      </li>
+      <li>
+        <span class="toc-num">03</span>
+        <a href="03-three-keys.html">Three keys</a>
+        <p class="toc-sum">
+          Cold, warm and hot, and what each one may authorise. The invariant the
+          whole design defends: the key that spends can never raise its own
+          limit.
+        </p>
+        <p class="toc-proof">
+          <b>Proves</b> the hot key&rsquo;s <code>setAddr</code> reverting on live Sepolia
+          &middot; <span class="absent">admits</span> custody is not cold
+        </p>
+      </li>
+      <li>
+        <span class="toc-num">04</span>
+        <a href="04-two-rails.html">Two rails</a>
+        <p class="toc-sum">
+          The same query paid on Hedera and on Arc, answered identically both
+          times. Sub-cent payments batch into one transaction, and the spending
+          agent never submits one.
+        </p>
+        <p class="toc-proof"><b>Proves</b> settled HBAR and USDC, and an agent nonce still at 0</p>
+      </li>
+      <li>
+        <span class="toc-num">05</span>
+        <a href="05-keep-the-method.html">Keep the method</a>
+        <p class="toc-sum">
+          The analyst runs inside an enclave, so a buyer gets a verdict they can
+          verify against a hash and cannot reproduce. Sell the answer, keep the
+          method.
+        </p>
+        <p class="toc-proof">
+          <b>Proves</b> a byte-identical verdict settled on Sepolia
+          &middot; <span class="absent">admits</span> it is not DON-attested
+        </p>
+      </li>
+      <li>
+        <span class="toc-num">06</span>
+        <a href="06-run-it.html">Run it</a>
+        <p class="toc-sum">
+          One <code>docker compose up</code>, three commands, and where each
+          piece of the code lives. The shortest of them returns
+          <code>402 Payment Required</code>, which is the whole product in one
+          line.
+        </p>
+        <p class="toc-proof"><b>Proves</b> the thing on your own machine, in about fifteen minutes</p>
+      </li>
+    </ol>
+
+    <h2>Where to check us</h2>
+
+    <p>
+      Nothing here asks to be taken on trust. These are the ones to open first,
+      and the state of each one today is stated rather than implied.
+    </p>
+
+    <table class="tbl resources">
+      <thead>
+        <tr><th>Resource</th><th>What it is</th><th>State</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a href="../docs/EVIDENCE.md">docs/EVIDENCE.md</a></td>
+          <td>Every claim, one link each, including what is <em>not</em> live</td>
+          <td class="state">Links checked 2026-09-08</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/IpastorSan/turnstile">github.com/IpastorSan/turnstile</a></td>
+          <td>The repo. MIT. Built from scratch at this event, and the history shows it</td>
+          <td class="state">Public at submission</td>
+        </tr>
+        <tr>
+          <td><a href="https://turnstile.moveseventyeight.com">turnstile.moveseventyeight.com</a></td>
+          <td>The hosted app and the x402 seller service the ENS record points at</td>
+          <td class="state state-absent">Not resolving yet &mdash; deploy 14 Sep</td>
+        </tr>
+        <tr>
+          <td><a href="../CORRECTIONS.md">CORRECTIONS.md</a></td>
+          <td>Claims that turned out to be wrong, what replaced them, and why</td>
+          <td class="state">Nothing deleted from the record</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="note">
+      Reading this as a PDF? It was designed for it: margin notes stay in the
+      margin, every external link prints its destination, and no block depends
+      on background graphics being switched on.
+    </p>
+
+  </main>
+
+  <nav class="pager">
+    <span class="pager-prev pager-empty">
+      <span class="pager-dir">Previous</span>
+      <span class="pager-title">&mdash;</span>
+    </span>
+    <a class="pager-next" href="01-the-problem.html">
+      <span class="pager-dir">Next</span>
+      <span class="pager-title">01 &middot; The problem</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>

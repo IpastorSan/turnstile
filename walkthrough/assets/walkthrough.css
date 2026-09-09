@@ -205,6 +205,9 @@ h1 {
   letter-spacing: -0.012em;
   margin: 3.2rem 0 0.2rem;
   padding-top: 0.8rem;
+  /* The rule is a section divider, so it spans the sheet rather than stopping
+     at the measure — otherwise it stops short of every full-width table. */
+  max-width: none;
   border-top: 1px solid var(--paper-edge);
 }
 
@@ -327,12 +330,16 @@ code,
   border: 1px solid var(--paper-edge);
   border-radius: 2px;
   padding: 0.06em 0.3em;
+  /* Keep the box drawn on both halves when an identifier wraps a line. */
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
-/* Hashes and addresses: never let one blow out the measure. */
+/* Hashes and addresses: never let one blow out the measure. Anywhere, not
+   break-all — break-all splits a domain that would have fitted on the next
+   line, which is worse to read than a short line. */
 .addr {
   overflow-wrap: anywhere;
-  word-break: break-all;
 }
 
 a code {
@@ -575,12 +582,27 @@ pre code,
    Tables
    ========================================================================== */
 
+/* Tables get the measure AND the margin column. Three columns squeezed into
+   66ch wrap every cell to two words, which is the one place where holding the
+   measure costs more than it buys. Add .tbl-measure to opt back in. */
 .tbl {
   width: 100%;
+  max-width: none;
   border-collapse: collapse;
   margin: 1.7rem 0 0;
   font-size: 0.9rem;
   line-height: 1.4;
+}
+
+.tbl-measure {
+  max-width: var(--measure);
+}
+
+/* A row split across two printed pages is unreadable; a table split between
+   rows is fine, and thead repeats itself. */
+.tbl tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .tbl th {
@@ -793,9 +815,14 @@ pre code,
 
 /* ==========================================================================
    Narrow screens — the margin column has nowhere to go
-   ========================================================================== */
+   ==========================================================================
 
-@media (max-width: 1000px) {
+   `screen and` is load-bearing. A4 at 96dpi is 794px, so a bare max-width
+   query also matches the print context and reflows every margin note inline
+   on paper — which is exactly the thing the print block below exists to
+   prevent. Verified against Chromium's --print-to-pdf on 2026-09-09.        */
+
+@media screen and (max-width: 1000px) {
   :root {
     --measure: 100%;
   }
@@ -827,7 +854,7 @@ pre code,
   }
 }
 
-@media (max-width: 620px) {
+@media screen and (max-width: 620px) {
   html {
     font-size: 16px;
   }
