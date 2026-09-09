@@ -123,3 +123,45 @@ export function querySellers(query: FindSellersQuery): DiscoveryResponse {
 
 export type { FindSellersQuery, FindSellersResult };
 export type { SellerResult, SellerPrice, PriceSource } from '../../seller/service/discovery.ts';
+
+/**
+ * Open the store for WRITING, which only the World verification route does.
+ *
+ * Deliberately refuses the committed snapshot. `web/data/discovery.db` ships
+ * inside the image: a write there lands in an ephemeral container layer, is
+ * lost on the next restart, and makes the running file diverge from the one in
+ * git while looking like it worked. On the read-only filesystem most server
+ * bundles get, it fails outright instead.
+ *
+ * So a deployment that wants to record verifications must mount a writable
+ * working store at graph/sink/data/ — deploy/compose.yaml does. Anything else
+ * gets a refusal that says which, rather than a silent success that loses data.
+ */
+export function openDiscoveryStore(
+  options: { readOnly?: boolean } = {},
+): { ok: true; db: DatabaseSync; path: string; close: () => void } | StoreUnavailable {
+  const readOnly = options.readOnly ?? true;
+
+  if (!readOnly) {
+    if (!existsSync(WORKING_STORE)) {
+      return {
+        ok: false,
+        reason:
+          'No writable discovery store. Verifications are durable state and must not be written into the committed snapshot, which is replaced on every deploy. Mount a working store at graph/sink/data/discovery.db.',
+      };
+    }
+    const db = new DatabaseSync(WORKING_STORE);
+    return { ok: true, db, path: WORKING_STORE, close: () => db.close() };
+  }
+
+  const store = resolveStore();
+  if (!store) {
+    return {
+      ok: false,
+      reason:
+        'No discovery store is present. Run graph/sink/ to build one, or npm run snapshot to commit a dated copy.',
+    };
+  }
+  const db = new DatabaseSync(store.path, { readOnly: true });
+  return { ok: true, db, path: store.path, close: () => db.close() };
+}
