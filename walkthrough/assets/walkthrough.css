@@ -937,6 +937,20 @@ pre code,
     background: transparent;
   }
 
+  /* On screen a wide terminal block scrolls sideways. Paper has no sideways,
+     so `white-space: pre` silently CLIPS — and the lines most likely to be too
+     wide are exactly the ones worth printing: a 66-character namehash, a
+     keccak256, the 78-digit role bitmask in the setAddr revert. A judge who
+     cannot copy the value cannot rerun the check, which is the whole premise.
+     So wrap on paper rather than truncate. The `$` prompts still mark where
+     each command starts, so a wrapped line does not read as a new one. */
+  pre,
+  .terminal {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: visible;
+  }
+
   /* Print the destination of a prose link, because a PDF cannot be clicked in
      every reader and every one of these is a thing to go and check. */
   .prose a[href^="http"]::after,
