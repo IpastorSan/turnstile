@@ -311,6 +311,19 @@ runs as unreachable document origins come back.)*
   The **warm** tier *is* Privy: `scripts/arc-setup.ts` calls `depositFor()` from a
   Privy server wallet owned by a key quorum and capped by a Privy policy, and the
   two transactions it signed are linked in `docs/privy-mandate.md`. MOV-228 did
-  replace the key rather than the mechanism, exactly as predicted. What is still
+  replace the key rather than the mechanism, exactly as predicted. ~~What is still
   true from MOV-225's note: only the **cold** tier is deployed under a
-  device-held key, and Panel A's *positions* were always real.
+  device-held key,~~ and Panel A's *positions* were always real.
+
+  **Correction (2026-09-09, MOV-266): the struck clause is wrong, and it is the
+  last surviving instance of a claim this file retracted twice above.** No tier
+  is deployed under a device-held key, because **there is no device** — the
+  Ledger track was dropped (MOV-000) and the operator key is the deployer key in
+  `.env` (MOV-005). Both corrections are in section A; this sentence sat below
+  them and outlived them, so a reader who scrolled to the end met the withdrawn
+  claim last. Found while building `walkthrough/03-three-keys.html`, which
+  reads this file for the custody wording.
+
+  **What is still true:** Panel A's *positions* were always real, and the
+  authority split they draw is enforced on chain by the resolver's role checks —
+  MOV-218's `setAddr` revert. Only the appeal to a device is gone.

@@ -82,7 +82,7 @@ npm run dev        # http://localhost:3210
 |---|---|
 | `/` | Market. All 197 real ERC-8004 registrations across Base, mainnet and Sepolia, filterable by capability, chain, price ceiling and x402 support. |
 | `/seller/[name]` | One seller's ENSv2 records, read from Sepolia on every request. Nothing cached, nothing hard-coded. |
-| `/mandate` | Labelled placeholder. The mandate itself is **live** and exercised from the CLI (`npm run privy:mandate`); it is the *page* that is not built. See [`docs/privy-mandate.md`](./docs/privy-mandate.md). |
+| `/mandate` | **Live.** Reads the org wallet, both key quorums, the mandate policy and the allowlist from Privy on request, plus a per-rail ledger of what the agent has actually spent. `/mandate/new` issues your own — operator signing keys are generated in your browser and never sent. See [`docs/privy-mandate.md`](./docs/privy-mandate.md). **Correction (2026-09-09, MOV-266):** this row read "Labelled placeholder … it is the *page* that is not built". That was true until 2026-09-08 and is not now. |
 | `/onboard` | Labelled placeholder, genuinely blocked: World Sandbox approval has not arrived, so there is no credential to verify against. Deliberately not faked. |
 | `GET /api/sellers` | The discovery query over HTTP — the same engine the MCP tool calls. |
 | `GET /api/offer/:name` | One seller's offer, read live from chain. |
