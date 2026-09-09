@@ -40,7 +40,8 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 | 14 | Append to **`WORLD-FEEDBACK.md`**: docs + integration flow, Developer Portal navigation/search/discovery/debugging, Sandbox states, proof flows, test users, errors, edge cases, what was confusing/missing/broken |
 | 15 | Capture **every on-chain tx the first time it works** — HashScan links, tx hashes, terminal output |
 | 16 | **Check `docs/architecture.png` by eye whenever a tier, key or mechanism changes.** A raster is a claim surface no `grep` can audit, and it has now outlived a prose correction twice (MOV-000, Paymaster wording, one day late; MOV-005, custody wording, same day). Edit `docs/architecture.svg`, then `rsvg-convert -w 1200 docs/architecture.svg -o docs/architecture.png` |
-| 17 | Repo is **private during the build**. Flipping it to public is the last step before submitting — see [Before submitting](#before-submitting--blocks-all-12-submissions) |
+| 17 | **`docs/walkthrough.webm`/`.mp4` and `docs/screenshots/*` are supplementary, and satisfy NO sponsor video gate.** Regenerate with `npm run video` / `npm run capture` after any UI change — a screenshot is a claim, and this repo has been caught twice by a raster outliving a correction. Hedera's **≤5 min with the paid request on camera** and The Graph's **2–4 min** are performances and are still to record |
+| 18 | Repo is **private during the build**. Flipping it to public is the last step before submitting — see [Before submitting](#before-submitting--blocks-all-12-submissions) |
 
 ### Per-submission
 
