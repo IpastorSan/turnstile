@@ -70,7 +70,7 @@ npm run demo        # discover a seller, read its price from Sepolia, pay on bot
 | The encoding, the contract and the evidence commitment work against real chain | A verdict settled on Sepolia: CAUTION, confidence 7500bp, evidence hash `0x60caa384…02c2` over 9218 bytes, block 11654749 | [Etherscan](https://sepolia.etherscan.io/tx/0x8ee33bb38563ed88836eaf6e2b7011c1350ef64390f7307691da24bd45e909b8) |
 | It is **byte-identical** to what the enclave produced | Same evidence hash, rating, confidence and masks as the simulator. The determinism claim is exercised, not asserted | [`addresses.verdict-rehearsal.sepolia.json`](../contracts/addresses.verdict-rehearsal.sepolia.json) |
 | **That settled verdict is NOT DON-attested.** Do not cite it as such | Its forwarder is the seller's own key, so we delivered it. `cre workflow deploy` needs deployment access this org does not have (verified 2026-09-07) | this row |
-| The production consumer exists and **would reject** that write | `0xfE95CD0f…C5F2`, gated on the real CRE Forwarder `0xF8344CFd…4482`. Nothing has settled into it | [Etherscan](https://sepolia.etherscan.io/address/0xfE95CD0f710DDC5ceED0e93c4e25412Dc3d8eEeA) |
+| The production consumer exists and **would reject** that write | `0xfE95CD0f…eEeA`, gated on the real CRE Forwarder `0xF8344CFd…4482`. Nothing has settled into it | [Etherscan](https://sepolia.etherscan.io/address/0xfE95CD0f710DDC5ceED0e93c4e25412Dc3d8eEeA) |
 
 ## Privy: the warm tier
 
@@ -89,7 +89,37 @@ Stated plainly, because a demo surface deserves the same honesty as a retracted 
 | The hosted seller endpoint | `agent-endpoint[mcp]` names an address with no DNS record. The service is real and runs from the repo; the deploy is scheduled for Sept 14 | A judge reading only the ENS record finds nothing to pay. Run it locally with `npm run serve` |
 | A DON-attested verdict | `cre workflow deploy` is gated on access we do not have | The enclave and the settlement both work; the link between them is signed by us, not the DON |
 | World Selfie Check | Sandbox access, the Selfie Check Beta flag and the Sandbox mobile app are all pending approvals | `/onboard` is a labelled placeholder. `world_verification` is empty, so every agent reports `unknown`, never `unverified` |
-| The `/mandate` web page | The mandate itself is live and runs from the CLI | Use `npm run privy:mandate`, not the browser |
+
+**Correction (2026-09-09, MOV-266): two rows above have been edited, and the
+reason for each is below.** Both were found while building `walkthrough/`, which
+reads this file as its source of truth and could not restate either.
+
+1. **The `/mandate` web page row is deleted, because it is no longer true.** It
+   said "the mandate itself is live and runs from the CLI … use
+   `npm run privy:mandate`, not the browser". `/mandate` shipped on 2026-09-08
+   and reads live from Privy: the org wallet, both quorums with their differing
+   thresholds, the policy, the allowlist, and a per-rail ledger of what the
+   agent actually spent. `/mandate/new` issues one, generating the operators'
+   signing keys in the browser. `docs/screenshots/mandate.png` is that page.
+   Everything else in this section is unchanged and still not live.
+
+2. **The production CRE consumer was written `0xfE95CD0f…C5F2`. The suffix was
+   wrong** — it is `0xfE95CD0f710DDC5ceED0e93c4e25412Dc3d8eEeA`, so the
+   abbreviation is `0xfE95CD0f…eEeA`. `…C5F2` is the *rehearsal* consumer's
+   suffix (`0xEE72d3d0E4b090eBB8Db6abc26547bcd1fc9C5F2`), copied across. The
+   link in that row always pointed at the right address, and the claim it makes
+   is unchanged: nothing has settled into the production consumer, and it would
+   reject the rehearsal write.
+
+**Addition (2026-09-09, MOV-266): the settlement counts above are a pinned
+subset, not a total.** The Arc rows say "eleven settled payments across two
+transactions", which is exactly right for 2026-09-07 and for the two batch
+transactions they link — do not change them. As of **2026-09-09** the live
+`/mandate` page reads **25 settled payments totalling $1.0550** across both
+rails: 12 on `hedera-x402` ($0.840000) and 13 on `arc-usdc` ($0.215000), read
+from the public mirror node and Circle Gateway's transfers API rather than from
+any store of ours. The count grows every time the demo runs, which is why the
+rows above pin transactions instead of a total.
 
 ## The Arc payout address reads 0 USDC, and always will
 
