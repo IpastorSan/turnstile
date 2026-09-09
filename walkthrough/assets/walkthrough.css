@@ -1,0 +1,931 @@
+/* Turnstile — judge walkthrough.
+ *
+ * One stylesheet, seven pages, no build step, no CDN, no JavaScript. A judge
+ * opens index.html off a USB stick on a plane and it works, and it prints to a
+ * PDF that is still worth reading.
+ *
+ * ---------------------------------------------------------------------------
+ * Relationship to the product
+ * ---------------------------------------------------------------------------
+ * web/app/globals.css is the same palette seen from the other side. The app is
+ * a dark enamel station wall; this is the printed notice. Every colour below is
+ * either taken verbatim from globals.css or is that palette read on paper, and
+ * each one names its source. Nothing new is invented except two darkenings
+ * needed to put brass and vermilion on cream at readable contrast.
+ *
+ * ---------------------------------------------------------------------------
+ * Components (MOV-266 consumes these)
+ * ---------------------------------------------------------------------------
+ *   Shell        .sheet  .masthead  .page-head  .prose  .pager
+ *   Evidence     .claim  .not-true      <- the pair; read the note above them
+ *   Margin       .sidenote + .sidenote-ref (numbered)  .marginnote (unnumbered)
+ *   Figures      .fig  .fig-wide  .fig-margin  + <figcaption>, .fig-date
+ *   Identifiers  <code>  .addr  .terminal  .terminal-cap
+ *   Structure    .tbl  .steps  .newthought  .lede  .eyebrow  .note
+ *   Index only   .toc  .toc-num  .toc-sum  .toc-proof  .resources
+ *
+ * ---------------------------------------------------------------------------
+ * Type
+ * ---------------------------------------------------------------------------
+ * Offline means no webfonts. Each stack names the app's face first — a judge
+ * who has Bricolage or IBM Plex Mono installed sees the product's own type, and
+ * everyone else gets a system face chosen to sit in the same place. The body is
+ * a serif because this is a document, not a screen.
+ */
+
+:root {
+  /* Paper. --chalk (#e9e5d8) lifted one step for a lit screen, and --chalk
+     proper for anything that needs to sit back from it. */
+  --paper:       #f6f3ea;
+  --paper-sunk:  #ece8da;
+  --paper-edge:  #d9d3c0;
+
+  /* Ink. globals.css --enamel-900 / -700 / -500, unchanged. On cream they read
+     as near-black, deep green and a mid green, which is the same family the app
+     uses as backgrounds. */
+  --ink:       #08191a;
+  --ink-mid:   #143b37;
+  --ink-soft:  #2a6a61;
+  --ink-faint: #5f7a74;  /* globals.css --chalk-faint */
+
+  /* Accents. --brass and --vermilion are verbatim and are used for rules and
+     marks. The two -text variants are the only colours here that are not in
+     globals.css: the originals are tuned for a dark ground and fall under 4.5:1
+     on cream, so text takes a darkened form and rules keep the true hue. */
+  --brass:          #d2a857;
+  --brass-deep:     #8a6f33;  /* globals.css --brass-deep */
+  --brass-text:     #6d5622;
+  --vermilion:      #e4593a;
+  --vermilion-text: #9c3218;
+
+  --measure:    66ch;
+  --margin-col: 15.5rem;
+  --gutter:     2.2rem;
+
+  --font-display: "Bricolage Grotesque", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: Charter, "Bitstream Charter", "Sitka Text", "Iowan Old Style", Cambria, "Palatino Linotype", Palatino, Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 17px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--brass);
+  text-underline-offset: 2.5px;
+  text-decoration-thickness: 1px;
+}
+
+a:hover {
+  text-decoration-color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brass-deep);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Shell
+   ========================================================================== */
+
+/* The sheet is the measure plus its margin column. Text stops at the measure;
+   only .fig-wide is allowed across both. */
+.sheet {
+  max-width: calc(var(--measure) + var(--gutter) + var(--margin-col));
+  margin: 0 auto;
+  padding: 0 1.6rem 5rem;
+  counter-reset: sidenote;
+}
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1.4rem 0 0.7rem;
+  border-bottom: 1px solid var(--paper-edge);
+  margin-bottom: 2.6rem;
+}
+
+.masthead a {
+  text-decoration: none;
+}
+
+.masthead-mark {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.masthead-where {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.masthead-count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+}
+
+.page-head {
+  margin-bottom: 2.4rem;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--brass-text);
+  margin: 0 0 0.7rem;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2rem, 5vw, 2.85rem);
+  line-height: 1.04;
+  letter-spacing: -0.022em;
+  margin: 0;
+  max-width: 22ch;
+  text-wrap: balance;
+}
+
+.lede {
+  font-size: 1.16rem;
+  line-height: 1.5;
+  color: var(--ink-mid);
+  margin: 1.1rem 0 0;
+  max-width: 52ch;
+}
+
+/* ==========================================================================
+   Prose
+   ========================================================================== */
+
+.prose > * {
+  max-width: var(--measure);
+}
+
+.prose h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.42rem;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+  margin: 3.2rem 0 0.2rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--paper-edge);
+}
+
+.prose h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.005em;
+  margin: 2.1rem 0 0.1rem;
+}
+
+.prose p {
+  margin: 1.05rem 0 0;
+}
+
+/* Tufte's opener: the first line of a section carries small caps instead of an
+   indent, so a section can start without a heading. */
+.newthought {
+  font-variant-caps: small-caps;
+  font-feature-settings: "smcp" 1;
+  letter-spacing: 0.03em;
+}
+
+.prose ul,
+.prose ol {
+  margin: 1.05rem 0 0;
+  padding-left: 1.3rem;
+}
+
+.prose li {
+  margin-top: 0.4rem;
+}
+
+.prose strong {
+  font-weight: 700;
+}
+
+blockquote,
+.epigraph {
+  margin: 1.6rem 0 0;
+  padding-left: 1.1rem;
+  border-left: 2px solid var(--paper-edge);
+  color: var(--ink-mid);
+  font-style: italic;
+}
+
+/* An aside that is not evidence: context, a caveat, a pointer. Deliberately
+   lighter than .claim and .not-true so it cannot be mistaken for either. */
+.note {
+  margin: 1.6rem 0 0;
+  padding: 0.1rem 0 0.1rem 1.1rem;
+  border-left: 2px solid var(--brass);
+  color: var(--ink-mid);
+  font-size: 0.94rem;
+}
+
+/* ==========================================================================
+   Margin notes
+   ========================================================================== */
+
+/* Two forms. Numbered:
+     <p>Sentence.<span class="sidenote-ref"></span> <span class="sidenote">Note.</span></p>
+   The ref prints the superscript and advances the counter; the sidenote that
+   follows reads the same value, so the pair always agrees.
+   Unnumbered, for a note tied to a figure or a whole paragraph:
+     <span class="marginnote">Note.</span>                                    */
+
+.sidenote,
+.marginnote {
+  float: right;
+  clear: right;
+  width: var(--margin-col);
+  margin-right: calc(-1 * (var(--margin-col) + var(--gutter)));
+  margin-top: 0.35rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  line-height: 1.42;
+  color: var(--ink-mid);
+  position: relative;
+}
+
+.sidenote-ref {
+  counter-increment: sidenote;
+}
+
+.sidenote-ref::after {
+  content: counter(sidenote);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  vertical-align: super;
+  color: var(--brass-text);
+  margin-left: 1px;
+}
+
+.sidenote::before {
+  content: counter(sidenote);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  vertical-align: super;
+  color: var(--brass-text);
+  margin-right: 0.35em;
+}
+
+.sidenote code,
+.marginnote code {
+  font-size: 0.74rem;
+}
+
+/* ==========================================================================
+   Identifiers
+   ========================================================================== */
+
+/* Anything a judge might paste into a terminal or an explorer is monospace, so
+   it is visibly a thing you can copy rather than a thing we wrote. */
+code,
+.addr {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  background: var(--paper-sunk);
+  border: 1px solid var(--paper-edge);
+  border-radius: 2px;
+  padding: 0.06em 0.3em;
+}
+
+/* Hashes and addresses: never let one blow out the measure. */
+.addr {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+a code {
+  background: transparent;
+  border-color: transparent;
+  padding: 0;
+}
+
+pre,
+.terminal {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  background: var(--paper-sunk);
+  border: 1px solid var(--paper-edge);
+  border-left: 3px solid var(--ink-soft);
+  border-radius: 2px;
+  padding: 0.85rem 1rem;
+  margin: 1.5rem 0 0;
+  overflow-x: auto;
+  white-space: pre;
+  tab-size: 2;
+}
+
+pre code,
+.terminal code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* A caption under a terminal block: the command, the date, or what to look at. */
+.terminal-cap {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--ink-faint);
+  margin: 0.5rem 0 0;
+}
+
+/* ==========================================================================
+   .claim and .not-true — the pair this walkthrough is built around
+   ==========================================================================
+
+   Read this before changing either.
+
+   A .claim is a statement plus the transaction that proves it. A .not-true is
+   a statement we are deliberately NOT making, plus why, and what follows from
+   it. The whole point of the pair is that they carry the SAME typographic
+   weight: same box, same padding, same rule thickness, same statement size,
+   same label size. The only difference is hue — brass for what is proven,
+   vermilion for what is not.
+
+   Do not shrink .not-true, grey it out, italicise it, or move it to a
+   footnote. An admission set in small print reads as something we hoped you
+   would miss; set at full weight it reads as something we checked. This
+   project's strongest asset is that it says what it did not prove, and the
+   styling has to agree with that.
+
+   Both are drawn with borders rather than fills, because browsers drop
+   background colours when printing and a judge may be reading a PDF. The tint
+   is a screen bonus; the structure survives without it.
+
+   Markup, identical for both:
+
+     <div class="claim">                     <div class="not-true">
+       <p class="claim-label">Claim</p>        <p class="claim-label">Not claimed</p>
+       <p class="claim-statement">…</p>        <p class="claim-statement">…</p>
+       <dl class="claim-evidence">            <dl class="claim-evidence">
+         <dt>Proof</dt><dd>…</dd>               <dt>Why</dt><dd>…</dd>
+         <dt>Where</dt><dd>…</dd>               <dt>Consequence</dt><dd>…</dd>
+       </dl>                                  </dl>
+     </div>                                  </div>                            */
+
+.claim,
+.not-true {
+  margin: 1.9rem 0 0;
+  padding: 1rem 1.15rem 1.1rem;
+  border: 1px solid var(--paper-edge);
+  border-left-width: 4px;
+  border-radius: 2px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.claim {
+  border-left-color: var(--brass);
+  background: color-mix(in srgb, var(--brass) 7%, var(--paper));
+}
+
+.not-true {
+  border-left-color: var(--vermilion);
+  background: color-mix(in srgb, var(--vermilion) 6%, var(--paper));
+}
+
+/* One label rule for both. Same size, same tracking, same weight. */
+.claim-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  margin: 0 0 0.5rem;
+}
+
+.claim .claim-label {
+  color: var(--brass-text);
+}
+
+.not-true .claim-label {
+  color: var(--vermilion-text);
+}
+
+/* One statement rule for both. */
+.claim-statement {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.12rem;
+  line-height: 1.28;
+  letter-spacing: -0.008em;
+  margin: 0;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.claim-statement code {
+  font-size: 0.82em;
+  font-weight: 500;
+}
+
+.claim-evidence {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 1rem;
+  row-gap: 0.35rem;
+  margin: 0.85rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--paper-edge);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.claim-evidence dt {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-top: 0.28em;
+}
+
+.claim-evidence dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.claim-evidence dd code {
+  background: transparent;
+  border-color: transparent;
+  padding: 0;
+  font-size: 0.84em;
+}
+
+/* A claim block may carry a terminal transcript as its proof. */
+.claim pre,
+.not-true pre,
+.claim .terminal,
+.not-true .terminal {
+  margin-top: 0.85rem;
+  background: color-mix(in srgb, var(--paper-sunk) 60%, transparent);
+}
+
+/* ==========================================================================
+   Figures
+   ========================================================================== */
+
+/* Every figure carries a caption. A screenshot with no caption is a decoration,
+   and this document has no room for decoration. */
+.fig {
+  margin: 2rem 0 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.fig img,
+.fig svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--paper-edge);
+  border-radius: 2px;
+  background: var(--paper-sunk);
+}
+
+.fig figcaption {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--ink-mid);
+  margin-top: 0.55rem;
+  padding-left: 0.7rem;
+  border-left: 2px solid var(--brass);
+  max-width: 58ch;
+}
+
+/* The capture date of anything live. A screenshot of a testnet is a claim about
+   a moment, so it says which moment. */
+.fig-date {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+/* Across the measure and the margin column both — for wide screenshots. */
+.fig-wide {
+  max-width: none;
+  width: calc(var(--measure) + var(--gutter) + var(--margin-col));
+}
+
+/* Entirely in the margin column, caption below, for a small supporting shot. */
+.fig-margin {
+  float: right;
+  clear: right;
+  width: var(--margin-col);
+  max-width: var(--margin-col);
+  margin-right: calc(-1 * (var(--margin-col) + var(--gutter)));
+  margin-top: 0.4rem;
+  margin-bottom: 1.2rem;
+}
+
+.fig-margin figcaption {
+  font-size: 0.74rem;
+  margin-top: 0.45rem;
+}
+
+/* ==========================================================================
+   Tables
+   ========================================================================== */
+
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.7rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.tbl th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 0.66rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 0 0.9rem 0.5rem 0;
+  border-bottom: 1px solid var(--ink-soft);
+}
+
+.tbl td {
+  padding: 0.55rem 0.9rem 0.55rem 0;
+  border-bottom: 1px solid var(--paper-edge);
+  vertical-align: top;
+}
+
+.tbl th:last-child,
+.tbl td:last-child {
+  padding-right: 0;
+}
+
+/* ==========================================================================
+   Steps — the request path, or any ordered flow
+   ========================================================================== */
+
+.steps {
+  list-style: none;
+  counter-reset: step;
+  margin: 1.7rem 0 0;
+  padding: 0;
+}
+
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.6rem;
+  margin-top: 0.85rem;
+}
+
+.steps > li::before {
+  content: "0" counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.12em;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--brass-text);
+}
+
+.step-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Prev / next footer
+   ========================================================================== */
+
+.pager {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1.2rem;
+  align-items: start;
+  margin-top: 4rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--ink-soft);
+  max-width: none;
+}
+
+.pager a {
+  text-decoration: none;
+  display: block;
+}
+
+.pager a:hover .pager-title {
+  text-decoration: underline;
+  text-decoration-color: var(--brass);
+  text-underline-offset: 2.5px;
+}
+
+.pager-prev {
+  grid-column: 1;
+}
+
+.pager-up {
+  grid-column: 2;
+  text-align: center;
+}
+
+.pager-next {
+  grid-column: 3;
+  text-align: right;
+}
+
+.pager-dir {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0.28rem;
+}
+
+.pager-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.98rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+/* An empty slot keeps the grid honest on the first and last pages. */
+.pager-empty {
+  color: var(--ink-faint);
+}
+
+/* ==========================================================================
+   Index page
+   ========================================================================== */
+
+.toc {
+  list-style: none;
+  margin: 2.2rem 0 0;
+  padding: 0;
+  max-width: none;
+}
+
+.toc > li {
+  display: grid;
+  grid-template-columns: 2.9rem minmax(0, 1fr);
+  gap: 0 0.4rem;
+  padding: 0.95rem 0;
+  border-top: 1px solid var(--paper-edge);
+}
+
+.toc > li:last-child {
+  border-bottom: 1px solid var(--paper-edge);
+}
+
+.toc-num {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--brass-text);
+  padding-top: 0.3em;
+}
+
+.toc a {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.12rem;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+.toc a:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--brass);
+  text-underline-offset: 3px;
+}
+
+.toc-sum {
+  grid-column: 2;
+  margin: 0.25rem 0 0;
+  font-size: 0.94rem;
+  line-height: 1.45;
+  color: var(--ink-mid);
+  max-width: 58ch;
+}
+
+/* What the page puts on the table: a transaction, a test, or an admission. */
+.toc-proof {
+  grid-column: 2;
+  margin: 0.4rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
+}
+
+.toc-proof b {
+  font-weight: 500;
+  color: var(--brass-text);
+}
+
+.toc-proof .absent {
+  color: var(--vermilion-text);
+}
+
+.resources {
+  margin-top: 1.6rem;
+}
+
+.resources .state {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  color: var(--ink-faint);
+}
+
+.resources .state-absent {
+  color: var(--vermilion-text);
+}
+
+/* ==========================================================================
+   Narrow screens — the margin column has nowhere to go
+   ========================================================================== */
+
+@media (max-width: 1000px) {
+  :root {
+    --measure: 100%;
+  }
+
+  .sheet {
+    max-width: 42rem;
+  }
+
+  .sidenote,
+  .marginnote,
+  .fig-margin {
+    float: none;
+    width: auto;
+    max-width: none;
+    margin-right: 0;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .sidenote,
+  .marginnote {
+    display: block;
+    padding-left: 0.9rem;
+    border-left: 2px solid var(--brass);
+  }
+
+  .fig-wide {
+    width: 100%;
+  }
+}
+
+@media (max-width: 620px) {
+  html {
+    font-size: 16px;
+  }
+
+  .claim-evidence {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.1rem;
+  }
+
+  .claim-evidence dt {
+    padding-top: 0.6rem;
+  }
+
+  .pager {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .pager-prev,
+  .pager-up,
+  .pager-next {
+    grid-column: 1;
+    text-align: left;
+  }
+}
+
+/* ==========================================================================
+   Print — a judge may read this as a PDF
+   ==========================================================================
+
+   The measure plus the margin column is about 158mm, which fits inside A4 at
+   these margins, so margin notes stay in the margin on paper. Every block is
+   drawn with borders rather than fills, so nothing depends on the reader having
+   background graphics switched on.                                          */
+
+@page {
+  margin: 16mm 14mm 18mm;
+}
+
+@media print {
+  :root {
+    --paper: #fff;
+    --paper-sunk: #fff;
+    --paper-edge: #b9b3a2;
+    --measure: 105mm;
+    --margin-col: 44mm;
+    --gutter: 6mm;
+  }
+
+  html {
+    font-size: 11pt;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .sheet {
+    max-width: none;
+    padding: 0;
+  }
+
+  .claim,
+  .not-true,
+  code,
+  pre,
+  .terminal,
+  .fig img {
+    background: transparent;
+  }
+
+  /* Print the destination of a prose link, because a PDF cannot be clicked in
+     every reader and every one of these is a thing to go and check. */
+  .prose a[href^="http"]::after,
+  .claim-evidence a[href^="http"]::after,
+  .resources a[href^="http"]::after {
+    content: " " attr(href);
+    font-family: var(--font-mono);
+    font-size: 0.66em;
+    color: #444;
+    overflow-wrap: anywhere;
+  }
+
+  .prose h2,
+  .prose h3,
+  .claim-statement,
+  .fig figcaption {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .pager,
+  .masthead-count {
+    display: none;
+  }
+
+  .masthead {
+    margin-bottom: 1.4rem;
+  }
+}
