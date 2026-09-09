@@ -231,11 +231,23 @@ function tradingFeePct(fees: { feeType: string; feePercentage: string }[]): numb
   return trading ? num(trading.feePercentage) : null;
 }
 
-/** The fee tier as Uniswap's uint24, which is what QuoterV2 wants. */
+/**
+ * The fee tier as Uniswap's uint24, which is what QuoterV2 wants.
+ *
+ * **Correction (2026-09-09, MOV-269):** this used to end
+ * `[100, 500, 3_000, 10_000].includes(raw) ? raw : raw` — both arms the same
+ * value, so the whitelist did nothing while reading as a filter. Found by
+ * MOV-263's coverage pass.
+ *
+ * It is removed rather than made to reject, because rejecting would be wrong:
+ * those four are v3's *initial* tiers, and governance can enable more. A pool
+ * on an enabled tier is a real pool, and a quoter that refused to price it
+ * would be the bug. Any tier passes through, which is what the code already
+ * did — it just no longer pretends otherwise.
+ */
 export function feeTierToUint24(feePct: number | null): number | null {
   if (feePct === null) return null;
-  const raw = Math.round(feePct * 10_000);
-  return [100, 500, 3_000, 10_000].includes(raw) ? raw : raw;
+  return Math.round(feePct * 10_000);
 }
 
 export async function fetchPoolFacts(
@@ -281,6 +293,20 @@ export async function fetchPoolFacts(
   }));
 
   const protocol = data.dexAmmProtocols[0];
+
+  // A source that answers without `_meta` used to throw a bare TypeError
+  // naming neither the pool nor the subgraph — the least useful possible
+  // failure for the one field that says how stale this answer is. The type
+  // declares `_meta` as present, so this cannot be expressed as a nullable
+  // return without lying to every consumer; a named throw is the honest shape.
+  // Found by MOV-263's coverage pass, fixed in MOV-269.
+  if (!data._meta?.block) {
+    throw new Error(
+      `${source.label} answered for ${address} without _meta.block, so there is no way to say which block this reflects. ` +
+        `A pool fact with no block is not usable as evidence.`,
+    );
+  }
+
   return {
     address: raw.id,
     name: raw.name ?? address,
