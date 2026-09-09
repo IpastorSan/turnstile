@@ -34,6 +34,7 @@ COPY rails ./rails
 COPY buyer ./buyer
 COPY seller ./seller
 COPY mcp-turnstile ./mcp-turnstile
+COPY identity ./identity
 COPY contracts/addresses.turnstile.sepolia.json ./contracts/
 COPY web ./web
 

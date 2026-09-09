@@ -238,10 +238,13 @@ CREATE TABLE IF NOT EXISTS settlement_receipt (
 
 CREATE INDEX IF NOT EXISTS settlement_receipt_by_agent ON settlement_receipt(agent_uid, settled_at DESC);
 
--- MOV-223, blocked on World Sandbox approval. Nothing writes this table yet and
--- discovery reports every agent as world_verification = 'unknown'. Deliberately
--- not implemented: an empty table that reads as "unverified" would be a claim
--- we have not earned.
+-- MOV-223. Written by identity/store.ts once an operator completes Selfie Check.
+-- An agent with no row here reads as 'unknown', never 'unverified': absence of a
+-- proof is not evidence of a failed one.
+--
+-- `nullifier` is deliberately NOT unique. One human may hold several listings
+-- (identity/limits.ts caps it), so a unique index would refuse their second
+-- listing rather than their fourth. The index below is for counting.
 CREATE TABLE IF NOT EXISTS world_verification (
   agent_uid    TEXT PRIMARY KEY REFERENCES agent(agent_uid) ON DELETE CASCADE,
   status       TEXT NOT NULL,     -- verified | rejected
@@ -249,6 +252,11 @@ CREATE TABLE IF NOT EXISTS world_verification (
   proof_ref    TEXT,
   verified_at  INTEGER NOT NULL
 );
+
+-- "How many listings does this human already hold" is the hot query for every
+-- listing decision, and it is a scan without this.
+CREATE INDEX IF NOT EXISTS world_verification_by_nullifier
+  ON world_verification(nullifier, status);
 
 -- ---------------------------------------------------------------------------
 -- Bookkeeping

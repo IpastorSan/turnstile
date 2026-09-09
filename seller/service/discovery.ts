@@ -479,8 +479,10 @@ export function findSellers(db: DatabaseSync, query: FindSellersQuery = {}): Fin
         'MOV-220 — settled volume comes from HCS receipts. settlement_receipt is empty, so ranking ' +
         'falls back to registration recency and says so.',
       worldVerification:
-        'MOV-223 — World verification is blocked on Sandbox approval. Every agent reports ' +
-        "worldVerification: 'unknown'; nothing writes the world_verification table yet.",
+        'MOV-223 — live since 2026-09-09. identity/ writes world_verification after World\'s ' +
+        'Developer Portal verifies a proof. An agent with no row reports ' +
+        "worldVerification: 'unknown', never 'unverified': absence of a proof is not evidence " +
+        'of a failed one, and most of these 197 agents are not ours to verify.',
       livePricing:
         'A price for a non-Turnstile agent only exists in its HTTP 402 response. probe-x402.ts ' +
         'fetches one on demand; agents with x402Support and no quote report priceSource: ask_x402.',

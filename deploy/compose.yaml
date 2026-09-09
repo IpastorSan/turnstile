@@ -39,6 +39,15 @@ services:
       dockerfile: web/Dockerfile
     restart: unless-stopped
     env_file: ../.env
+    volumes:
+      # World verifications are durable state we write, not chain data we can
+      # rebuild, so they need a store that survives a redeploy. The committed
+      # snapshot inside the image cannot serve: a write there lands in an
+      # ephemeral layer and is lost on restart. web/lib/discovery.ts refuses to
+      # write to the snapshot for exactly that reason, so without this mount the
+      # verify route returns a refusal that explains itself rather than losing
+      # rows quietly.
+      - ../graph/sink/data:/app/graph/sink/data
     environment:
       PORT: 3210
       HOSTNAME: 0.0.0.0

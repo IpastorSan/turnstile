@@ -82,10 +82,12 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] Video + presentation + detailed docs; GitHub link
 - [ ] Launch track: deployed or **deployment-ready on Arc mainnet by 30 Sep**
 
-**World — Selfie Check ($3,500)**
-- [ ] Selfie Check used meaningfully as a **risk/eligibility/fairness/abuse-prevention** signal, not a login
-- [ ] Working app, tested via the **Sandbox App**
-- [ ] **Feedback document** (item 14)
+**World — Selfie Check ($3,500)** — unblocked 2026-09-09; approvals arrived after a five-day wait.
+- [x] Selfie Check used meaningfully as a **risk/eligibility/fairness/abuse-prevention** signal, not a login — MOV-223/224. It is an **abuse control**: `identity/limits.ts` caps one human at three seller listings and refuses the fourth with `listing_limit_reached`. Nothing here signs anybody in, and no account is created. Delete it and the registry is a Sybil farm — one operator scripts two hundred subnames and buries every honest seller in the ranking. The action is created with `max_verifications: 0` **precisely so the refusal is ours and not World's**: at the portal's default of 1, World would refuse the second verification and a judge would be shown World's limit rather than the product's
+- [x] A mandate can **require** one — `verifiedOperatorOnly` in `buyer/mandate/` refuses to pay a seller with no verification on file, so a buyer's agent declines anonymous sellers without anyone maintaining a list. Fails closed: `operatorIsVerified` defaults to `false`, and `unknown` collapses to refusal
+- [ ] Working app, tested via the **Sandbox App** — everything but the proof is live and verified through Caddy: the context route signs with the real key, the widget mounts, both failure paths return honest refusals. **The proof itself needs the phone**, which is the one step that cannot be automated
+- [x] **Feedback document** (item 14) — `WORLD-FEEDBACK.md`, written from the integration rather than reconstructed: the `signRequest` camelCase → `RpContext` snake_case rename that fails silently, the `max_verifications` default that would have silently become our abuse policy, three 404ing documentation URLs, two API hosts on two versions, the three separate approval gates, and one piece of praise for the best error message on the surface
+- **Honest state:** three of four gates are met and the fourth is a phone away. Nothing is claimed as tested via the Sandbox App until it has been.
 
 **Ledger ($3,500) — NOT PURSUED. Deliberate decision, 2026-09-08 (MOV-000). Do not submit to this track.**
 - [~] ~~Built on the Ledger Agent Stack, **in particular `wallet-cli ring`**~~ — impossible on our hardware; see setup step 5 for the full diagnosis
