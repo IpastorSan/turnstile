@@ -63,6 +63,47 @@ jobs:
           fi
           npm run --if-present test
 
+  # The web app is a SEPARATE npm package with its own lockfile, so the `node`
+  # job above never installs it, never typechecks it and never builds it. It had
+  # no CI coverage at all until 2026-09-09 (MOV-270): a broken web build would
+  # have surfaced only at `docker compose build`, which nothing here runs.
+  #
+  # This is the judge-facing surface. It is the last thing that should be
+  # unverified.
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # Same reason as the root job: the lockfile was written by npm 11, and
+      # npm 10 refuses it.
+      - name: Pin npm to the version that wrote the lockfile
+        run: npm install -g npm@11
+
+      # `web/` imports across the repo (rails/, buyer/, seller/, graph/,
+      # identity/, mcp-turnstile/) rather than vendoring copies, so the root
+      # install has to happen too or the type resolution fails on paths that are
+      # perfectly correct.
+      - name: Install
+        run: |
+          npm ci
+          npm ci --prefix web
+
+      - name: Typecheck
+        run: npm run typecheck --prefix web
+
+      # `next build` runs TypeScript over the transitive graph, which reaches
+      # the co-located *.test.ts files. That is how web/Dockerfile was found to
+      # have never built at all. No .env is needed: every page that reads a
+      # chain is force-dynamic, so nothing is prerendered at build time.
+      - name: Build
+        run: npm run build --prefix web
+
   contracts:
     runs-on: ubuntu-latest
     timeout-minutes: 25
