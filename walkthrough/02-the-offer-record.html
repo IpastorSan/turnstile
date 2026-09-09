@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02 · The offer record — Turnstile walkthrough</title>
+<meta name="description" content="The ENSv2 subname is the offer. Standard ENSIP-25/26 keys, read from Sepolia on every request, and a cast call you can rerun.">
+<link rel="stylesheet" href="assets/walkthrough.css">
+</head>
+<body>
+<div class="sheet">
+
+  <header class="masthead">
+    <a class="masthead-mark" href="index.html">Turnstile</a>
+    <span class="masthead-where">Walkthrough &middot; ETHOnline 2026</span>
+    <span class="masthead-count">02 / 06</span>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow">The offer record</p>
+    <h1>The name is the offer</h1>
+    <p class="lede">
+      There is no Turnstile listing database. The price, the rails, the endpoint
+      and the payout address are ENSv2 resolver records on
+      <span class="addr">liquidity.turnstile.eth</span>, read from Sepolia on
+      every request. If you can call <code>text()</code>, you can read the offer.
+    </p>
+  </div>
+
+  <main class="prose">
+
+    <p>
+      <span class="newthought">Page 01 ended on a gap:</span> the registry
+      carries no price, and an x402 quote only exists once you have already made
+      the call. The fix has to put a number somewhere a buyer&rsquo;s agent can
+      read <em>before</em> spending, and it has to be somewhere that already has
+      an owner, a resolver and a way to prove who may write to it. ENS is that
+      place, so the offer is a set of resolver records rather than a row in a
+      database we would then ask you to trust.
+    </p>
+
+    <figure class="fig fig-wide">
+      <img src="../docs/screenshots/seller.png"
+           alt="The seller page for liquidity.turnstile.eth. A header strip shows price $0.07, ceiling $0.50, rails x402 and usdc-arc, and a payout address. Below, a table of eight resolver keys with their values, then four verification cards, then a section headed Where to ask stating that the published host does not answer yet.">
+      <figcaption>
+        The seller page for <span class="addr">liquidity.turnstile.eth</span>,
+        with the block number it read at in the top right. Every row of the table
+        is one <code>text(node, key)</code> call made when the page was
+        requested &mdash; nothing cached, nothing hard-coded, so reloading moves
+        the block number. The four cards below the table are the checks that run
+        before the page treats the price as one a buyer could act on, and the
+        last section says in bold that the published endpoint does not answer
+        yet.
+        <span class="fig-date">Captured 2026-09-09 07:25:49 UTC, block 11,666,487.</span>
+      </figcaption>
+    </figure>
+
+    <div class="claim">
+      <p class="claim-label">Claim</p>
+      <p class="claim-statement">
+        The resolver record <em>is</em> the offer, and it is readable by anyone
+        with an RPC endpoint and no permission from us.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Proof</dt>
+        <dd>
+          Resolver <span class="addr">0xb1B4Da2C49814c8CbF975E7a48fbB014EA0b075B</span>
+          on Sepolia, a <code>PermissionedResolver</code> proxy whose
+          implementation is the stock ENS one, verified through
+          <code>VerifiableFactory.verifyContract</code>.
+        </dd>
+        <dt>Rerun it</dt>
+        <dd>The two <code>cast call</code>s below. They need no key and no account.</dd>
+        <dt>Where</dt>
+        <dd>
+          <a href="https://sepolia.etherscan.io/address/0xb1B4Da2C49814c8CbF975E7a48fbB014EA0b075B">Resolver on Etherscan</a>
+          &middot;
+          <a href="../docs/ens-offer-records.md"><code>docs/ens-offer-records.md</code></a>
+        </dd>
+      </dl>
+    </div>
+
+    <h2>Read it yourself</h2>
+
+    <p>
+      Two variables and one call shape. <code>$R</code> is the resolver;
+      <code>$N</code> is the namehash of
+      <span class="addr">liquidity.turnstile.eth</span>, which is derived from
+      the name at runtime and not hard-coded anywhere in this repo.
+    </p>
+
+    <div class="terminal"><code>$ R=0xb1B4Da2C49814c8CbF975E7a48fbB014EA0b075B
+$ N=0xb030c3d897a1f9b98ee7f09bb6a860a77d4e53c717cce7f53fbf4bf00f667acd
+
+$ cast call $R "text(bytes32,string)(string)" $N "turnstile:price"
+"0.07"
+
+$ cast call $R "text(bytes32,string)(string)" $N "turnstile:rails"
+"x402,usdc-arc"
+
+$ cast call $R "addr(bytes32)(address)" $N
+0x0Adca6e14bA956201D221feC767e4f24194bf5F2</code></div>
+    <p class="terminal-cap">
+      Against Sepolia. Captured 2026-09-07; the price has not moved since.
+      <code>--rpc-url</code> omitted for width.
+    </p>
+
+    <p>
+      That is the entire discovery-to-quote path a buyer&rsquo;s agent needs. It
+      learns the price is seven cents, that it may settle on x402 or on USDC over
+      Arc, and where the money goes, without opening a connection to us.<span class="sidenote-ref"></span>
+      <span class="sidenote">
+        Which is also the answer to &ldquo;what if Turnstile disappears&rdquo;.
+        The offer outlives us: it lives on Sepolia under a name whose owner is
+        not our web server.
+      </span>
+    </p>
+
+    <h2>Eight keys, and six of them are not ours to define</h2>
+
+    <p>
+      The temptation with a record like this is to invent a schema. We did not,
+      because a bespoke schema is a second standard nobody reads. Everything that
+      <em>can</em> be a standard ENSIP-25 or ENSIP-26 key is one, and only the
+      three commercial values &mdash; which no standard covers &mdash; carry a
+      <code>turnstile:</code> prefix that marks them as ours.
+    </p>
+
+    <table class="tbl">
+      <thead>
+        <tr><th>Key</th><th>Standard</th><th>Value</th><th>What it does</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>agent-context</code></td>
+          <td>ENSIP-26</td>
+          <td>A one-paragraph description</td>
+          <td>An agent that has never heard of Turnstile reads this key</td>
+        </tr>
+        <tr>
+          <td><code>agent-endpoint[mcp]</code></td>
+          <td>ENSIP-26</td>
+          <td><span class="addr">turnstile.moveseventyeight.com/&hellip;/sse</span></td>
+          <td>Where a buyer connects after paying. <strong>Not resolving yet</strong> &mdash; see below</td>
+        </tr>
+        <tr>
+          <td><code>agent-registration[&hellip;]</code></td>
+          <td>ENSIP-25</td>
+          <td><code>1</code></td>
+          <td>Embeds an ERC-7930 address of the registry, naming one agent on one chain unambiguously</td>
+        </tr>
+        <tr>
+          <td><code>addr</code></td>
+          <td>ENS core</td>
+          <td><span class="addr">0x0Adca6e1&hellip;bf5F2</span></td>
+          <td>Where payment for an answer lands</td>
+        </tr>
+        <tr>
+          <td><code>turnstile:price</code></td>
+          <td>ours</td>
+          <td><code>0.07</code></td>
+          <td>Decimal dollars. Written by the <strong>hot</strong> key</td>
+        </tr>
+        <tr>
+          <td><code>turnstile:price-ceiling</code></td>
+          <td>ours</td>
+          <td><code>0.50</code></td>
+          <td>The bound on that price. Written by the <strong>operator</strong> key only</td>
+        </tr>
+        <tr>
+          <td><code>turnstile:rails</code></td>
+          <td>ours</td>
+          <td><code>x402,usdc-arc</code></td>
+          <td>Which rails this seller settles on</td>
+        </tr>
+        <tr>
+          <td><code>turnstile:operator-proof</code></td>
+          <td>ours</td>
+          <td><code>ledger-key-ring</code></td>
+          <td>How the operator identity is held. <strong>A stale label</strong> &mdash; see below</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="note">
+      The last row is a live seam and the screenshot above shows it. The chain
+      still returns <code>ledger-key-ring</code>, a label written before the
+      Ledger track was dropped. The code now publishes
+      <code>cold-key-offline</code>, which the custody correction on
+      <a href="03-three-keys.html">page 03</a> shows is <em>also</em> wrong, and
+      neither string has been rewritten on chain. Nothing reads this key to make
+      a decision &mdash; the authority split is enforced by role checks, not by a
+      string &mdash; but it is on chain, a judge will find it, and it is
+      documented in <a href="../docs/ens-offer-records.md"><code>ens-offer-records.md</code></a>
+      rather than quietly fixed.
+    </p>
+
+    <h2>Two claims that check each other</h2>
+
+    <p>
+      <span class="newthought">A name can claim any agent id it likes,</span> and
+      any contract can call itself a resolver. Neither claim is worth anything
+      alone, so the seller page checks both against the other side before it
+      treats the price as actionable, and shows you the result:
+    </p>
+
+    <ol class="steps">
+      <li>
+        <span class="step-name">Two-way agent link.</span> The ENSIP-25 record
+        names agent <code>10127</code>; the registry&rsquo;s
+        <code>tokenURI(10127)</code> returns this name back. Either direction
+        alone is an assertion; together they are a link.
+      </li>
+      <li>
+        <span class="step-name">Resolver verified.</span>
+        <code>VerifiableFactory.verifyContract</code> returns the stock ENS
+        <code>PermissionedResolver</code> implementation, so the proxy is not a
+        contract of ours pretending to be one.
+      </li>
+      <li>
+        <span class="step-name">Registration exists.</span> Agent
+        <code>10127</code> is a real ERC-8004 registration in
+        <span class="addr">0x8004A818BFB912233c491871b3d84c89A494BD9e</span>,
+        owned by the operator key.
+      </li>
+      <li>
+        <span class="step-name">Linked into the real hierarchy.</span> The name
+        is derived from the live <code>eth</code> registry, verified by a fork
+        test against Sepolia rather than against a local deployment.
+      </li>
+    </ol>
+
+    <div class="not-true">
+      <p class="claim-label">Not claimed</p>
+      <p class="claim-statement">
+        The endpoint published in <code>agent-endpoint[mcp]</code> does not
+        answer. Nothing on the open internet will sell you an answer today.
+      </p>
+      <dl class="claim-evidence">
+        <dt>Why</dt>
+        <dd>
+          The record names
+          <span class="addr">turnstile.moveseventyeight.com</span>, which has no
+          DNS record yet. The deploy is scheduled for 14 September 2026.
+        </dd>
+        <dt>Consequence</dt>
+        <dd>
+          A judge who reads only the ENS record and then tries to call it finds
+          nothing. This is a deployment gap, not a capability gap: the service is
+          real, and <a href="06-run-it.html">page 06</a> runs it in one command.
+        </dd>
+        <dt>Scope</dt>
+        <dd>
+          The record itself is real, on chain and readable, and every settlement
+          on <a href="04-two-rails.html">page 04</a> is a real transaction on a
+          public testnet. Only the hosting is missing.
+        </dd>
+      </dl>
+    </div>
+
+    <p>
+      The seller page says this on the page rather than in a footnote, which is
+      the same decision this walkthrough makes throughout: a surface that hides
+      its own gap is worth less than one that names it, because a judge who finds
+      an unstated gap stops believing the stated wins.
+    </p>
+
+  </main>
+
+  <nav class="pager">
+    <a class="pager-prev" href="01-the-problem.html">
+      <span class="pager-dir">Previous</span>
+      <span class="pager-title">01 &middot; The problem</span>
+    </a>
+    <a class="pager-up" href="index.html">
+      <span class="pager-dir">Up</span>
+      <span class="pager-title">Walkthrough</span>
+    </a>
+    <a class="pager-next" href="03-three-keys.html">
+      <span class="pager-dir">Next</span>
+      <span class="pager-title">03 &middot; Three keys</span>
+    </a>
+  </nav>
+
+</div>
+</body>
+</html>
