@@ -169,6 +169,25 @@ to name it** — that is a cold-key transaction, and the rail reuses the existin
 | `arc-usdc` | **live** — settles USDC on Arc testnet via Circle Gateway Nanopayments (MOV-225). See `docs/arc-nanopayments.md` |
 | `base-usdc` | **live** — settles USDC on Base Sepolia via the public x402 facilitator (2026-09-11). Added for the Bazantic gateway; `BASE_PAYOUT_ADDRESS` overrides the payout, `X402_FACILITATOR_URL` the facilitator |
 
+**What was verified on the live host, 2026-09-11.** Not a unit test: a signed
+payment against the deployed seller. `scripts/base-pay-probe.ts` fetched the real
+402, chose the `eip155:84532` entry, signed an EIP-3009 authorization against the
+token's own domain, and posted it back. The seller routed it to this rail, the
+facilitator simulated `transferWithAuthorization` on the USDC contract, and the
+chain refused it — `ERC20: transfer amount exceeds balance`, because the probe's
+payer holds no USDC there. The seller answered 402 with
+`payment rejected by base-usdc: insufficient_funds`. Every hop is therefore
+proven except the balance: challenge → signature accepted → facilitator →
+on-chain simulation → our error mapping. Funding a payer is the last step, and
+it is a faucet, not code.
+
+The other two rails' challenges were unchanged by this and are issued in the
+same 402 — verified by reading the live `PAYMENT-REQUIRED` header (three
+`accepts[]` entries, three distinct `(scheme, network)` pairs). If the x402
+facilitator is ever unreachable, the challenge still carries the other two: a
+failed rail lands in `extensions.turnstileRailsUnavailable` and only an
+all-rails failure is a 503 (`seller/service/x402.ts`).
+
 ### What MOV-219 shipped
 
 Two **placeholder** rails, `hedera-x402/` and `arc-usdc/`, both built on
