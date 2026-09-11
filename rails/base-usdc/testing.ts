@@ -62,3 +62,17 @@ export function offlineOptions(over: Partial<BaseRailOptions> = {}): BaseRailOpt
     ...over,
   };
 }
+
+/** The mainnet instance, offline: PayAI's kind list and the same happy-path fakes. */
+export function offlineMainnetOptions(over: Partial<BaseRailOptions> = {}): BaseRailOptions {
+  return {
+    payTo: PAYOUT,
+    facilitatorOptions: {
+      fetch: fakeBaseFacilitatorFetch({
+        supported: { kinds: [{ x402Version: 2, scheme: 'exact', network: 'eip155:8453' }] },
+      }),
+    },
+    rpcFetch: (async () => new Response(JSON.stringify({ result: null }), { status: 200 })) as unknown as typeof globalThis.fetch,
+    ...over,
+  };
+}

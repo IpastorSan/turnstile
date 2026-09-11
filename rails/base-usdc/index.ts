@@ -54,8 +54,10 @@ import type {
 import { PaymentRailError, usdToAtomic } from '../PaymentRail.ts';
 import {
   CHAIN_ID, EIP712_NAME, EIP712_VERSION, ERC20_TRANSFER_TOPIC, ENS_PAYOUT_ADDRESS,
+  MAINNET_CHAIN_ID, MAINNET_EIP712_NAME, MAINNET_FACILITATOR_URL, MAINNET_NETWORK,
+  MAINNET_RPC_URL, MAINNET_USDC_ASSET,
   NETWORK, RPC_URL, USDC_ASSET, USDC_DECIMALS,
-  basescanTransactionUrl, isTransactionHash,
+  explorerTransactionUrl, isTransactionHash,
 } from './config.ts';
 import { FacilitatorError, X402Facilitator, toVerifyFailureReason } from './facilitator.ts';
 import type { FacilitatorOptions } from './facilitator.ts';
@@ -88,12 +90,27 @@ export interface ExactEvmPayload {
 }
 
 export interface BaseRailOptions {
+  /**
+   * Rail id. Defaults to `base-usdc`.
+   *
+   * The mainnet instance passes `base-usdc-mainnet`, because `RailRegistry`
+   * refuses two rails with the same id — they would be indistinguishable in
+   * `/health` and in a receipt. The `PaymentRail` interface asks ids to match
+   * their directory name; two instances of one implementation sharing a
+   * directory is the exception, and this comment is where it is declared rather
+   * than discovered.
+   */
+  id?: string;
   /** The seller's payout address. Defaults to `BASE_PAYOUT_ADDRESS`, then the ENS `addr(60)`. */
   payTo?: string;
   network?: string;
   asset?: string;
   decimals?: number;
   symbol?: string;
+  /** EIP-712 domain name of the token. Defaults to the testnet token's, so a mainnet rail must pass one. */
+  eip712Name?: string;
+  /** Human-readable chain, used in `info.label` so a judge reads the right one. */
+  chainLabel?: string;
   facilitatorUrl?: string;
   maxTimeoutSeconds?: number;
   facilitator?: X402Facilitator;
@@ -146,13 +163,20 @@ function authorizationOf(payload: PaymentPayload): Partial<ExactEvmPayload> | nu
 }
 
 export function createBaseRail(options: BaseRailOptions = {}): PaymentRail {
+  const id = options.id ?? RAIL_ID;
   const payTo = options.payTo ?? process.env['BASE_PAYOUT_ADDRESS'] ?? ENS_PAYOUT_ADDRESS;
   const network = options.network ?? NETWORK;
-  const asset = options.asset ?? USDC_ASSET;
+  const isMainnet = network === MAINNET_NETWORK;
+  const asset = options.asset ?? (isMainnet ? MAINNET_USDC_ASSET : USDC_ASSET);
   const decimals = options.decimals ?? USDC_DECIMALS;
   const symbol = options.symbol ?? 'USDC';
+  const eip712Name = options.eip712Name ?? (isMainnet ? MAINNET_EIP712_NAME : EIP712_NAME);
+  // The chain id has to match the network, or the EIP-712 domain a payer signs
+  // against is for the wrong chain and the facilitator refuses it.
+  const chainId = isMainnet ? MAINNET_CHAIN_ID : CHAIN_ID;
+  const chainLabel = options.chainLabel ?? (isMainnet ? 'Base' : 'Base Sepolia');
   const maxTimeoutSeconds = options.maxTimeoutSeconds ?? 300;
-  const rpcUrl = options.rpcUrl ?? process.env['BASE_RPC_URL'] ?? RPC_URL;
+  const rpcUrl = options.rpcUrl ?? process.env['BASE_RPC_URL'] ?? (isMainnet ? MAINNET_RPC_URL : RPC_URL);
 
   const facilitator = options.facilitator ?? new X402Facilitator({
     baseUrl: options.facilitatorUrl,
@@ -162,8 +186,8 @@ export function createBaseRail(options: BaseRailOptions = {}): PaymentRail {
   const rpcFetch = options.rpcFetch ?? globalThis.fetch;
 
   const info: RailInfo = {
-    id: RAIL_ID,
-    label: `Base Sepolia ${symbol}, settled through the x402 facilitator`,
+    id,
+    label: `${chainLabel} ${symbol}, settled through the x402 facilitator`,
     scheme: 'exact',
     network,
     asset: { id: asset, symbol, decimals },
@@ -178,7 +202,7 @@ export function createBaseRail(options: BaseRailOptions = {}): PaymentRail {
   };
 
   return {
-    id: RAIL_ID,
+    id,
     info,
 
     async challenge(req: ChallengeRequest): Promise<PaymentRequirement> {
@@ -189,7 +213,7 @@ export function createBaseRail(options: BaseRailOptions = {}): PaymentRail {
         const kind = await facilitator.kindFor('exact', network);
         if (!kind) {
           throw new PaymentRailError(
-            RAIL_ID,
+            id,
             'unsupported_rail',
             `${facilitator.baseUrl} does not settle exact on ${network}`,
           );
@@ -197,7 +221,7 @@ export function createBaseRail(options: BaseRailOptions = {}): PaymentRail {
       } catch (cause) {
         if (cause instanceof PaymentRailError) throw cause;
         throw new PaymentRailError(
-          RAIL_ID,
+          id,
           'facilitator_unavailable',
           `could not read ${facilitator.baseUrl}/supported: ${cause instanceof Error ? cause.message : String(cause)}`,
           { cause },
@@ -216,9 +240,9 @@ export function createBaseRail(options: BaseRailOptions = {}): PaymentRail {
           // the token's EIP-712 domain: without them `@x402/evm`'s client (and
           // Bazantic's) refuses the challenge outright, and with them wrong the
           // facilitator refuses the payment after it has been signed.
-          name: EIP712_NAME,
+          name: eip712Name,
           version: EIP712_VERSION,
-          chainId: CHAIN_ID,
+          chainId,
           facilitator: facilitator.baseUrl,
           settlementModel: 'facilitator-redeemed-eip3009',
           decimals,
@@ -281,7 +305,7 @@ export function createBaseRail(options: BaseRailOptions = {}): PaymentRail {
         // The facilitator could not answer at all. Not the payer's fault, so
         // this is a throw the service turns into 503 rather than a 402.
         throw new PaymentRailError(
-          RAIL_ID,
+          id,
           'facilitator_unavailable',
           cause instanceof FacilitatorError ? cause.message : `verify failed: ${cause instanceof Error ? cause.message : String(cause)}`,
           { cause },
@@ -304,7 +328,7 @@ export function createBaseRail(options: BaseRailOptions = {}): PaymentRail {
       const authorization = inner?.authorization;
       const replayKey = replayKeyOf(authorization);
       const base = {
-        railId: RAIL_ID,
+        railId: id,
         network,
         asset: payload.accepted.asset,
         amount: payload.accepted.amount,
@@ -344,8 +368,8 @@ export function createBaseRail(options: BaseRailOptions = {}): PaymentRail {
         extra: {
           settlement: 'x402-facilitator',
           facilitator: facilitator.baseUrl,
-          basescan: basescanTransactionUrl(response.transaction),
-          chainId: CHAIN_ID,
+          basescan: explorerTransactionUrl(network, response.transaction),
+          chainId,
         },
       };
       return book.record(receipt, replayKey);
@@ -395,7 +419,7 @@ export function createBaseRail(options: BaseRailOptions = {}): PaymentRail {
       const from = `0x${transfer.topics[1]!.slice(-40)}`;
       const amount = transfer.data && transfer.data !== '0x' ? String(BigInt(transfer.data)) : null;
       return {
-        railId: RAIL_ID,
+        railId: id,
         transaction: id,
         success: tx.status === '0x1',
         network,
@@ -404,8 +428,34 @@ export function createBaseRail(options: BaseRailOptions = {}): PaymentRail {
         asset,
         settledAt: Date.now(),
         error: tx.status === '0x1' ? null : 'transaction reverted',
-        extra: { settlement: 'rpc', basescan: basescanTransactionUrl(id), rpc: rpcUrl },
+        extra: { settlement: 'rpc', basescan: explorerTransactionUrl(network, id), rpc: rpcUrl },
       };
     },
   };
+}
+
+/**
+ * The same rail on Base **mainnet**.
+ *
+ * A second instance rather than a second implementation, because every
+ * difference between the two chains is a constant: the network id, the USDC
+ * address, the EIP-712 domain name, the facilitator and the explorer. What is
+ * *not* shared is the money: this instance settles real USDC, which is why it
+ * exists — a Bazantic production gateway charges its client on mainnet and
+ * cannot pay a testnet-only seller.
+ *
+ * The id differs from the testnet instance's because `RailRegistry` requires it
+ * to; `info.network` is what routes a payment, and the two do not collide.
+ */
+export function createBaseMainnetRail(options: BaseRailOptions = {}): PaymentRail {
+  return createBaseRail({
+    id: 'base-usdc-mainnet',
+    chainLabel: 'Base',
+    network: MAINNET_NETWORK,
+    asset: MAINNET_USDC_ASSET,
+    eip712Name: MAINNET_EIP712_NAME,
+    facilitatorUrl: MAINNET_FACILITATOR_URL,
+    rpcUrl: MAINNET_RPC_URL,
+    ...options,
+  });
 }
