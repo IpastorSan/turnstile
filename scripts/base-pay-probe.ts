@@ -1,7 +1,11 @@
 // Probe: does the live seller accept a signed x402 payment on the Base rail?
 //
 //   set -a; . ./.env; set +a
-//   node --disable-warning=ExperimentalWarning scripts/base-pay-probe.ts
+//   node --disable-warning=ExperimentalWarning scripts/base-pay-probe.ts [eip155:8453]
+//
+// The optional argument picks the accept entry to pay. Default eip155:84532
+// (Base Sepolia, free faucet money); pass eip155:8453 for the mainnet rail, which
+// needs real USDC in the payer's wallet.
 //
 // A diagnostic, not a paid-request flow. It fetches the real 402, picks the
 // eip155:84532 entry, signs an EIP-3009 authorization with `BASE_PAYER_KEY` (or
@@ -21,7 +25,7 @@ import { randomBytes } from 'node:crypto';
 import { privateKeyToAccount } from 'viem/accounts';
 
 const RESOURCE = 'https://turnstile.moveseventyeight.com/analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640';
-const CAIP2 = 'eip155:84532';
+const CAIP2 = process.argv[2] ?? 'eip155:84532';
 
 const first = await fetch(RESOURCE);
 console.log(`unpaid status: ${first.status}`);

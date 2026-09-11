@@ -89,6 +89,69 @@ export const ERC20_TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f16
  */
 export const ENS_PAYOUT_ADDRESS = '0x0Adca6e14bA956201D221feC767e4f24194bf5F2';
 
+// ---------------------------------------------------------------------------
+// Base MAINNET — the same rail, the other chain
+//
+// Added 2026-09-11 for the Bazantic gateway. The reason is not symmetry: a
+// gateway registered on `bazantic.com` is a *production* one, and it charges
+// its client in USDC on Base mainnet (`network: base`, 0.01 USDC, read off the
+// live challenge). The Testnet rail above cannot be paid by that client, and
+// `*.bazantic.dev` previews — which would settle on Sepolia — are the
+// vendor's own deployments behind Vercel SSO, not something a hackathon
+// account can create.
+//
+// Everything below was read off Base mainnet on 2026-09-11 with `cast`; the
+// commands are in the commit message. The EIP-712 domain is the part that
+// differs from Sepolia in a way nobody would guess: Circle's mainnet token is
+// named **"USD Coin"** while the testnet one is named "USDC", and the
+// facilitator refuses a payment signed against the wrong name
+// (`invalid_exact_evm_token_name_mismatch`).
+// ---------------------------------------------------------------------------
+
+/** CAIP-2 network id for Base mainnet. `cast chain-id --rpc-url https://mainnet.base.org` → 8453. */
+export const MAINNET_NETWORK = 'eip155:8453';
+
+/** The EVM chain id inside {@link MAINNET_NETWORK}. */
+export const MAINNET_CHAIN_ID = 8453;
+
+/** USDC on Base mainnet — Circle's real token, `0x833589…2913`. */
+export const MAINNET_USDC_ASSET = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+
+/** Mainnet USDC's EIP-712 domain name. **Not** the same string as testnet's. */
+export const MAINNET_EIP712_NAME = 'USD Coin';
+
+/**
+ * The facilitator that settles this rail.
+ *
+ * The x402 Foundation's facilitator (`x402.org`) lists Base Sepolia only, so
+ * mainnet needs a different operator. **Verified 2026-09-11: no API key.**
+ * `GET https://facilitator.payai.network/supported` advertises
+ * `{scheme: exact, network: eip155:8453}` and `POST /verify` answers
+ * `invalid_exact_evm_signature` for a malformed authorization — i.e. the
+ * request reaches the verifier rather than a gate.
+ *
+ * **Not verified, and worth knowing before mainnet revenue depends on it:**
+ * this facilitator's fee model. The other candidate, `facilitator.xpay.sh`,
+ * also settles mainnet with no key; swapping to it is one option or one env
+ * var (`X402_FACILITATOR_URL`).
+ */
+export const MAINNET_FACILITATOR_URL = 'https://facilitator.payai.network';
+
+/** Base mainnet's public RPC. Free, no key — verified 2026-09-11. */
+export const MAINNET_RPC_URL = 'https://mainnet.base.org';
+
+/** Block explorer per network. A mainnet payment must not link to a testnet explorer. */
+const EXPLORER_BY_NETWORK: Record<string, string> = {
+  [NETWORK]: EXPLORER_URL,
+  [MAINNET_NETWORK]: 'https://basescan.org',
+};
+
+/** The right explorer URL for a settlement on a given network. */
+export function explorerTransactionUrl(network: string, hash: string): string {
+  return `${EXPLORER_BY_NETWORK[network] ?? EXPLORER_URL}/tx/${hash}`;
+}
+
+
 export function basescanTransactionUrl(hash: string): string {
   return `${EXPLORER_URL}/tx/${hash}`;
 }
