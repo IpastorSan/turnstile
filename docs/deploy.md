@@ -19,10 +19,10 @@ Verified 2026-09-11 from outside the box, over real TLS (re-checked 07:30 UTC):
 | `GET /seller-health` | 200 |
 | `GET /analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640` | **402 Payment Required** |
 | `GET http://…/` | 308 → `https://` |
-| `GET /liquidity.turnstile.eth/sse` — the URL in `agent-endpoint[mcp]` | **404** — see [Known gap](#known-gap-the-published-endpoint-path-serves-nothing) |
+| `GET /liquidity.turnstile.eth/sse` — the URL in `agent-endpoint[mcp]` | ~~**404** — see [Known gap](#known-gap-the-published-endpoint-path-serves-nothing)~~ **Now serves MCP/SSE** (2026-09-11, same day): GET with `Accept: text/event-stream` opens the stream and names its `POST …/messages` return path. See the gap section, now closed. |
 
-The host is up and the paid service answers. The URL the ENS record publishes
-does not.
+The host is up and the paid service answers. So does the URL the ENS record
+publishes (as of 2026-09-11; see "Known gap" below, closed).
 
 ## Why one box rather than a serverless frontend
 
@@ -32,7 +32,8 @@ long-running processes, and one of them is the thing the chain points at:
 | Service | What it is | Public? |
 |---|---|---|
 | `web` | Next.js. Market page, seller pages, `/api/sellers`, `/api/offer/:name` | yes |
-| `seller` | The x402-gated service. **This is what `agent-endpoint[mcp]` resolves to.** | yes |
+| `seller` | The x402-gated service. **This is what a buyer pays.** | yes |
+| `mcp` | The four MCP tools over HTTP/SSE. **This is what `agent-endpoint[mcp]` resolves to.** No credentials by design — it quotes, never pays. | yes |
 | `evidence` | Serves the evidence bundle the CRE enclave fetches. Bearer-gated | yes, for CRE |
 
 Deploying only the web app would leave the ENS record just as dead as it is now
@@ -106,6 +107,7 @@ Caddy sends the paths each service actually serves, rather than a catch-all:
 |---|---|
 | `/analyze/*`, `/receipts/*` | `seller:4021` |
 | `/seller-health` | `seller:4021` `/health` |
+| `/liquidity.turnstile.eth/sse`, `/liquidity.turnstile.eth/messages*` | `mcp:4030` |
 | `/evidence/*` | `evidence:8787` |
 | everything else | `web:3210` |
 
@@ -113,6 +115,13 @@ Caddy sends the paths each service actually serves, rather than a catch-all:
 outcome. That matters for one path in particular, below.
 
 ## Known gap: the published endpoint path serves nothing
+
+**CLOSED 2026-09-11 (this branch).** `mcp-turnstile/http-server.ts` serves the
+same four tools over HTTP/SSE, `deploy/compose.yaml` runs it as `mcp`, and
+Caddy routes `…/liquidity.turnstile.eth/sse` and its `POST …/messages` return
+path to it. The section below is kept as written, because the record was on
+chain claiming a 404 for most of the build and the reasoning for why the gap
+survived so long is the useful part.
 
 `agent-endpoint[mcp]` publishes:
 
@@ -148,8 +157,11 @@ Three ways to close it, none of them done:
 1. **Repoint the record to the base URL** and let clients use `/analyze/:pool`.
    One hot-key write. Honest, but then the `[mcp]` protocol tag oversells what
    is at the other end, because plain HTTP + x402 is not MCP.
-2. **Serve MCP over HTTP/SSE** at that path, wrapping the same four tools.
-   Real work, and it makes the record true as published.
+2. ~~**Serve MCP over HTTP/SSE** at that path, wrapping the same four tools.
+   Real work, and it makes the record true as published.~~ **Done (2026-09-11):
+   option 2 was built.** See the update at the top of this section, and
+   `mcp-turnstile/http-app.ts` for the custody and SSRF story — the process
+   gets no `.env`, so the public endpoint can quote and discover but not pay.
 3. **Publish `agent-endpoint[web]`** alongside, per ENSIP-26's extensible key,
    and leave `[mcp]` for whenever a remote transport exists.
 

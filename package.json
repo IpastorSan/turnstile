@@ -17,6 +17,7 @@
     "hydrate-sellers": "node graph/sink/hydrate-sellers.ts",
     "discover": "node seller/service/discovery-cli.ts",
     "mcp": "node mcp-turnstile/server.ts",
+    "mcp:http": "node mcp-turnstile/http-server.ts",
     "typecheck": "tsc --noEmit",
     "typecheck:cre": "tsc --noEmit -p seller/cre/analyst-verdict/tsconfig.json",
     "evidence": "node seller/cre/evidence-server.ts",
