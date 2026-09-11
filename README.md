@@ -187,10 +187,20 @@ account, with the code links and the evidence for every claim.
    this repo, and it needs no API key. Its flagship output is
    `initializedTicksCrossed` across a size ladder, which is the difference
    between a pool that is deep and one that merely has a large TVL attached.
-3. **An upstream fix** to `Uniswap/uniswap-ai`, Uniswap's official agent-tooling
-   repo: its v4 quoting skill mandates ethers v5's `callStatic`, which v6
-   removed and viem never had — in a skill whose every other snippet is viem.
-   Its eval rubrics grade for it too.
+3. **A defect we reported in `Uniswap/uniswap-ai`** — Uniswap's official
+   agent-tooling repo — **which Uniswap fixed and merged the same day.** Its v4
+   quoting skill mandated ethers v5's `callStatic`, which v6 removed and viem
+   never had, in a skill whose every other snippet is viem. Its eval rubrics
+   graded for it too, so the marker rewarded generating code that throws.
+   [`#148`](https://github.com/Uniswap/uniswap-ai/issues/148) →
+   [`#149`](https://github.com/Uniswap/uniswap-ai/pull/149), merged
+   2026-09-08, seven files.
+
+   **The merged code is theirs, not ours** — a maintainer wrote it so the docs
+   sync and version bump landed in one commit, and
+   [credited the report](https://github.com/Uniswap/uniswap-ai/issues/148#issuecomment-5586501199).
+   Their verification also found it in one more place than we did, and traced it
+   to Uniswap's own v4 quoting guide, which the skill had faithfully copied.
 
 Rough edges are recorded in [`FEEDBACK.md`](./FEEDBACK.md) as we hit them.
 

@@ -80,6 +80,14 @@ npm run demo        # discover a seller, read its price from Sepolia, pay on bot
 | An authored Substreams module for an emerging standard | ERC-8004 agent-registry normalization, Rust, one pipeline across four networks | [`graph/substreams/erc8004-agent-registry-v0.1.0.spkg`](../graph/substreams/) |
 | Reusable infrastructure, not a one-off app | `mcp-turnstile` (4 tools + `SKILL.md`) and a standalone `uniswap-mcp` package | [`mcp-turnstile/SKILL.md`](../mcp-turnstile/SKILL.md) |
 
+## Uniswap
+
+| Claim | Evidence | Where |
+|---|---|---|
+| We reported a defect in Uniswap's official agent-tooling repo | `v4-sdk-integration` mandated ethers v5 `callStatic` in a skill that installs no ethers and whose other snippets are all viem; both eval rubrics graded for it | [`uniswap-ai#148`](https://github.com/Uniswap/uniswap-ai/issues/148) |
+| **Uniswap fixed and merged it, the same day** | Merged 2026-09-08T14:27:57Z, 7 files, +51 / −14, across the skill, its docs page, the plugin `CLAUDE.md` and both rubrics | [`uniswap-ai#149`](https://github.com/Uniswap/uniswap-ai/pull/149) |
+| **The merged code is theirs, not ours.** Stated here so it is not inferred | A maintainer wrote it so the version bump and docs sync landed in one commit, and linked back to our issue: *"the shape is yours and the PR will link back here"* | [their comment](https://github.com/Uniswap/uniswap-ai/issues/148#issuecomment-5586501199) |
+
 ## Chainlink CRE: read this one carefully
 
 | Claim | Evidence | Where |
