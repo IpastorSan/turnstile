@@ -91,7 +91,64 @@ export interface WalletUpdateRow {
 export function openDb(path: string = DEFAULT_DB_PATH): DatabaseSync {
   const db = new DatabaseSync(path);
   db.exec(readFileSync(SCHEMA_PATH, 'utf8'));
+  migrateWorldVerificationFk(db);
   return db;
+}
+
+/**
+ * Drop the historical FK on world_verification.agent_uid, in place.
+ *
+ * `CREATE TABLE IF NOT EXISTS` never edits a table that already exists, so
+ * every database built before the FK was removed keeps it — including the
+ * mounted store on the live host, which survived redeploys because it lives on
+ * a volume by design. The FK broke World verification on 2026-09-11: proofs
+ * are recorded before an agent row exists (that is the onboarding order), so
+ * the insert died with FOREIGN KEY constraint failed and the public site
+ * returned 500 for every genuine proof.
+ *
+ * The rebuild is the SQLite way to change a column constraint: copy, drop,
+ * rename. The views are the part that bites — `agent_current` references this
+ * table, a dropped-but-referenced table makes the schema unparseable, and
+ * ALTER TABLE RENAME re-parses every view before it will run. So dependent
+ * views are dropped first and recreated verbatim from their own stored SQL
+ * afterwards. Order: save view SQL → copy → drop views → drop table → rename
+ * → recreate views → recreate the count index.
+ */
+export function migrateWorldVerificationFk(db: DatabaseSync): boolean {
+  const row = db
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'world_verification'")
+    .get() as { sql: string } | undefined;
+  if (!row || !/REFERENCES\s+agent/i.test(row.sql)) return false;
+
+  const dependents = db
+    .prepare("SELECT type, name, sql FROM sqlite_master WHERE type IN ('view', 'trigger') AND sql LIKE '%world_verification%'")
+    .all() as { type: string; name: string; sql: string }[];
+
+  db.exec('PRAGMA foreign_keys = OFF');
+  try {
+    db.exec(`
+      CREATE TABLE world_verification_no_fk (
+        agent_uid    TEXT PRIMARY KEY,
+        status       TEXT NOT NULL,
+        nullifier    TEXT,
+        proof_ref    TEXT,
+        verified_at  INTEGER NOT NULL
+      );
+      INSERT INTO world_verification_no_fk
+        SELECT agent_uid, status, nullifier, proof_ref, verified_at FROM world_verification;
+    `);
+    for (const dep of dependents) db.exec(`DROP ${dep.type.toUpperCase()} IF EXISTS "${dep.name.replace(/"/g, '""')}"`);
+    db.exec('DROP TABLE world_verification');
+    db.exec('ALTER TABLE world_verification_no_fk RENAME TO world_verification');
+    for (const view of dependents) db.exec(view.sql);
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS world_verification_by_nullifier
+        ON world_verification(nullifier, status);
+    `);
+  } finally {
+    db.exec('PRAGMA foreign_keys = ON');
+  }
+  return true;
 }
 
 /** `URI_SCHEME_HTTPS` -> `HTTPS`. Proto3 JSON spells enums out in full. */

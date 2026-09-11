@@ -246,7 +246,14 @@ CREATE INDEX IF NOT EXISTS settlement_receipt_by_agent ON settlement_receipt(age
 -- (identity/limits.ts caps it), so a unique index would refuse their second
 -- listing rather than their fourth. The index below is for counting.
 CREATE TABLE IF NOT EXISTS world_verification (
-  agent_uid    TEXT PRIMARY KEY REFERENCES agent(agent_uid) ON DELETE CASCADE,
+  -- No FK on agent_uid, deliberately, and this column of comments is the
+  -- scar from the live 500 it caused on 2026-09-11. A proof is recorded
+  -- BEFORE any agent row exists — that is the whole onboarding order: verify
+  -- the human, then register the listing. The sink's `agent` table only
+  -- holds on-chain registrations, so verifying our own ENS listing (which
+  -- lives in the manifest, not the graph) died with FOREIGN KEY constraint
+  -- failed. The FK was enforcing a dependency that must not exist.
+  agent_uid    TEXT PRIMARY KEY,
   status       TEXT NOT NULL,     -- verified | rejected
   nullifier    TEXT,
   proof_ref    TEXT,
