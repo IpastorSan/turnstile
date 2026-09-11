@@ -311,15 +311,19 @@ on Hedera testnet, with HCS receipts on topic `0.0.10408013`. See
   recording:**
 
   ```bash
-  baz wallet new                       # then fund it: faucet.circle.com, Base Sepolia USDC
-  baz wallet balance
+  baz wallet new                       # fund it with USDC on BASE MAINNET, not Sepolia
+  baz wallet balance                   # reads base mainnet; testnet funds show 0
   baz curl "https://uiytibxlirffdly7zzti372rj4.bazgateway.com/analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640" \
-    --account wallet --max-amount 0.08 --network base-sepolia --json
+    --account wallet --max-amount 0.08 --json
   ```
 
-  `--network base-sepolia` because the gateway is a production one (default Base
-  mainnet) while the rail is testnet; `--max-amount 0.08` because the tier is
-  $0.07 and the CLI's default ceiling is 0.01.
+  **No `--network` flag.** A production Bazantic gateway issues its own challenge
+  on Base mainnet (verified: `network: base`, 0.01 USDC to their address), which
+  is the CLI's default for a production gateway — passing `--network base-sepolia`
+  is refused with `unsupported_challenge`. The provider rail that receives the
+  gateway's upstream payment is `base-usdc-mainnet` (added 2026-09-11);
+  `--max-amount 0.08` is needed because the tier is $0.07 and the CLI's default
+  ceiling is 0.01.
 - Recording: *record its URL here.*
 
 ## Open items
