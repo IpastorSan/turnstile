@@ -21,7 +21,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import type { PaymentPayload, PaymentRequirement } from '../PaymentRail.ts';
-import { createBaseRail } from './index.ts';
+import { createBaseMainnetRail, createBaseRail } from './index.ts';
 import { toVerifyFailureReason } from './facilitator.ts';
 
 const USDC = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
@@ -245,4 +245,58 @@ test('receipt() reads a settled transfer back off the chain, and refuses anythin
   assert.equal(await rail.receipt('stub:base-usdc:000001'), null);
   const empty = createBaseRail({ payTo: PAYOUT, rpcFetch: (async () => new Response(JSON.stringify({ result: { status: '0x1', logs: [] } }), { status: 200 })) as unknown as typeof globalThis.fetch });
   assert.equal(await empty.receipt(hash), null);
+});
+
+// ---------------------------------------------------------------------------
+// The mainnet instance — same implementation, the other chain
+//
+// What is pinned here is the part that is silently wrong when it is wrong: the
+// EIP-712 domain. Circle's mainnet token is named "USD Coin" and the testnet one
+// "USDC", and a payment signed against the wrong name is refused by the
+// facilitator only after the payer has signed it. The rest — network, asset,
+// explorer — is a constant that a reader could check by eye, but a test is
+// cheaper than an eye.
+
+const MAINNET_USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+
+function mainnetRail(options: FakeOptions = {}) {
+  const fake = fakeFacilitator({
+    supported: { kinds: [{ x402Version: 2, scheme: 'exact', network: 'eip155:8453' }] },
+    ...options,
+  });
+  const rail = createBaseMainnetRail({ payTo: PAYOUT, facilitatorOptions: { fetch: fake.fetchImpl } });
+  return { rail, ...fake };
+}
+
+test('the mainnet challenge carries mainnet USDC and its own EIP-712 name', async () => {
+  const { rail } = mainnetRail();
+  const challenge = await rail.challenge({ resource: RESOURCE, description: 'x', priceUsd: 0.07 });
+  assert.equal(rail.info.id, 'base-usdc-mainnet');
+  assert.match(rail.info.label, /^Base USDC/, 'the label must not say Sepolia on a mainnet rail');
+  assert.equal(challenge.network, 'eip155:8453');
+  assert.equal(challenge.asset, MAINNET_USDC);
+  assert.equal(challenge.extra['name'], 'USD Coin', 'mainnet USDC is named "USD Coin"; testnet is "USDC"');
+  assert.equal(challenge.extra['version'], '2');
+  assert.equal(challenge.extra['chainId'], 8453);
+  assert.equal(challenge.amount, '70000');
+});
+
+test('a mainnet settlement links to basescan.org, never the testnet explorer', async () => {
+  const { rail } = mainnetRail();
+  const requirement = await rail.challenge({ resource: RESOURCE, description: 'x', priceUsd: 0.07 });
+  const receipt = await rail.settle(paymentFor(requirement));
+  assert.equal(receipt.success, true);
+  assert.match(String(receipt.extra?.['basescan']), /^https:\/\/basescan\.org\/tx\//);
+  assert.doesNotMatch(String(receipt.extra?.['basescan']), /sepolia/);
+});
+
+test('the two instances declare different rails, which is what lets both be registered', async () => {
+  const { rail: testnet } = railWith();
+  const { rail: mainnet } = mainnetRail();
+  assert.notEqual(testnet.info.id, mainnet.info.id);
+  assert.notEqual(testnet.info.network, mainnet.info.network);
+  // Same seller payout address: two chains, one seller.
+  const a = await testnet.challenge({ resource: RESOURCE, description: 'x', priceUsd: 0.07 });
+  const b = await mainnet.challenge({ resource: RESOURCE, description: 'x', priceUsd: 0.07 });
+  assert.equal(a.payTo, b.payTo);
 });

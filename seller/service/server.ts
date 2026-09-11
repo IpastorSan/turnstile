@@ -7,7 +7,8 @@
 // everywhere else in the directory, and fails if the list grows a branch.
 
 import { createArcRail } from '../../rails/arc-usdc/index.ts';
-import { createBaseRail } from '../../rails/base-usdc/index.ts';
+import { createBaseMainnetRail, createBaseRail } from '../../rails/base-usdc/index.ts';
+
 import { createHederaRail } from '../../rails/hedera-x402/index.ts';
 import { RailRegistry } from '../../rails/registry.ts';
 import { liveAnalyst } from './analyst-port.ts';
@@ -15,7 +16,7 @@ import { createApp } from './app.ts';
 
 const port = Number(process.env['PORT'] ?? 4021);
 
-const registry = new RailRegistry([createHederaRail(), createArcRail(), createBaseRail()]);
+const registry = new RailRegistry([createHederaRail(), createArcRail(), createBaseRail(), createBaseMainnetRail()]);
 const app = createApp({ registry, analyst: liveAnalyst() });
 
 app.listen(port, () => {

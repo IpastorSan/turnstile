@@ -8,7 +8,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createArcRail } from './arc-usdc/index.ts';
-import { createBaseRail } from './base-usdc/index.ts';
+import { createBaseMainnetRail, createBaseRail } from './base-usdc/index.ts';
 import { createHederaRail } from './hedera-x402/index.ts';
 // The Hedera rail reads its facilitator and its exchange rate over HTTP. A unit
 // suite that hit the network for that would be slow, offline-hostile, and would
@@ -19,7 +19,7 @@ import { fakeFacilitatorFetch, offlineRailOptions } from './hedera-x402/testing.
 import { fakeGateway, offlineRailOptions as offlineArcOptions } from './arc-usdc/testing.ts';
 // And the same again for Base: its `/supported` is what says the network is
 // settleable at all.
-import { offlineOptions as offlineBaseOptions } from './base-usdc/testing.ts';
+import { offlineMainnetOptions, offlineOptions as offlineBaseOptions } from './base-usdc/testing.ts';
 import { PaymentRailError, usdToAtomic } from './PaymentRail.ts';
 import type { PaymentPayload, PaymentRail, PaymentRequirement } from './PaymentRail.ts';
 import { RailRegistry } from './registry.ts';
@@ -176,7 +176,7 @@ test('a rail that settles nothing says so, and one that settles says that instea
   const rails = [
     createHederaRail(offlineRailOptions(fakeFacilitatorFetch())),
     createArcRail(offlineArcOptions(fakeGateway())),
-    createBaseRail(offlineBaseOptions()),
+    createBaseRail(offlineBaseOptions()), createBaseMainnetRail(offlineMainnetOptions()),
   ];
 
   for (const r of rails) {
@@ -196,7 +196,7 @@ test('a rail that settles nothing says so, and one that settles says that instea
   // All three shipped rails are live as of 2026-09-11 (Base joined the other
   // two). Asserted rather than assumed, so that a rail silently regressing to a
   // stub fails here.
-  assert.deepEqual(rails.map(r => `${r.id}=${r.info.live}`).sort(), ['arc-usdc=true', 'base-usdc=true', 'hedera-x402=true']);
+  assert.deepEqual(rails.map(r => `${r.id}=${r.info.live}`).sort(), ['arc-usdc=true', 'base-usdc-mainnet=true', 'base-usdc=true', 'hedera-x402=true']);
 
   // And the stub rail still tells the truth in the other direction.
   const stub = rail('placeholder', 'chain:9');
@@ -224,21 +224,21 @@ test('the advertised rails reconcile with the on-chain turnstile:rails record', 
   // which is the point of pinning it.
   const ON_CHAIN = 'x402,usdc-arc';
 
-  const registry = new RailRegistry([createHederaRail(offlineRailOptions(fakeFacilitatorFetch())), createArcRail(offlineArcOptions(fakeGateway())), createBaseRail(offlineBaseOptions())]);
+  const registry = new RailRegistry([createHederaRail(offlineRailOptions(fakeFacilitatorFetch())), createArcRail(offlineArcOptions(fakeGateway())), createBaseRail(offlineBaseOptions()), createBaseMainnetRail(offlineMainnetOptions())]);
   const advertised = registry.describe().map(info => info.ensRailToken).sort();
   assert.deepEqual([...new Set(advertised)], ON_CHAIN.split(',').sort());
 
   // And the ids stay the directory names, so a reader of either can find the other.
-  assert.deepEqual(registry.describe().map(info => info.id).sort(), ['arc-usdc', 'base-usdc', 'hedera-x402']);
+  assert.deepEqual(registry.describe().map(info => info.id).sort(), ['arc-usdc', 'base-usdc', 'base-usdc-mainnet', 'hedera-x402']);
 });
 
 test('the three shipped rails are routable against each other', async () => {
   // The property MOV-220, MOV-225 and the Base rail all rely on: distinct
   // (scheme, network), so a payment can be attributed. If any rail changes its
   // network to another's, this fails rather than the money going astray.
-  const registry = new RailRegistry([createHederaRail(offlineRailOptions(fakeFacilitatorFetch())), createArcRail(offlineArcOptions(fakeGateway())), createBaseRail(offlineBaseOptions())]);
+  const registry = new RailRegistry([createHederaRail(offlineRailOptions(fakeFacilitatorFetch())), createArcRail(offlineArcOptions(fakeGateway())), createBaseRail(offlineBaseOptions()), createBaseMainnetRail(offlineMainnetOptions())]);
   const { accepts, failed } = await registry.challengeAll({ resource: RESOURCE, description: 'x', priceUsd: 0.07 });
   assert.deepEqual(failed, []);
-  assert.equal(accepts.length, 3);
-  assert.equal(new Set(accepts.map(a => `${a.scheme} ${a.network}`)).size, 3);
+  assert.equal(accepts.length, 4);
+  assert.equal(new Set(accepts.map(a => `${a.scheme} ${a.network}`)).size, 4);
 });

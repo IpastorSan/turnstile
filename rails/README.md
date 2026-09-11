@@ -168,6 +168,7 @@ to name it** — that is a cold-key transaction, and the rail reuses the existin
 | `hedera-x402` | **live** — settles HBAR on Hedera testnet via Blocky402 (MOV-220) |
 | `arc-usdc` | **live** — settles USDC on Arc testnet via Circle Gateway Nanopayments (MOV-225). See `docs/arc-nanopayments.md` |
 | `base-usdc` | **live** — settles USDC on Base Sepolia via the public x402 facilitator (2026-09-11). Added for the Bazantic gateway; `BASE_PAYOUT_ADDRESS` overrides the payout, `X402_FACILITATOR_URL` the facilitator |
+| `base-usdc-mainnet` | **live** — the same rail on Base **mainnet**, same implementation, different constants (2026-09-11). Added because a Bazantic gateway registered on `bazantic.com` is production and charges its client on mainnet; their testnet previews are internal. Settlement goes through `facilitator.payai.network` (verified no-key, mainnet `exact`; **its fee model is not verified**). The EIP-712 name differs from testnet — mainnet USDC is `"USD Coin"`, testnet is `"USDC"` — and a test pins that. |
 
 **What was verified on the live host, 2026-09-11.** Not a unit test: a signed
 payment against the deployed seller. `scripts/base-pay-probe.ts` fetched the real
