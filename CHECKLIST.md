@@ -71,14 +71,14 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 **ENS — ENSv2 ($4,500)**
 - [x] ENSv2 on **Sepolia**; features **central, not cosmetic** — done (MOV-217 + MOV-218). Registry, registrar and a `PermissionedResolver` live on Sepolia; `liquidity.turnstile.eth` minted with ENSIP-25/26 records and a cold/hot EAC role split enforced by the resolver. Tx hashes and on-chain reads in `docs/ens-offer-records.md`
 - [ ] Demo functional, **no hard-coded values**
-- [ ] Video **and/or** live demo link (ideally both); open source
+- [x] Video **and/or** live demo link (ideally both); open source — **live demo link since 2026-09-11 (MOV-273): <https://turnstile.moveseventyeight.com>**, a GCP VM running `deploy/compose.yaml` behind Caddy with a Let's Encrypt certificate; `/analyze/:pool` answers `402` over real TLS. The gate's "and/or" is met by the link alone. **Still to do:** the video is not recorded; "open source" depends on the visibility flip under [Before submitting](#before-submitting--blocks-all-12-submissions); and the URL published in `agent-endpoint[mcp]` (`…/liquidity.turnstile.eth/sse`) returns 404 — submit the host link, not the record's URL. See `docs/deploy.md`, "Known gap"
 
 **Arc — Agentic ($1,667) + Launch ($3,500)**
 - [x] **A live agentic payment on Arc** — done (MOV-225). USDC on Arc testnet (`eip155:5042002`) through **Circle Gateway Nanopayments**, `@circle-fin/x402-batching@3.4.0`, facilitator `https://gateway-api-testnet.circle.com` with no API key. Seven payments settled 2026-09-07 — one at $0.07 and six at $0.000500 — from agent `0x0633a193017939Bb1eB242982397224c66948e2F`, whose **nonce stayed 0 throughout**: it signs EIP-3009 authorizations offchain and never submits a transaction, so it paid exactly zero gas. Transcript and verified/unverified table in `docs/arc-nanopayments.md`
 - [x] **The same query settles over both rails** — done (MOV-225). One run, one URL: Arc returned authorization `fa4ca648-863c-4f61-9a1e-2953eb789f7f`, Hedera returned `0.0.7162784@1788800327.098234984`, same verdict both times. `seller/service/no-chain-code.test.ts` fails the build if any file on the payment path names a chain, so this is enforced rather than asserted
 - [x] **Nanopayments, batched, with the transaction as evidence** — done (MOV-225). Six $0.000500 queries and the $0.07 query settled in **one** Arc transaction, [`0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1`](https://testnet.arcscan.app/tx/0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1) — block 60940635, 22 payments in it including other Gateway users', 0.133111 USDC, `from` = Circle's batcher `0xc73ef0d8…a884`, `to` = the GatewayWallet. A second run settled four more in [`0xe50b8be6…5c39`](https://testnet.arcscan.app/tx/0xe50b8be63a2fe102c70de3b62a43251fbfcac1d8ca93f9f1760dd3c7a7985c39) (block 60942503) — eleven settled payments in two transactions. Both runs' six-minute inline poll **expired before the batch landed**: Circle's batcher fires on its own schedule (2 to 15 minutes observed on one afternoon). **Do not script a demo around a fixed window** — run `npm run arc:receipts -- --ours --watch` as a second step
 - [ ] **State explicitly which bounty** each submission targets
-- [x] Working **frontend and backend** — done (MOV-230). Next.js 16 app in `web/`: market and seller pages server-rendered, plus `/api/sellers`, `/api/offer/:name` and `/api/health` as real routes over the discovery store and live Sepolia. Not a static export. **Still not deployed** — see `docs/deploy.md`
+- [x] Working **frontend and backend** — done (MOV-230). Next.js 16 app in `web/`: market and seller pages server-rendered, plus `/api/sellers`, `/api/offer/:name` and `/api/health` as real routes over the discovery store and live Sepolia. Not a static export. ~~**Still not deployed**~~ — see `docs/deploy.md`. **Update (2026-09-11, MOV-273):** deployed. <https://turnstile.moveseventyeight.com> serves the web app and the x402 service since 2026-09-11 (`/`, `/api/health`, `/seller-health` 200; `/analyze/:pool` 402)
 - [x] **Architecture diagram** (§2.1 + §2.2) — done (MOV-230). `docs/architecture.svg` + `.png`, embedded in `README.md`, walked through in `docs/architecture.md`. Panel A the cold/warm/hot key tiers, Panel B discovery → offer → 402 → rail → answer
 - [ ] Video + presentation + detailed docs; GitHub link
 - [ ] Launch track: deployed or **deployment-ready on Arc mainnet by 30 Sep**
@@ -94,7 +94,7 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [~] ~~Built on the Ledger Agent Stack, **in particular `wallet-cli ring`**~~ — impossible on our hardware; see setup step 5 for the full diagnosis
 - [~] ~~Device-backed security **central**, not bypassed~~ — **there is no device.** The cold/warm/hot tier split is real, and the cold key's authority is enforced on chain (MOV-218: the hot key's `setAddr` payout change reverts with `EACUnauthorizedAccountRoles` on Sepolia). It is simply **not hardware-backed**, so this gate cannot be claimed
 - [~] ~~Submission explicitly labels the capability broker as **ours**, not a Ledger primitive~~ — moot with the track dropped
-- **Why this is struck through rather than deleted:** the gates were evaluated and failed on hardware we could not change, not overlooked. Claiming a Ledger we do not have would be a false statement to judges. Every "Ledger" mention elsewhere in the repo was removed or dated-corrected in MOV-000; the one string that survives is the live ENS record `turnstile:operator-proof = "ledger-key-ring"` on Sepolia, which is a **stale label** — rewriting it needs a cold-key transaction. See `docs/ens-offer-records.md`.
+- **Why this is struck through rather than deleted:** the gates were evaluated and failed on hardware we could not change, not overlooked. Claiming a Ledger we do not have would be a false statement to judges. Every "Ledger" mention elsewhere in the repo was removed or dated-corrected in MOV-000; ~~the one string that survives is the live ENS record `turnstile:operator-proof = "ledger-key-ring"` on Sepolia, which is a **stale label** — rewriting it needs a cold-key transaction.~~ **Update (2026-09-11, MOV-273):** that string no longer survives. The operator key `0x0Adca6e1…f5F2` rewrote the record to `operator-key-role-scoped` in [`0x26195105…d4e1`](https://sepolia.etherscan.io/tx/0x261951055f300820830e66160c7a5d2437a489b15ee008aad39b4f47f2a3d4e1) (block 11680454, status 1), matching `PublishOffer.s.sol`'s default. No live record on chain mentions a Ledger now. See `docs/ens-offer-records.md`.
 
 **Uniswap ($3,000)**
 - [ ] Public repo, open source
@@ -146,10 +146,21 @@ That record pointed at `https://mcp-eu.turnstile.xyz/…` until 2026-09-08, and 
 is not ours** — it resolves to third-party AWS. MOV-010 repointed it to
 `https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse` with the hot key, tx
 [`0x6736b3b2…8c66`](https://sepolia.etherscan.io/tx/0x6736b3b2125d7d030be5fb70c5343342d98cc44ab2dd38b2451667926b818c66),
-block 11662532. The new host **does not resolve yet** either, so a judge reading only the ENS
+block 11662532. ~~The new host **does not resolve yet** either, so a judge reading only the ENS
 record still finds nothing to pay. The gap is now on a domain we control and can close with the
-deploy, which is the point. **The Sept 14 beat is therefore no longer "repair a dead record" —
+deploy, which is the point.~~ **The Sept 14 beat is therefore no longer "repair a dead record" —
 see the note below.**
+
+**Update (2026-09-11, MOV-273): the real deploy happened on 2026-09-11, not Sept 14, and it
+stays up.** <https://turnstile.moveseventyeight.com> is a GCP Compute Engine VM running
+`deploy/compose.yaml` behind Caddy with a Let's Encrypt certificate, `main` at `5feaec2`.
+Verified from outside over TLS: `/`, `/api/health`, `/seller-health` 200; `/analyze/:pool`
+**402**; http→https 308. The struck sentence said the host did not resolve; it does now. **What
+is still true: a judge reading only the ENS record still finds nothing to pay**, because the
+record's full URL, `…/liquidity.turnstile.eth/sse`, returns 404 — `mcp-turnstile` is stdio-only
+and nothing serves that path (`docs/deploy.md`, "Known gap"). The Sept 13 rehearsal is moot now
+that the real deploy is up. The beat below needs re-reading against this: see the update after
+it.
 
 **The Sept 14 beat, restated after MOV-010.** The original plan was that repairing the dead
 record *was* the demo, because the hot key may move where the service lives and may **not**
@@ -172,7 +183,17 @@ written. MOV-010's own tx
 ([`0x6736b3b2…8c66`](https://sepolia.etherscan.io/tx/0x6736b3b2125d7d030be5fb70c5343342d98cc44ab2dd38b2451667926b818c66))
 is a third data point available if a judge asks how often this record moves.
 
-**OPEN DECISION — Ignacio's call, needed before Sept 14.** The live record
+**Update (2026-09-11, MOV-273): step 1 of this beat no longer works as written.** It assumed the
+host would go from unresolved to live on camera. The host went live on 2026-09-11, off camera, and
+the record already points at it — at a path, `…/liquidity.turnstile.eth/sse`, that returns 404. So
+"the record goes from not answering to answering while a judge watches" is still available, but
+only by repointing to a URL that actually answers, which is one of the three options in
+`docs/deploy.md`, "Known gap" (repoint to the base URL, serve MCP over HTTP/SSE at that path, or
+publish `agent-endpoint[web]` alongside). Which one is Ignacio's call and is not made here. Step 2,
+the refused `setAddr`, is unaffected.
+
+**RESOLVED 2026-09-11 (MOV-273) — the record was rewritten; see the update at the end of this
+block.** ~~**OPEN DECISION — Ignacio's call, needed before Sept 14.**~~ The live record
 `turnstile:operator-proof` on Sepolia still reads `ledger-key-ring`. The Ledger track is
 dropped (setup step 5), so that string describes nothing we do, and it is **cold-key
 writable only** — an edit cannot reach it, `PublishOffer.s.sol` publishes `cold-key-offline`
@@ -186,6 +207,17 @@ show what the hot key can and cannot do; a third shows the tier above it is real
 just prose. If the cold key is inconvenient to bring online that day, the fallback is to
 leave the annotation in `docs/ens-offer-records.md` and say so on camera — but that spends
 narration on an apology instead of a proof.
+
+**Update (2026-09-11, MOV-273): decided and done.** `turnstile:operator-proof` was rewritten from
+`ledger-key-ring` to `operator-key-role-scoped` by the operator key
+`0x0Adca6e14bA956201D221feC767e4f24194bf5F2` (root roles on the resolver), in
+[`0x261951055f300820830e66160c7a5d2437a489b15ee008aad39b4f47f2a3d4e1`](https://sepolia.etherscan.io/tx/0x261951055f300820830e66160c7a5d2437a489b15ee008aad39b4f47f2a3d4e1),
+block 11680454, status 1. Read back the same day, and the live seller page shows the new value.
+It happened on 2026-09-11, not in the Sept 14 session the recommendation proposed. The tx stays
+citable as the one demonstration of the operator key doing what only it may do. Whether to repeat a
+cold-tier write on camera is a separate call, not made here. One correction to the block above: it
+says `PublishOffer.s.sol` publishes `cold-key-offline`. That was superseded the same day by MOV-005.
+The default is `operator-key-role-scoped`, which is exactly what the chain now reads.
 
 Then Bazantic registration the same day, which needs the
 public `--spec-url` and `--endpoint` plus a browser session (`baz login`). See
@@ -224,6 +256,12 @@ whether the link was decoration.
 recording **or** link to a live demo (ideally both)"* — the video alone satisfies it. Arc wants
 a working frontend and backend *demonstrated*, not hosted. Only Bazantic ($1,000, cut-line #1)
 strictly needs public URLs, because its facilitator fetches them server-side.
+
+**Update (2026-09-11, MOV-273):** the public host now exists (<https://turnstile.moveseventyeight.com>,
+live since 2026-09-11), so Bazantic registration is no longer waiting on a deploy. It still needs
+`baz login` in a browser. Whether the `--spec-url` Bazantic wants is served from this host was
+**not checked** in this change. "Not hosted" above describes what Arc requires, not our state,
+and is unchanged.
 
 **What the repo staying private actually protects:** the ERC-8004 Substreams angle and the
 sealed-calibration design. The deployed *site* only shows a market page and a seller page —
@@ -538,6 +576,14 @@ The lines below are appended rather than edited, per the union-merge rule.
   build machine (no Vercel, Netlify, Fly or Cloudflare CLI or token), so the
   deploy could not be performed. `web/Dockerfile` and `docs/deploy.md` reduce it
   to one command plus one environment variable, `SEPOLIA_RPC_URL`.
+- **Update (2026-09-11, MOV-273):** three bullets above are out of date on the deploy. Arc's "true,
+  not deployed", ENS's "the missing half is the deploy … not hosted anywhere", and ENS's "video
+  and/or live demo link: still open" were all accurate for MOV-230. The stack has been live at
+  <https://turnstile.moveseventyeight.com> since 2026-09-11, so the web app and the x402 service are
+  hosted, and the live-demo-link row above is ticked. What still stands: the video is not recorded,
+  and the URL in `agent-endpoint[mcp]` returns 404 (`docs/deploy.md`, "Known gap"). The
+  "Demo functional, no hard-coded values" row is left unticked for Ignacio's call, now that its
+  missing half exists.
 - Two routes are deliberately **not** built and are labelled as such in the app:
   `/onboard` (MOV-223, blocked on World Sandbox approval) and `/mandate`
   (MOV-228, not started). Neither shows invented data. A faked panel would put

@@ -3,6 +3,27 @@
 One host runs everything: the Next.js app, the x402 seller service, the evidence
 server the CRE enclave fetches from, and Caddy in front of all three.
 
+## Live since 2026-09-11
+
+**<https://turnstile.moveseventyeight.com>** is served from a GCP Compute Engine
+VM, `turnstile` (e2-medium, `europe-southwest1-a`, static IP `34.175.99.87`),
+running `deploy/compose.yaml` from `main` at `5feaec2`, with Caddy holding a
+Let's Encrypt certificate.
+
+Verified 2026-09-11 from outside the box, over real TLS (re-checked 07:30 UTC):
+
+| Request | Status |
+|---|---|
+| `GET /` | 200 |
+| `GET /api/health` | 200 |
+| `GET /seller-health` | 200 |
+| `GET /analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640` | **402 Payment Required** |
+| `GET http://…/` | 308 → `https://` |
+| `GET /liquidity.turnstile.eth/sse` — the URL in `agent-endpoint[mcp]` | **404** — see [Known gap](#known-gap-the-published-endpoint-path-serves-nothing) |
+
+The host is up and the paid service answers. The URL the ENS record publishes
+does not.
+
 ## Why one box rather than a serverless frontend
 
 Turnstile is not a frontend with an API. Two of its three services are
@@ -108,6 +129,19 @@ the host was repointed on 2026-09-08 (MOV-010).
 So even after this stack is live, an agent that follows the ENS record to that
 exact URL gets a 404 from the web app. The seller service is reachable and
 payable at `/analyze/:pool`; the record does not say so.
+
+**Update (2026-09-11, MOV-273):** the paragraph above was written as a
+prediction, before the stack was live. It is live now and the prediction held.
+Checked 2026-09-11 07:30 UTC against the public host:
+
+```
+GET https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse                        404
+GET https://turnstile.moveseventyeight.com/analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640  402
+```
+
+The same day, `cast call` against the resolver still returned
+`"https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse"` for
+`agent-endpoint[mcp]`. The gap closed at the host and stays open at the path.
 
 Three ways to close it, none of them done:
 

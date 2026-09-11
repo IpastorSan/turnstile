@@ -84,10 +84,21 @@ The short version of the request path:
 **All six steps run today**, and the settlement half moves real money: HBAR
 through Blocky402 on Hedera, and USDC on Arc through Circle Gateway
 nanopayments, with the same query answered identically over both rails. Every
-transaction is linked in [`CHECKLIST.md`](./CHECKLIST.md). The one real gap is
+transaction is linked in [`CHECKLIST.md`](./CHECKLIST.md). ~~The one real gap is
 deployment rather than capability: the address published in `agent-endpoint[mcp]`
 has no DNS record yet, so step 03 works from the repo and not from the open
-internet. `docs/architecture.md` gives the per-step state.
+internet.~~
+
+**Update (2026-09-11, MOV-273):** this previously said the published host had no
+DNS record. It changed because the stack went live on 2026-09-11:
+<https://turnstile.moveseventyeight.com> serves the web app, and the x402 service
+on it answers `402 Payment Required` at `/analyze/:pool` (verified 2026-09-11
+over real TLS). **What is still true is the gap itself — it moved from the host to
+the path.** `agent-endpoint[mcp]` publishes `…/liquidity.turnstile.eth/sse`, and
+that exact URL returns **404**: `mcp-turnstile` is a stdio MCP server and nothing
+in this repo serves MCP over HTTP. A buyer's agent that follows the ENS record
+literally still finds nothing to pay. See [`docs/deploy.md`](./docs/deploy.md).
+`docs/architecture.md` gives the per-step state.
 
 ## The web app
 
