@@ -31,6 +31,13 @@ with none of the thing it exists to show.
 | Create a mandate | operator keys generated in the browser, never sent to the server | [`mandate-new.png`](./screenshots/mandate-new.png) |
 | Onboard | Selfie Check as an abuse control, not a login | [`onboard.png`](./screenshots/onboard.png) |
 
+**Update (2026-09-11, MOV-273):** `seller.png` predates two changes, and shows the
+old state of both: `turnstile:operator-proof` reading `ledger-key-ring` (rewritten
+on chain 2026-09-11), and a "Where to ask" section saying the published host does
+not answer yet (the host is live since 2026-09-11; the published *path* still
+404s). What it claims in the table above — a live, uncached read from Sepolia — is
+unaffected. It was not re-captured in this change.
+
 **Run the product end to end in one command:**
 
 ```bash
@@ -60,6 +67,7 @@ npm run demo        # discover a seller, read its price from Sepolia, pay on bot
 | Its scope is exactly two records | Roles cover `agent-endpoint[mcp]` and `turnstile:price`, nothing else | [`testFork_hotKeyIsStillScopedToTwoRecords`](../contracts/test/fork/SepoliaOffer.t.sol) |
 | The operator key holds the root roles | `0x0Adca6e1…f5F2` on `liquidity.turnstile.eth` | [`addresses.turnstile.sepolia.json`](../contracts/addresses.turnstile.sepolia.json) |
 | **Custody is not cold.** Stated here so it is not inferred | That operator key is the same address as the deployer, and its key is `DEPLOYER_PRIVATE_KEY` in `.env`. The *authority* split is real; the custody is not. See [`CORRECTIONS.md`](../CORRECTIONS.md) | this row |
+| The operator key writes what only it may write | It rewrote `turnstile:operator-proof` from the stale `ledger-key-ring` to `operator-key-role-scoped`, signed by `0x0Adca6e1…f5F2`, block 11680454, status 1. Added and read back 2026-09-11 | [Etherscan](https://sepolia.etherscan.io/tx/0x261951055f300820830e66160c7a5d2437a489b15ee008aad39b4f47f2a3d4e1) |
 
 ## Discovery: the offer lives in the name
 
@@ -106,13 +114,25 @@ npm run demo        # discover a seller, read its price from Sepolia, pay on bot
 | A treasury operation, executed | `approve` + `depositFor` funding the agent | [tx 1](https://testnet.arcscan.app/tx/0x3c526daf25216ac831ba21f828458e4bdd7562227b012b399b3e05f0869320de) · [tx 2](https://testnet.arcscan.app/tx/0x681ba1cdbe5b46c6dcd6a7f906265b678099c501e425d62b114793d65c297ec3) |
 | An approval workflow that actually refuses | Raising the mandate cap returns `401` with one operator signature and succeeds with two | `npm run privy:mandate` |
 
+## Deployment: the host is live
+
+Added 2026-09-11 (MOV-273). Both rows were checked that day from outside the box.
+
+| Claim | Evidence | Where |
+|---|---|---|
+| The stack is served on the public internet | GCP Compute Engine VM `turnstile` (e2-medium, `europe-southwest1-a`, static IP `34.175.99.87`) running `deploy/compose.yaml` from `main` at `5feaec2`, behind Caddy with a Let's Encrypt certificate. Live since 2026-09-11 | [turnstile.moveseventyeight.com](https://turnstile.moveseventyeight.com) · [`docs/deploy.md`](./deploy.md) |
+| The paid service answers, and will not answer unpaid | Over real TLS: `/analyze/0x88e6…5640` → `402 Payment Required`; `/`, `/api/health`, `/seller-health` → 200; http → https 308 | `curl -si https://turnstile.moveseventyeight.com/analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640` |
+
+The URL the ENS record publishes is **not** among these. It is the first row of
+the next section.
+
 ## What is not live
 
 Stated plainly, because a demo surface deserves the same honesty as a retracted claim.
 
 | Not live | Why | Consequence |
 |---|---|---|
-| The hosted seller endpoint | `agent-endpoint[mcp]` names an address with no DNS record. The service is real and runs from the repo; the deploy is scheduled for Sept 14 | A judge reading only the ENS record finds nothing to pay. Run it locally with `npm run serve` |
+| The MCP endpoint published on chain | `agent-endpoint[mcp]` publishes `https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`, and that exact URL returns **404** (verified 2026-09-11). `mcp-turnstile` is a stdio MCP server; nothing in the repo serves that path. The *host* is live — see [Deployment](#deployment-the-host-is-live) | A buyer's agent that follows the ENS record literally finds nothing to pay. The payable service is on the same host at `/analyze/:pool`, and the record does not say so. See [`docs/deploy.md`](./deploy.md), "Known gap" |
 | A DON-attested verdict | `cre workflow deploy` is gated on access we do not have | The enclave and the settlement both work; the link between them is signed by us, not the DON |
 | World Selfie Check | Sandbox access, the Selfie Check Beta flag and the Sandbox mobile app are all pending approvals | `/onboard` is a labelled placeholder. `world_verification` is empty, so every agent reports `unknown`, never `unverified` |
 
@@ -146,6 +166,16 @@ rails: 12 on `hedera-x402` ($0.840000) and 13 on `arc-usdc` ($0.215000), read
 from the public mirror node and Circle Gateway's transfers API rather than from
 any store of ours. The count grows every time the demo runs, which is why the
 rows above pin transactions instead of a total.
+
+**Update (2026-09-11, MOV-273): the first row of this section was rewritten.**
+It previously read "The hosted seller endpoint | `agent-endpoint[mcp]` names an
+address with no DNS record. The service is real and runs from the repo; the
+deploy is scheduled for Sept 14 | … Run it locally with `npm run serve`". The
+host went live on 2026-09-11, so that row now names only the part still not
+live: the exact URL the record publishes, which returns 404. The host's own
+evidence is in [Deployment](#deployment-the-host-is-live), and the operator
+key's rewrite of `turnstile:operator-proof` was added to the Authority table.
+The other two rows here are unchanged and still not live.
 
 ## The Arc payout address reads 0 USDC, and always will
 

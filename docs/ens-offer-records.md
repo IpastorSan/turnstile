@@ -54,7 +54,7 @@ can still discover the service and connect to it.
 | `turnstile:price` | ours | `0.07` | **hot** |
 | `turnstile:price-ceiling` | ours | `0.50` | cold |
 | `turnstile:rails` | ours | `x402,usdc-arc` | cold |
-| `turnstile:operator-proof` | ours | `ledger-key-ring` — **stale, see below** | cold |
+| `turnstile:operator-proof` | ours | `operator-key-role-scoped` — rewritten 2026-09-11, was `ledger-key-ring`; see below | cold |
 | `addr(60)` — **the payout address** | ENSIP-1 | the seller's payout | cold |
 
 **Correction (2026-09-08, MOV-000): `turnstile:operator-proof` is a stale
@@ -85,6 +85,25 @@ Two consequences, both deliberate:
    through `graph/sink/ens.ts` and `mcp-turnstile/offer.ts` as an opaque string
    and no test asserts its contents, so the drift is cosmetic rather than
    load-bearing.
+
+**Update (2026-09-11, MOV-273): the chain now matches the code, and both
+consequences above are out of date.** They said the code publishes
+`cold-key-offline` and that code and chain disagree on this string. The first was
+superseded by MOV-005 the same day it was written: `PublishOffer.s.sol`'s
+`TURNSTILE_OPERATOR_PROOF` default has been `operator-key-role-scoped` since. The
+second stopped being true on 2026-09-11, when the operator key
+`0x0Adca6e14bA956201D221feC767e4f24194bf5F2` — the holder of the root roles on
+the resolver — rewrote the record in
+[`0x26195105…d4e1`](https://sepolia.etherscan.io/tx/0x261951055f300820830e66160c7a5d2437a489b15ee008aad39b4f47f2a3d4e1)
+(block 11680454, status 1). Read back the same day with `cast call $R
+"text(bytes32,string)(string)" $N "turnstile:operator-proof"`, it returns
+`"operator-key-role-scoped"`, and the live seller page shows the new value.
+
+What is unchanged: the string is still carried as an opaque value and nothing
+decides on it, and **custody is still not cold** — the record now says exactly
+what the MOV-005 note above says to read it as, and no more. The `cast`
+transcript below is left verbatim: it records what the chain returned before the
+rewrite.
 
 **Unchanged: every other row, and the cold/hot split itself.** Which keys may
 write which records is enforced by the resolver's roles, not by this string —
@@ -188,6 +207,9 @@ $ cast call $R "text(bytes32,string)(string)" $N "turnstile:rails"
 "x402,usdc-arc"
 $ cast call $R "text(bytes32,string)(string)" $N "turnstile:operator-proof"
 "ledger-key-ring"        # stale label, not a Ledger — see the correction above
+# ^ superseded 2026-09-11 (MOV-273) by the operator key, tx 0x26195105…d4e1,
+#   block 11680454. Left verbatim: it is what the chain returned that day.
+#   Current value: "operator-key-role-scoped"
 
 $ cast call $R "addr(bytes32)(address)" $N
 0x0Adca6e14bA956201D221feC767e4f24194bf5F2
@@ -501,10 +523,16 @@ downloaded twice. If `forge` disappears again, that is where it is.
   readable from both ends. ERC-8004 clients that expect an HTTPS agent-card URL
   will not follow it. ENSIP-27 (`/.well-known/agent.json`) is the likely landing
   place and was not implemented here.
-- **The MCP endpoint URL does not resolve.**
+- ~~**The MCP endpoint URL does not resolve.**
   `https://turnstile.moveseventyeight.com/…` has no DNS record until the deploy.
-  The record is real; the host is not up. Repointed 2026-09-08 (MOV-010) from
+  The record is real; the host is not up.~~ Repointed 2026-09-08 (MOV-010) from
   `mcp-eu.turnstile.xyz`, which sat on a domain we do not own.
+  **Update (2026-09-11, MOV-273): the host resolves and is up; the published URL
+  still does not answer.** The stack went live on 2026-09-11 and the x402 service
+  answers `402` at `/analyze/:pool` on that host. But the full URL in the record,
+  `https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`, returns
+  **404** (verified 2026-09-11): `mcp-turnstile` is a stdio MCP server and
+  nothing serves that path. See `docs/deploy.md`, "Known gap".
 - **Etherscan verification.** The resolver proxy is a factory-deployed clone;
   verification of the clone was not attempted. `verifyContract` from the factory
   is the stronger check and it passes.
@@ -533,7 +561,16 @@ AWS. Publishing a record into a domain someone else controls is worse than
 publishing a dead one: if that owner ever adds an `mcp-eu` host, our ENS record
 silently points buyers at their server. `moveseventyeight.com` is ours.
 
-**The new host does not resolve yet either.** `turnstile.moveseventyeight.com`
-has no DNS record until the deploy. So the endpoint is still not answering, and
+~~**The new host does not resolve yet either.** `turnstile.moveseventyeight.com`
+has no DNS record until the deploy.~~ So the endpoint is still not answering, and
 nothing below that says the service is unreachable has stopped being true. What
 changed is that the gap is now on a domain we can close.
+
+**Update (2026-09-11, MOV-273):** the struck sentences said the new host had no
+DNS record. It has one now: the stack went live on 2026-09-11 on a GCP VM behind
+Caddy, and the x402 service answers `402` at `/analyze/:pool` on that host.
+**The sentence after them is still true:** the endpoint as published is still not
+answering, because `…/liquidity.turnstile.eth/sse` returns 404 — nothing serves
+MCP over HTTP (verified 2026-09-11). The gap on our domain closed at the host and
+remains at the path. `docs/deploy.md` lists the three ways to close it; none is
+done.

@@ -75,26 +75,38 @@
     <div class="not-true">
       <p class="claim-label">Not claimed</p>
       <p class="claim-statement">
-        The hosted seller endpoint is not live. Nothing on the open internet
-        will answer a paid request today.
+        The endpoint published in ENS does not answer. The host is live; the
+        path the record names returns 404.
       </p>
       <dl class="claim-evidence">
         <dt>Why</dt>
         <dd>
           The ENS record <code>agent-endpoint[mcp]</code> names
-          <span class="addr">turnstile.moveseventyeight.com</span>, which has no
-          DNS record yet. The deploy is scheduled for 14 September 2026.
+          <span class="addr">turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse</span>.
+          The host has been live since 11 September 2026, and the x402 service
+          answers <code>402</code> at <code>/analyze/:pool</code> on it. But
+          <code>mcp-turnstile</code> is a stdio MCP server, and nothing serves
+          that path.
         </dd>
         <dt>Consequence</dt>
         <dd>
-          A judge reading only the ENS record finds nothing to pay. The service
-          is real and runs from the repo &mdash; page six runs it in one command.
+          A judge&rsquo;s agent that follows the ENS record literally finds
+          nothing to pay. A person who opens
+          <a href="https://turnstile.moveseventyeight.com">the host</a> finds the
+          app, and the paid service on it refuses to answer until it is paid.
         </dd>
         <dt>Scope</dt>
         <dd>
-          This is a deployment gap, not a capability gap. The settlements linked
-          from page four are real transactions on public testnets and are
-          unaffected.
+          A gap between the record and the deployment, not a capability gap.
+          The settlements linked from page four are real transactions on public
+          testnets and are unaffected.
+        </dd>
+        <dt>Updated</dt>
+        <dd>
+          2026-09-11. This block previously said the hosted seller endpoint was
+          not live, that the host had no DNS record, and that the deploy was
+          scheduled for 14 September. The host went live early; the path is
+          still the gap.
         </dd>
       </dl>
     </div>
@@ -197,7 +209,7 @@
         <tr>
           <td><a href="https://turnstile.moveseventyeight.com">turnstile.moveseventyeight.com</a></td>
           <td>The hosted app and the x402 seller service the ENS record points at</td>
-          <td class="state state-absent">Not resolving yet &mdash; deploy 14 Sep</td>
+          <td class="state">Live since 11 Sep. The ENS record&rsquo;s <code>/&hellip;/sse</code> path returns 404 (updated 2026-09-11; was &ldquo;Not resolving yet &mdash; deploy 14 Sep&rdquo;)</td>
         </tr>
         <tr>
           <td><a href="../CORRECTIONS.md">CORRECTIONS.md</a></td>
