@@ -29,7 +29,11 @@ with none of the thing it exists to show.
 | Seller | `liquidity.turnstile.eth` resolved live from Sepolia, block number moving on reload | [`seller.png`](./screenshots/seller.png) |
 | Mandate | both key quorums, the policy, and 25 settled payments across two rails | [`mandate.png`](./screenshots/mandate.png) |
 | Create a mandate | operator keys generated in the browser, never sent to the server | [`mandate-new.png`](./screenshots/mandate-new.png) |
-| Onboard | Selfie Check as an abuse control, not a login | [`onboard.png`](./screenshots/onboard.png) |
+| Onboard | Selfie Check as an abuse control, not a login; the listing picker (registered agent or reservation) | [`onboard.png`](./screenshots/onboard.png) |
+
+**Update (2026-09-11, MOV-279):** `onboard.png` was re-captured from the public
+deployment after MOV-277 replaced the hard-coded listing with a picker. The other
+four images are unchanged from MOV-276.
 
 **Update (2026-09-11, MOV-273):** `seller.png` predates two changes, and shows the
 old state of both: `turnstile:operator-proof` reading `ledger-key-ring` (rewritten
