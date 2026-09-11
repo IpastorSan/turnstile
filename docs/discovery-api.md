@@ -406,16 +406,19 @@ nested object.
   published price for a payable quote. `mcp-turnstile/examples/transcript.md`
   shows it happening.
 
-  **Update (2026-09-11, MOV-273):** the host is no longer unresolved. The two
-  dated notes above are left as the record of what was true on their dates.
-  `turnstile.moveseventyeight.com` has been live since 2026-09-11, and the x402
-  service answers `402` at `/analyze/:pool` on it. **The finding still holds at
-  the path:** the full URL in `agent-endpoint[mcp]`,
-  `…/liquidity.turnstile.eth/sse`, returns 404, since `mcp-turnstile` is
-  stdio-only. Re-run live on 2026-09-11, `get_offer` still reports
-  `purchasable: false`, with the reason now "POST expected 402, got 404" rather
-  than a DNS failure. `examples/transcript.md` predates this and was not
-  re-recorded. See `docs/deploy.md`, "Known gap".
+  **Update (2026-09-11, MOV-273) — host and path both closed the same day:** the
+  host is live, and so is the published path. `…/liquidity.turnstile.eth/sse`
+  serves MCP over HTTP/SSE (handshake verified against the live host: `GET` with
+  `Accept: text/event-stream` opens a stream naming its `POST …/messages?sessionId=…`
+  return path, `initialize` answers with our capabilities, `tools/list` returns all
+  four tools). The two dated notes above are left as the record of what was true on
+  their dates. `get_offer` still reports `purchasable: false` for this agent, and
+  the reason is now a transport mismatch rather than an absent service: the probe
+  POSTs to the URL the record names expecting a `402`, and the SSE transport answers
+  `404` to a bare POST because its POST path is `…/messages?sessionId=…`. The
+  payable resource is `…/analyze/:pool`, which does answer `402`. The probe should
+  follow the record the way a real MCP client does; that change is noted, not made.
+  `examples/transcript.md` predates all of this and was not re-recorded.
 
 - **`x402_quote` was still empty when this was written; it has since been run.**
   **Correction (2026-09-07, MOV-229):** all 14 agents in the store that advertise
