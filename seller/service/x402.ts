@@ -184,6 +184,23 @@ export function paidRoute(options: PaidRouteOptions, handler: PaidHandler): Requ
     };
 
     const signature = req.header('PAYMENT-SIGNATURE');
+
+    // Provenance for every attempt on a paid route: who called, and whether they
+    // arrived with a payment at all. Response bodies cannot distinguish "our 402
+    // travelled back up through a gateway" from "they never paid us"; this line
+    // can, and it is the whole difference when someone else's platform sits in
+    // front of this service. Header *names* only, and the signature is never
+    // written out — not even truncated. Set TURNSTILE_LOG_ATTEMPTS=0 to silence.
+    if (process.env.TURNSTILE_LOG_ATTEMPTS !== '0') {
+      const paymentish = Object.keys(req.headers).filter((h) => /payment|authorization|x-mpp|mpp/i.test(h));
+      console.log(
+        `[paid] ${req.method} ${req.originalUrl} payment=${signature ? 'present' : 'absent'}` +
+          ` paymentHeaders=${JSON.stringify(paymentish)}` +
+          ` ua=${JSON.stringify(req.header('user-agent') ?? '')}` +
+          ` xff=${req.header('x-forwarded-for') ?? '-'}`,
+      );
+    }
+
     if (!signature) {
       sendChallenge(res, challenge);
       return;
