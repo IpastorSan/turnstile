@@ -362,12 +362,31 @@ on Hedera testnet, with HCS receipts on topic `0.0.10408013`. See
   side; ours (`--auth-type x402-mpp` at registration) evidently does not pay the
   provider. That is their configuration, not code here.
 
-  **Next step, needs a browser:** open the listing in the dashboard and press
-  **"Test in Playground"**. Their docs say it drives a full request through the
-  gateway *including the x402 payment handshake*, and that **payments default to
-  testnet USDC** — which our `base-usdc` (Sepolia) rail serves. If it completes,
-  the Recipe has a working demo and a recording path with no real money. If it
-  also stops at our 402, the pathway needs configuring on their side.
+  **Answered definitively on 2026-09-11 — the gateway does not pay the provider.**
+  Rather than infer it from the response body, the seller now logs payment
+  provenance on every paid-route attempt (`feat/seller-attempt-telemetry`, merged
+  and deployed; `[paid] … payment=absent|present`, header *names* only, never the
+  signature). With that deployed, a `baz curl` through the gateway produced two
+  lines at our service: the caller's own poll (`ua="curl/8.22.0"`), and the
+  gateway's upstream request —
+
+  ```
+  [paid] GET /analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 payment=absent paymentHeaders=[] ua="node" xff=204.93.227.16
+  ```
+
+  `paymentHeaders=[]` is the whole finding: the gateway's request carries **no**
+  payment header of any scheme — no `PAYMENT-SIGNATURE` (x402), no `x-mpp`
+  (MPP), no `authorization` (api-key/jwt/basic). It is not a malformed payment or
+  a rejected one; there is no payment attempt at all. The caller is a cloud host
+  (`AS30081 CacheFly`, Chicago) rather than the client machine, consistent with
+  gateway infrastructure. The client was not charged either — the wallet balance
+  was unchanged (0.9749) across failed calls.
+
+  So the failure is entirely inside Bazantic's gateway config, and the question to
+  put to them is narrow: **how does a gateway pay a provider that answers `402`?**
+  The playground test is still worth pressing (their docs say it drives the
+  handshake with testnet USDC by default), and the dashboard may hold a
+  "payment pathway" setting for the listing.
 - [x] ~~`baz login` approved in a browser as `IpastorSan`~~ — done 2026-09-11,
   `baz whoami` confirms (blocker #1 dead).
 - [x] ~~`baz gateway add` run~~ — done 2026-09-11, output recorded above.
