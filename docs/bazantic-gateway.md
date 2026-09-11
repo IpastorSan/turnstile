@@ -448,7 +448,65 @@ on Hedera testnet, with HCS receipts on topic `0.0.10408013`. See
   Not verified: `baz wallet balance` still read 0.9749 USDC right after the
   call, although the transfer above left that wallet. It is probably a cached
   read. Who controls the receiving address is also not verified here; it is
-  what the listing shows under Payout routing.
+  what the listing shows under Payout routing. Later the same day the
+  dashboard's personal balance read **$0.07**, which fits Bazantic crediting
+  this account with the call's revenue.
+
+  **Update (2026-09-11, MOV-280): the Recipe is drafted and a test run
+  completes.** It is a private draft, not published:
+  `https://bazantic.com/dashboard/recipes/uniswap-pool-safety-analysis`.
+
+  **Correction to "The Recipe" above, and to the open question under "Not
+  verified by the agent":** a Recipe can only bind MCP tools of gateways that
+  are on Bazantic (its docs: "A Recipe only calls MCP tools that already exist
+  on the platform"). The Graph's subgraph has no Bazantic gateway, so it cannot
+  be step 1 as written. What is still true: the design, one service for what the
+  pool holds and ours for what it can absorb, with the finding as their ratio.
+  Only the first service changed.
+
+  | Step | Gateway on Bazantic | Tool | Contributes |
+  |---|---|---|---|
+  | 1 | Turnstile Liquidity Analyst (`uiytibxlirffdly7zzti372rj4`) | `analyzePoolAttested` | live QuoterV2 depth ladder, token addresses and prices, rating, confidence, caveats |
+  | 2 | Spectrum API (`savcfsdx3rhylccgosrpjodb4e`) | `getTokenBalance` | the pool's two token balances, read on chain at run time |
+
+  Finding: the largest trade within 1% slippage divided by on-chain TVL
+  (Spectrum balances times Turnstile's token prices). Neither side has both
+  operands.
+
+  What did not work, in order, so nobody retries it:
+
+  - **DEX Screener** is listed but its gateway exposes no tools ("Tools
+    unavailable for this gateway"), and its MCP path answers 404.
+  - **Spectrum Nodes** (`u77intcspjgr5pxirpw4ys7yra`): `getTokenBalance`
+    failed with "upstream returned HTTP 404".
+  - **Spectrum API `getPrice`**: every run sent `chain`, `token` and `currency`
+    although the upstream accepts only `symbol`, and a prompt that said so
+    explicitly did not change it. The tool schema the gateway shows the model
+    evidently differs from the upstream's. Dropped; prices come from
+    Turnstile's `analystInput.pool.tokens[].priceUSD`.
+
+  **The passing test run** (Bazantic's operator credential, no payment; the
+  seller logged each call as `payment=gateway gateway=bazantic`): Complete,
+  54.4 s, Claude Opus 5, three tool calls, all complete. On the Recipe's
+  example pool, Uniswap v3 USDC/WETH 0.3% (`0x8ad599c3…e6D8`), at mainnet
+  block 25,955,477:
+
+  - on-chain TVL **$32,356,828** from Spectrum balances (13,319,677.53 USDC and
+    7,383.92 WETH); the subgraph's claimed TVL was $32,729,725, so the index
+    overstated the chain slightly
+  - largest trade within 1% slippage: **$1M**, 0.676%, 3 initialized ticks
+    crossed; $10M cost 9.776% and crossed 57
+  - ratio **about 3.09%** (our division of the two figures above; the run
+    reported the same order, "roughly 32x" TVL over fee-earning depth)
+  - Turnstile: `ACCEPTABLE`, confidence 0.95
+
+  The model also flagged, unprompted, that pricing WETH with a price the
+  subgraph derives from this same pool is partly circular. That caveat is
+  correct and stays in the output. The run is kept as the Recipe's output
+  example. These are live figures and will not reproduce exactly.
+
+  **Left:** publishing (the user's decision; publish locks the definition and
+  makes it a public MCP tool) and the screen recording.
 - [x] ~~`baz login` approved in a browser as `IpastorSan`~~ — done 2026-09-11,
   `baz whoami` confirms (blocker #1 dead).
 - [x] ~~`baz gateway add` run~~ — done 2026-09-11, output recorded above.
