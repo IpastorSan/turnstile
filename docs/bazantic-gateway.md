@@ -387,6 +387,39 @@ on Hedera testnet, with HCS receipts on topic `0.0.10408013`. See
   The playground test is still worth pressing (their docs say it drives the
   handshake with testnet USDC by default), and the dashboard may hold a
   "payment pathway" setting for the listing.
+
+  **Correction (2026-09-11, MOV-278):** the paragraphs above call this "entirely
+  inside Bazantic's gateway config". That is wrong: the fault was ours. Read
+  from the gateway's own dashboard page and its Edit form in a browser on
+  2026-09-11, the listing says Bazantic "sits in front, handles x402/MPP
+  settlement, and forwards each call to the backend", with **Payout routing:
+  Ready** to a receiving address. The Edit form offers only three ways for the
+  gateway to authenticate to the upstream: **API key, basic auth, or none**,
+  plus optional extra headers. The auth type we registered, `x402-mpp`, is
+  shown as "Currently x402/MPP" and means *the gateway takes x402/MPP from the
+  caller*, not that it pays ours. So a Bazantic gateway never pays an upstream
+  402, by design. We had stacked two paywalls, and ours refused every call the
+  first one had already been paid for.
+
+  Still true: the evidence above is accurate (the forwarded request carries no
+  payment header, and the client's wallet was not charged when the call
+  failed). Only the conclusion about whose configuration was wrong has
+  changed.
+
+  **The fix (MOV-278):** `seller/service/gateway.ts`. The gateway identifies
+  itself with a shared secret in `x-turnstile-gateway-key`, set as an extra
+  header on the listing. The seller reads it from
+  `TURNSTILE_GATEWAY_KEYS=bazantic=<64 hex>` in `.env`. A matching call is
+  served with `X-Turnstile-Settled-By: bazantic` and no x402 receipt, because
+  nothing settled here: Bazantic collected the payment and pays us out on its
+  side. A wrong or absent key gets the normal 402, and a malformed or short key
+  stops the seller at boot rather than opening the paywall. Tests in
+  `seller/service/gateway.test.ts`.
+
+  **Also found on the listing:** every method was priced at Bazantic's default
+  of $0.01 (1,000 millicents), not our $0.07 and $0.35. The gateway's prices
+  are what the caller pays, so they should be set to 7,000 and 35,000
+  millicents to match `turnstile:price`.
 - [x] ~~`baz login` approved in a browser as `IpastorSan`~~ — done 2026-09-11,
   `baz whoami` confirms (blocker #1 dead).
 - [x] ~~`baz gateway add` run~~ — done 2026-09-11, output recorded above.
