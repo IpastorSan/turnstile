@@ -16,6 +16,7 @@
 
 import { NextRequest } from 'next/server';
 
+import { ORG_CREATE, rateLimit } from '../../../../lib/rate-limit.ts';
 import {
   PrivyClient,
   createKeyQuorum,
@@ -43,6 +44,12 @@ function badRequest(reason: string): Response {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
+  // Before any parsing or Privy call: a throttled request must cost zero. This
+  // endpoint creates users, quorums, a policy and a wallet under OUR Privy app,
+  // so unlimited access to it is an account farm with our credentials.
+  const limited = rateLimit(request, ORG_CREATE.name, ORG_CREATE.limit);
+  if (limited) return limited;
+
   let body: { orgName?: unknown; operators?: unknown; capUsd?: unknown; agentAddress?: unknown };
   try {
     body = await request.json();
