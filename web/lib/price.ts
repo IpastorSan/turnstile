@@ -54,7 +54,7 @@ export function priceSlot(seller: SellerResult): SlotCopy {
       tone: 'ask',
       source: 'x402 advertised',
       value: 'No knowable price',
-      note: 'A price exists, but only this agent’s endpoint can quote it, and it does not answer a 402.',
+      note: 'A price exists, but only this agent’s endpoint can quote it, and it did not answer a payable 402 when we asked.',
     };
   }
 

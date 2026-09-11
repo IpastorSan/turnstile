@@ -4,6 +4,12 @@
 against Hedera testnet, and captured verbatim — per `CLAUDE.md`, because
 re-running an on-chain flow later for a demo is not always possible.
 
+> **Note (2026-09-11, MOV-273):** the endpoint warnings further down reflect what
+> was true on 2026-09-07, when the published host had neither DNS nor a service.
+> Since 2026-09-11 the host is live and
+> `…/liquidity.turnstile.eth/sse` serves MCP over HTTP/SSE (handshake verified).
+> The capture is left verbatim as the record of that day. See `docs/deploy.md`.
+
 Both settlements below are real and checkable by anyone, with no key:
 
 | | transaction | HashScan |

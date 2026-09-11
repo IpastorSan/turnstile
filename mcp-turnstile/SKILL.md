@@ -127,11 +127,12 @@ quote must not overwrite a published price.
 
 **Read `purchasable` before paying.** It is true only when the endpoint answered
 402 with a payable quote. See "What a judge should try to break", below: our own
-seller publishes an exact price on chain at an endpoint that does not answer,
-and this tool reports the price and refuses to call it buyable.
+seller publishes an exact price on chain at an MCP endpoint, and this tool reports
+the price and refuses to call it buyable until it sees a payable 402.
 **Update (2026-09-11, MOV-273):** this said the endpoint "does not resolve". The
-host now resolves and is live; the exact URL the record publishes returns 404.
-See the honesty section below.
+host resolves and the published path now serves MCP over SSE; the tool still
+refuses to call the price buyable, because it probes that URL for a `402` and the
+transport answers `404` to a bare POST. See the honesty section below.
 
 `offer.basis` says how a dollar figure was arrived at, and `offer.comparable` is
 false when it came from the seller's own arithmetic. That distinction is not
@@ -278,20 +279,28 @@ supplied, and a caller that has one is trusting whoever supplied it. This is a
 real hole in the design and it is reported in every `receipts` result rather than
 papered over.
 
-**The endpoint published on chain does not answer.** `liquidity.turnstile.eth`
-publishes `agent-endpoint[mcp]` pointing at
-`https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`, and that
-exact URL returns **404** (verified 2026-09-11). This server is stdio-only and
-nothing serves MCP over HTTP at that path. The worked example shows the tool
-catching exactly this before it shows anything working.
+**The endpoint published on chain answers as MCP, and not as an x402 resource.**
+`liquidity.turnstile.eth` publishes `agent-endpoint[mcp]` pointing at
+`https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`. That URL now
+serves this same toolbox over HTTP/SSE (verified 2026-09-11): `GET` with
+`Accept: text/event-stream` opens a stream whose first frame names its
+`POST …/messages?sessionId=…` return path, `initialize` answers with our
+capabilities, and `tools/list` returns all four tools. An agent that speaks the
+SSE transport reaches this server by following the record.
 
-**Update (2026-09-11, MOV-273):** this paragraph was headed "not deployed" and
-said the host "does not resolve yet" and "is not up". The host has been live
-since 2026-09-11, and the seller's x402 service answers `402` at
-`https://turnstile.moveseventyeight.com/analyze/:pool` — pass that as `resource`
-to `purchase`. What has not changed is that the URL the ENS record names serves
-nothing, so an agent that follows the record literally still finds nothing to
-pay. See `docs/deploy.md`, "Known gap".
+What it does not do is answer a bare `POST` with a `402`: a `POST` to the stream
+URL is `404` by design, because in this transport the client posts to
+`…/messages`, not to the stream. The payable resource is a different URL —
+`https://turnstile.moveseventyeight.com/analyze/:pool`, which answers `402`.
+Pass that as `resource` to `purchase`.
+
+**Update history (2026-09-11, MOV-273):** this paragraph was headed "not deployed"
+and said the host "does not resolve yet" and "is not up"; then, briefly, that the
+host was live while the published path was not. The host went live on 2026-09-11
+and the published path has served MCP since the same day. `get_offer`'s probe
+still reports `purchasable: false` for this agent because it POSTs to the named
+endpoint expecting a payable `402` and gets `404` — a transport-shape mismatch in
+the probe, recorded in `docs/discovery-api.md`.
 
 ---
 
