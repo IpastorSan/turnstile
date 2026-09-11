@@ -49,6 +49,8 @@ import type { PaymentPayload, PaymentRequirement, Receipt } from '../../rails/Pa
 import { PaymentRailError } from '../../rails/PaymentRail.ts';
 import type { RailRegistry } from '../../rails/registry.ts';
 import type { Tier } from './tiers.ts';
+import { GATEWAY_KEY_HEADER, NO_GATEWAYS } from './gateway.ts';
+import type { GatewayTrust } from './gateway.ts';
 
 export const X402_VERSION = 2;
 
@@ -67,6 +69,8 @@ export interface PaidRouteOptions {
   serviceName?: string;
   /** Overrides the tier description on the wire — used for per-pool descriptions. */
   describe?: (req: Request) => string;
+  /** Gateways that settle in front of us and are let through unchallenged. See gateway.ts. */
+  gateways?: GatewayTrust;
 }
 
 /**
@@ -149,8 +153,27 @@ function matchesOffer(chosen: PaymentRequirement, offered: readonly PaymentRequi
  */
 export function paidRoute(options: PaidRouteOptions, handler: PaidHandler): RequestHandler {
   const { registry, tier } = options;
+  const gateways = options.gateways ?? NO_GATEWAYS;
 
   return async function x402Gate(req, res) {
+    // A gateway that already took the caller's payment. Checked before any rail
+    // is asked for a challenge, so a rail outage cannot fail a call that was
+    // settled elsewhere. A wrong or absent key falls through to the normal 402.
+    const gateway = gateways.identify(req.header(GATEWAY_KEY_HEADER));
+    if (gateway) {
+      if (process.env.TURNSTILE_LOG_ATTEMPTS !== '0') {
+        console.log(
+          `[paid] ${req.method} ${req.originalUrl} payment=gateway gateway=${gateway}` +
+            ` ua=${JSON.stringify(req.header('user-agent') ?? '')} xff=${req.header('x-forwarded-for') ?? '-'}`,
+        );
+      }
+      const body = await handler(req);
+      res.set('X-Turnstile-Settled-By', gateway);
+      res.set('Cache-Control', 'no-store');
+      res.status(200).json(body);
+      return;
+    }
+
     const resource = absoluteUrl(req);
     const description = options.describe ? options.describe(req) : tier.description;
     const resourceInfo = {

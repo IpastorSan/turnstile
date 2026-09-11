@@ -25,6 +25,7 @@ import type { AttestationPort } from './attestation.ts';
 import { TIERS, assertWithinCeiling } from './tiers.ts';
 import type { Tier } from './tiers.ts';
 import { paidRoute } from './x402.ts';
+import type { GatewayTrust } from './gateway.ts';
 
 /**
  * The analyst, as the service needs it.
@@ -53,6 +54,8 @@ export interface ServiceOptions {
   attestation?: AttestationPort;
   serviceName?: string;
   tiers?: { standard: Tier; premium: Tier };
+  /** Payment gateways in front of this service that settle on its behalf. Default: none. */
+  gateways?: GatewayTrust;
 }
 
 /**
@@ -110,6 +113,7 @@ export function createApp(options: ServiceOptions): Express {
       registry,
       tier: tiers.standard,
       serviceName,
+      gateways: options.gateways,
       describe: req => `Liquidity Analyst verdict for pool ${req.params['pool']} (subgraph only)`,
     },
     async req => {
@@ -124,6 +128,7 @@ export function createApp(options: ServiceOptions): Express {
       registry,
       tier: tiers.premium,
       serviceName,
+      gateways: options.gateways,
       describe: req => `Liquidity Analyst verdict for pool ${req.params['pool']}, with live depth and the scorer input`,
     },
     async req => {
