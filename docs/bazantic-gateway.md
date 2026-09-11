@@ -302,9 +302,24 @@ on Hedera testnet, with HCS receipts on topic `0.0.10408013`. See
   `--auth-type x402-mpp`. The gateway's MCP `initialize` answers and names the
   server "Turnstile Liquidity Analyst" — verified from outside the same day.
 - Recipe: *web-app paste at bazantic.com, copy in "The Recipe" above — still to do.*
-- Live payment through the gateway (`baz curl`, needs a funded payer via
-  `baz wallet` or `baz grant`): *still to do; record the transaction here the
-  first time it settles.*
+- Live payment through the gateway (`baz curl`): the payer rail exists now —
+  **added 2026-09-11**, `rails/base-usdc` settles USDC on Base Sepolia
+  (`eip155:84532`) through the public x402 facilitator, and the deployed 402
+  advertises it (three `accepts[]` entries, verified by reading the live
+  header). A signed payment against the live host reaches the facilitator and is
+  refused only on the payer's balance. **What is left is a funded payer and the
+  recording:**
+
+  ```bash
+  baz wallet new                       # then fund it: faucet.circle.com, Base Sepolia USDC
+  baz wallet balance
+  baz curl "https://uiytibxlirffdly7zzti372rj4.bazgateway.com/analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640" \
+    --account wallet --max-amount 0.08 --network base-sepolia --json
+  ```
+
+  `--network base-sepolia` because the gateway is a production one (default Base
+  mainnet) while the rail is testnet; `--max-amount 0.08` because the tier is
+  $0.07 and the CLI's default ceiling is 0.01.
 - Recording: *record its URL here.*
 
 ## Open items
