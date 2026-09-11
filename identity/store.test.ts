@@ -87,3 +87,31 @@ test('re-verifying the same agent updates the row rather than adding one', () =>
 test('an agent with no verification reads as absent, never as verified', () => {
   assert.equal(verificationFor(db(), 'agent-unknown'), null);
 });
+
+test('a listing another human already holds is refused, not taken over (MOV-277)', () => {
+  // One row per listing: without this, Bob verifying Alice's listing would
+  // overwrite her nullifier and move the listing into his allowance.
+  const database = db();
+  recordVerification(database, { agentUid: 'agent-1', nullifier: ALICE });
+  const attempt = mayClaim(database, BOB, 'agent-1');
+  assert.equal(attempt.allowed, false);
+  assert.equal(attempt.code, 'listing_held_by_another_human');
+});
+
+test('a rejected attempt never overwrites a verified row (MOV-277)', () => {
+  const database = db();
+  recordVerification(database, { agentUid: 'agent-1', nullifier: ALICE, at: 100 });
+  recordVerification(database, { agentUid: 'agent-1', nullifier: BOB, status: 'rejected', proofRef: 'listing_held_by_another_human', at: 200 });
+  const row = verificationFor(database, 'agent-1');
+  assert.equal(row?.status, 'verified');
+  assert.equal(row?.nullifier, ALICE);
+  assert.equal(row?.verifiedAt, 100);
+});
+
+test('a verified proof does replace an earlier rejected attempt', () => {
+  const database = db();
+  recordVerification(database, { agentUid: 'agent-1', nullifier: BOB, status: 'rejected', at: 100 });
+  recordVerification(database, { agentUid: 'agent-1', nullifier: ALICE, at: 200 });
+  assert.equal(verificationFor(database, 'agent-1')?.status, 'verified');
+  assert.equal(verificationFor(database, 'agent-1')?.nullifier, ALICE);
+});

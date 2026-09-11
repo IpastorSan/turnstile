@@ -32,6 +32,9 @@ export function recordVerification(
   db: DatabaseSync,
   entry: { agentUid: string; nullifier: string; proofRef?: string | null; status?: 'verified' | 'rejected'; at?: number },
 ): void {
+  // The WHERE on the upsert: a rejected attempt never overwrites a verified
+  // row. The table has one row per listing, so without it a refused stranger
+  // would erase the proof of the human who does hold the listing (MOV-277).
   db.prepare(
     `INSERT INTO world_verification (agent_uid, status, nullifier, proof_ref, verified_at)
      VALUES (?, ?, ?, ?, ?)
@@ -39,7 +42,8 @@ export function recordVerification(
        status = excluded.status,
        nullifier = excluded.nullifier,
        proof_ref = excluded.proof_ref,
-       verified_at = excluded.verified_at`,
+       verified_at = excluded.verified_at
+     WHERE excluded.status = 'verified' OR world_verification.status = 'rejected'`,
   ).run(
     entry.agentUid,
     entry.status ?? 'verified',
@@ -89,6 +93,20 @@ export function mayClaim(db: DatabaseSync, nullifier: string, agentUid: string):
   const standing = standingFor(db, nullifier);
   if (standing.agents.includes(agentUid)) {
     return { allowed: true, used: standing.used, limit: standing.allowance.limit, remaining: standing.allowance.remaining };
+  }
+  // One row per listing, so a second human's proof would replace the first
+  // human's. Refused instead: a listing already vouched for by one person is
+  // not up for grabs by the next one to take a selfie (MOV-277).
+  const existing = verificationFor(db, agentUid);
+  if (existing?.status === 'verified' && existing.nullifier !== nullifier) {
+    return {
+      allowed: false,
+      used: standing.used,
+      limit: standing.allowance.limit,
+      remaining: standing.allowance.remaining,
+      code: 'listing_held_by_another_human',
+      detail: 'a different human already holds a verified proof for this listing',
+    };
   }
   return standing.allowance;
 }
