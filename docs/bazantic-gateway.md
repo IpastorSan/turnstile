@@ -16,6 +16,14 @@ See [What is blocking](#what-is-blocking).
 
 ## The tool is `@bazantic/cli`, and its surface is smaller than the marketing page
 
+**Their docs are public and load-bearing** (found 2026-09-11, when the CLI's
+failure mode needed explaining): <https://bazantic.com/llms.txt> indexes them —
+`/docs/deploy-a-gateway` for the provider side, `/docs/cli`, `/docs/spend-grants`,
+`/skill` (the whole using-Bazantic skill as one Markdown file), and
+`/docs/recipes`. Read those before debugging a gateway from the outside; the
+skill in particular states the model plainly, including that "a failing upstream
+still costs money".
+
 Verified 2026-09-07 by installing `@bazantic/cli@0.8.0` from npm and reading the
 published bundle. The binary is `baz`.
 
@@ -332,8 +340,34 @@ on Hedera testnet, with HCS receipts on topic `0.0.10408013`. See
   2026-09-11: `https://turnstile.moveseventyeight.com` (blockers #2 and #3 are
   dead: the endpoint is public HTTPS and the repo is public, so the spec is
   fetchable). The gateway is registered against it.
-- [ ] A funded payer (`baz wallet` funding or a `baz grant`) for the live
-  `baz curl` 402 payment. Human action — it moves money.
+- [x] ~~A funded payer (`baz wallet` funding or a `baz grant`) for the live
+  `baz curl` 402 payment~~ — funded 2026-09-11 (`0x1cA3…0348`, 0.97 USDC on Base
+  mainnet), and it spent nothing, because the call fails one layer earlier.
+- [ ] **The gateway's provider payment pathway — the actual blocker now.**
+  Evidence from that funded call:
+
+  ```
+  baz curl <gateway>/analyze/<pool> --account wallet --max-amount 0.08 --json
+  → {"ok":false,"error":"payment_rejected","detail":"{\"x402Version\":2,\"error\":\"Payment required\",…
+  ```
+
+  `payment_rejected` in the CLI means *it paid and the retry still returned 402*.
+  The body it got is **our** challenge with a fresh `"error":"Payment required"` —
+  the string our service emits when a request arrives with **no payment header at
+  all** (a rejected payment carries a different error). The wallet balance did not
+  move. So: the client pays the gateway, the gateway forwards the request to us
+  **unpaid**, and our 402 travels back up to the caller. Their own skill says "the
+  gateway takes payment, forwards, and returns whatever the provider said", and a
+  gateway has separate x402 and MPP *payment pathways* configured on the Bazantic
+  side; ours (`--auth-type x402-mpp` at registration) evidently does not pay the
+  provider. That is their configuration, not code here.
+
+  **Next step, needs a browser:** open the listing in the dashboard and press
+  **"Test in Playground"**. Their docs say it drives a full request through the
+  gateway *including the x402 payment handshake*, and that **payments default to
+  testnet USDC** — which our `base-usdc` (Sepolia) rail serves. If it completes,
+  the Recipe has a working demo and a recording path with no real money. If it
+  also stops at our 402, the pathway needs configuring on their side.
 - [x] ~~`baz login` approved in a browser as `IpastorSan`~~ — done 2026-09-11,
   `baz whoami` confirms (blocker #1 dead).
 - [x] ~~`baz gateway add` run~~ — done 2026-09-11, output recorded above.
