@@ -161,16 +161,18 @@ $ curl -i http://localhost:4021/analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f56
 
     <figure class="fig fig-wide">
       <img src="../docs/screenshots/onboard.png"
-           alt="The onboard page, headed Prove a human is behind it. Sections explain that Selfie Check is not a login, that it allows three listings per person, and a Verify with World Selfie Check button described as a medium-assurance credential.">
+           alt="The onboard page, headed Prove a human is behind it. A listing picker offers liquidity.turnstile.eth as a registered agent, stored under its agent id eip155:11155111:0x8004…/10127, or another name under turnstile.eth as a reservation, above a Verify liquidity.turnstile.eth with World Selfie Check button.">
       <figcaption>
         <code>/onboard</code> &mdash; the abuse model. A registry anyone can
         write to is a registry anyone can flood, so proof of personhood caps how
         much of the market one person may occupy: three listings, and the fourth
-        is refused. The nullifier is verified on the backend and never returned
-        to the page, because a nullifier handed to a browser would let anyone
-        correlate listings to a human. The button does not work yet &mdash; see
-        below.
-        <span class="fig-date">Captured 2026-09-11 from the public deployment.</span>
+        is refused. The picker chooses which listing a proof is for: a
+        registered agent, stored under the agent id the market reads, or another
+        name under <code>turnstile.eth</code> as a reservation. The nullifier is
+        verified on the backend and never returned to the page, because a
+        nullifier handed to a browser would let anyone correlate listings to a
+        human.
+        <span class="fig-date">Re-captured 2026-09-11 from the public deployment, after MOV-277.</span>
       </figcaption>
     </figure>
 
@@ -218,6 +220,15 @@ $ curl -i http://localhost:4021/analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f56
       reservation, so the fourth refusal can be shown. The screenshot above
       predates the picker. What is unchanged: an agent with no proof reads
       <code>unknown</code>, never <code>unverified</code>.
+    </p>
+
+    <p>
+      <strong>Update (2026-09-11, MOV-279):</strong> the screenshot and its
+      caption above were re-captured after MOV-277 and now show the picker. The
+      re-keyed row is live: the market reports
+      <code>liquidity.turnstile.eth</code> as <code>verified</code>, read from
+      the public deployment the same day. Listings 2 to 4 and the refused fourth
+      have not yet been run through the Sandbox App on a phone.
     </p>
 
     <h2>Where the code lives</h2>

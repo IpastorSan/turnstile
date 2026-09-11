@@ -120,7 +120,12 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [x] Working demo + source + explanation of how Privy enables it — MOV-228. `npm run privy:setup` then `npm run privy:mandate` is the demo take; `buyer/org/` and `buyer/mandate/` are the source; `docs/privy-mandate.md` is the explanation, including six rough edges in Privy's API and a what-was-and-was-not-verified table
 
 **Bazantic ($1,000)**
-- [ ] Account + an **x402/MPP Gateway** for our project
+- [x] Account + an **x402/MPP Gateway** for our project
+  - Ticked 2026-09-11 (MOV-279): gateway `uiytibxlirffdly7zzti372rj4` LIVE, and a paid
+    `baz curl` completed through it: $0.07 USDC on Base mainnet, tx `0xf1088b77…919f`,
+    block 51,177,506, logged at the seller as `payment=gateway gateway=bazantic`. The
+    Recipe, the other-service row and the recording are still open. See
+    `docs/bazantic-gateway.md`.
 - [ ] ≥1 other service already on Bazantic or from an ETHOnline sponsor
 - [ ] Recipe using **both**, final result depends meaningfully on both
 - [ ] Screen recording start to finish

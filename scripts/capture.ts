@@ -99,11 +99,21 @@ const context = await browser.newContext({
 });
 const page = await context.newPage();
 
+// `npm run capture -- onboard` re-shoots one surface: after a change to one page,
+// re-capturing the other four just to refresh it invites committing rasters
+// nobody looked at.
+const only = process.argv.slice(2);
+const selected = only.length ? SHOTS.filter(s => only.some(o => s.file.startsWith(o))) : SHOTS;
+if (selected.length === 0) {
+  console.error(`no surface matches ${only.join(', ')}; have ${SHOTS.map(s => s.file).join(', ')}`);
+  process.exit(1);
+}
+
 await mkdir(OUT, { recursive: true });
-console.log(`capturing ${SHOTS.length} surfaces from ${BASE}\n`);
+console.log(`capturing ${selected.length} surfaces from ${BASE}\n`);
 
 let failed = 0;
-for (const shot of SHOTS) {
+for (const shot of selected) {
   try {
     await capture(page, shot);
   } catch (error) {
@@ -115,7 +125,7 @@ for (const shot of SHOTS) {
 await browser.close();
 
 if (failed > 0) {
-  console.error(`\n${failed} of ${SHOTS.length} failed. Nothing was written for those.`);
+  console.error(`\n${failed} of ${selected.length} failed. Nothing was written for those.`);
   process.exit(1);
 }
-console.log(`\n${SHOTS.length} written to ${OUT}/. Look at them before committing.`);
+console.log(`\n${selected.length} written to ${OUT}/. Look at them before committing.`);

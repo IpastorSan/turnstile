@@ -420,6 +420,35 @@ on Hedera testnet, with HCS receipts on topic `0.0.10408013`. See
   of $0.01 (1,000 millicents), not our $0.07 and $0.35. The gateway's prices
   are what the caller pays, so they should be set to 7,000 and 35,000
   millicents to match `turnstile:price`.
+
+  **Update (2026-09-11, MOV-279): a paid call now completes through the
+  gateway, end to end.** The listing was saved with the extra header
+  `x-turnstile-gateway-key` (the key is in `.env`, never in git) and prices of
+  7,000 and 35,000 millicents; its status returned to LIVE. Then:
+
+  ```
+  baz curl https://uiytibxlirffdly7zzti372rj4.bazgateway.com/analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 \
+    --account wallet --max-amount 0.08 --json
+  → ok: true, status: 200, paid: 0.07 USD on base
+    transaction 0xf1088b77d72de2daea61f6c6f48d1da508c227e8f556b09355b38dd3d2c3919f
+    body: tier standard, the verdict
+  ```
+
+  Checked from both ends, not taken from the CLI's word:
+
+  - **On chain:** Base mainnet block 51,177,506, receipt status success. One
+    USDC transfer of 70,000 base units ($0.07) from our payer
+    `0x1cA3fd71DFcF11020f1d9cb1956cbcb7eB310348` to
+    `0xeBcC1ee9F3844554c3D212E653F389Ca2cE76890`, the listing's receiving address.
+    <https://basescan.org/tx/0xf1088b77d72de2daea61f6c6f48d1da508c227e8f556b09355b38dd3d2c3919f>
+  - **At the seller:** the gateway's upstream request is logged as
+    `payment=gateway gateway=bazantic ua="node" xff=204.93.227.16`. That is the
+    same caller whose request was logged as `payment=absent` earlier today.
+
+  Not verified: `baz wallet balance` still read 0.9749 USDC right after the
+  call, although the transfer above left that wallet. It is probably a cached
+  read. Who controls the receiving address is also not verified here; it is
+  what the listing shows under Payout routing.
 - [x] ~~`baz login` approved in a browser as `IpastorSan`~~ — done 2026-09-11,
   `baz whoami` confirms (blocker #1 dead).
 - [x] ~~`baz gateway add` run~~ — done 2026-09-11, output recorded above.
