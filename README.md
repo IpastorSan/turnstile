@@ -27,7 +27,7 @@ rather than hidden.
 
 *The whole problem in one screen. 197 real registrations; one posts a price on
 chain, 97 will answer if you ask and none do, 99 have no price at all. Captured
-2026-09-09 from a dated snapshot.*
+2026-09-11 from the public deployment; the directory itself is a 2026-09-07 snapshot.*
 
 **Every claim in this README is linked to a transaction or marked as unproven, in
 [`docs/EVIDENCE.md`](./docs/EVIDENCE.md).** That page has a "what is not live"
