@@ -202,7 +202,7 @@ permissions, not by a policy document. See
 |---|---|---|---|
 | **01 Discover** | ERC-8004 Identity Registry registrations, streamed cross-chain via Substreams into a queryable store | `graph/substreams/`, `graph/sink/` | **Live** — 197 agents, 3 chains |
 | **02 Read the offer** | The seller's ENSv2 resolver is read for `turnstile:price`, `turnstile:rails`, `agent-endpoint[mcp]` | `graph/sink/ens.ts`, `web/lib/ens.ts` | **Live** — read from Sepolia per request |
-| **03 Ask** | Buyer's agent calls the MCP endpoint named in `agent-endpoint[mcp]` | `mcp-turnstile/`, `seller/service/` | **Host live; the published path is not.** The x402 service answers `402` at `https://turnstile.moveseventyeight.com/analyze/:pool` (verified 2026-09-11). The exact URL in `agent-endpoint[mcp]`, `…/liquidity.turnstile.eth/sse`, returns **404**: `mcp-turnstile` is stdio-only, so a buyer that follows the record literally does not reach the service. See `docs/deploy.md`. **Update (2026-09-11, MOV-273):** this cell previously read "Live locally — the service runs from the repo; the hosted address is not deployed until Sept 14". The stack went live on 2026-09-11 |
+| **03 Ask** | Buyer's agent calls the MCP endpoint named in `agent-endpoint[mcp]` | `mcp-turnstile/`, `seller/service/` | **Live, and the published path answers.** `…/liquidity.turnstile.eth/sse` serves MCP over HTTP/SSE: `GET` with `Accept: text/event-stream` opens a stream whose first frame names its `POST …/messages?sessionId=…` return path; `initialize` answers with our capabilities and `tools/list` returns all four tools (`find_sellers`, `get_offer`, `purchase`, `receipts`). Verified by handshake against the live host 2026-09-11, and the x402 service answers `402` at `https://turnstile.moveseventyeight.com/analyze/:pool`. See `docs/deploy.md`. **Update (2026-09-11, MOV-273):** this cell previously read "Live locally — the service runs from the repo; the hosted address is not deployed until Sept 14", then briefly "Host live; the published path is not". |
 | **04 402** | The endpoint answers `HTTP 402 Payment Required` with a quote that must match the posted price | `seller/service/` | **Live** (MOV-220) |
 | **05 Pay** | The hot key settles on x402 or USDC on Arc, inside the mandate | `rails/PaymentRail.ts` | **Live on both rails, with real money** (MOV-220, MOV-225) |
 | **06 Answer** | The result is returned. The method that produced it is not. | `seller/analyst/`, `seller/cre/` | **Live**, premium tier through the CRE enclave (MOV-227) |
@@ -224,11 +224,13 @@ tracks that as a live gap rather than a cosmetic one.
 no DNS record until a Sept 14 deploy. The deploy happened on 2026-09-11 and the
 host is live: step 03's service answers `402` at
 `https://turnstile.moveseventyeight.com/analyze/:pool` from the open internet.
-**The gap is still real, and it moved from the host to the path:** the URL
-`agent-endpoint[mcp]` publishes ends in `/liquidity.turnstile.eth/sse` and returns
-404, because `mcp-turnstile` is a stdio MCP server and nothing serves MCP over
-HTTP. A buyer that follows the record literally still does not reach step 04.
-See `docs/deploy.md`, "Known gap".
+**That gap then moved from the host to the path, and is closed there too:** the
+URL `agent-endpoint[mcp]` publishes, `/liquidity.turnstile.eth/sse`, returned 404
+because `mcp-turnstile` was a stdio-only server and nothing spoke MCP over HTTP.
+Since 2026-09-11 the same path serves the toolbox over HTTP/SSE
+(`mcp-turnstile/http-app.ts`, the route in `deploy/Caddyfile`, the `mcp` service
+in `deploy/compose.yaml`), so a buyer that follows the record literally reaches
+step 04. Verified by handshake against the live host — see `docs/deploy.md`.
 
 ### Step 02 is the leg the registry cannot supply
 
@@ -274,20 +276,17 @@ runs as unreachable document origins come back.)*
 
 ## Not verified
 
-- **The MCP endpoint published on chain does not answer.**
-  `agent-endpoint[mcp]` resolves to
-  `https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`, which has
-  no DNS record until the deploy. The ENS record is real and readable; the
-  service behind it runs from this repo and is not hosted. The seller page says
-  so on the page rather than only here. **Changed 2026-09-08 (MOV-010)** from
+- ~~**The MCP endpoint published on chain does not answer.**~~ **Closed
+  2026-09-11.** `agent-endpoint[mcp]` resolves to
+  `https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`, and that
+  path now serves the toolbox over HTTP/SSE: `GET` with
+  `Accept: text/event-stream` opens a stream naming its
+  `POST …/messages?sessionId=…` return path, `initialize` answers with our
+  capabilities, and `tools/list` returns all four tools. Verified against the
+  live host, not locally. The history — no DNS until the deploy, then a host that
+  answered `/analyze/:pool` while the published path still 404ed — is recorded in
+  `docs/deploy.md`. **Changed 2026-09-08 (MOV-010)** from
   `mcp-eu.turnstile.xyz`, a host on a domain we do not own.
-  **Update (2026-09-11, MOV-273):** the headline is still true; the reason
-  changed. This bullet said the host had no DNS record and the service was not
-  hosted. Since 2026-09-11 the host is live (GCP VM, Caddy, Let's Encrypt) and
-  the x402 service answers `402` at `/analyze/:pool` on it. The published URL
-  itself returns **404** (verified 2026-09-11): `mcp-turnstile` is a stdio MCP
-  server and nothing in the repo serves `/…/sse`. See `docs/deploy.md`,
-  "Known gap".
 - ~~**Steps 04–06 have never been executed end to end.** There is no settlement
   receipt anywhere in the system, which is also why discovery's ranking is a
   labelled placeholder rather than settled volume.~~
