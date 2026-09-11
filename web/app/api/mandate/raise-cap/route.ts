@@ -15,10 +15,18 @@
 
 import { PrivyClient, PrivyError, credentialsFromEnv, loadOrgFromEnv, operatorFromEnv } from '../../../../../buyer/org/index.ts';
 import { demoMandate, getMandatePolicy, policySpendCapUsd, raiseSpendCap } from '../../../../../buyer/mandate/index.ts';
+import type { NextRequest } from 'next/server';
+
+import { RAISE_CAP, rateLimit } from '../../../../lib/rate-limit.ts';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(): Promise<Response> {
+export async function POST(request: NextRequest): Promise<Response> {
+  // Each attempt costs two Privy round-trips with our app secret, so it is
+  // guarded even though its only honest outcome is a refusal.
+  const limited = rateLimit(request, RAISE_CAP.name, RAISE_CAP.limit);
+  if (limited) return limited;
+
   const agentAddress = process.env['ARC_AGENT_ADDRESS'] ?? '0x0633a193017939Bb1eB242982397224c66948e2F';
 
   try {

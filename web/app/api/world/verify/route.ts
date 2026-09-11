@@ -16,10 +16,18 @@ import { NextRequest } from 'next/server';
 
 import { mayClaim, recordVerification, standingFor, verifyProof, worldConfigFromEnv, worldIsConfigured } from '../../../../../identity/index.ts';
 import { openDiscoveryStore } from '../../../../lib/discovery.ts';
+import { WORLD_VERIFY, rateLimit } from '../../../../lib/rate-limit.ts';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest): Promise<Response> {
+  // Every accepted request is a call to the Developer Portal and a row in our
+  // store, so this is a write path with our credentials on it. The limit is
+  // per-IP, which is looser than the per-human cap below and deliberately so:
+  // this stops a script, the nullifier count stops a person.
+  const limited = rateLimit(request, WORLD_VERIFY.name, WORLD_VERIFY.limit);
+  if (limited) return limited;
+
   if (!worldIsConfigured()) {
     return Response.json(
       { ok: false, reason: 'This deployment has no World credentials configured.' },
