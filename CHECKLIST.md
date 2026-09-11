@@ -126,8 +126,15 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
     block 51,177,506, logged at the seller as `payment=gateway gateway=bazantic`. The
     Recipe, the other-service row and the recording are still open. See
     `docs/bazantic-gateway.md`.
-- [ ] ≥1 other service already on Bazantic or from an ETHOnline sponsor
+- [x] ≥1 other service already on Bazantic or from an ETHOnline sponsor
+  - Ticked 2026-09-11 (MOV-280): Spectrum API (`savcfsdx3rhylccgosrpjodb4e`), already on
+    Bazantic, bound in the Recipe for `getTokenBalance`. DEX Screener and Spectrum Nodes
+    were tried first and failed upstream; see `docs/bazantic-gateway.md`.
 - [ ] Recipe using **both**, final result depends meaningfully on both
+  - 2026-09-11 (MOV-280): drafted and tested, not ticked. `uniswap-pool-safety-analysis`
+    binds our `analyzePoolAttested` and Spectrum's `getTokenBalance`; a test run completed
+    (54.4 s, 3 tool calls) with the depth-to-on-chain-TVL ratio as the finding. Tick when
+    it is published; publishing is the user's call.
 - [ ] Screen recording start to finish
 - [ ] **Bazantic username in the submission** for attribution
 
