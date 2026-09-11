@@ -5,6 +5,16 @@
 `FEEDBACK.md` link get audited** before winners are finalised, so the link is
 not optional decoration — it is the point of submitting.
 
+**Correction (2026-09-11, MOV-272):** three passages below previously said we
+*opened a PR* or *wrote the fix* for the uniswap-ai skill bug. We did not. We
+filed issue #148; a Uniswap maintainer (`wkoutre`) wrote and merged the fix in
+#149 the same day and credited the report. Pasting the old wording would have
+claimed authorship of a merged PR we did not author — checkable in one click.
+What is unchanged: every other answer, and the FEEDBACK.md link.
+
+**Steps 1 and 2 below are done as of 2026-09-11** — `main` is current and the
+repo is public — so the form can be submitted now.
+
 This file exists so that nobody constructs the URL or writes the blocker answer
 by hand at 3am. Everything below is copy-paste except the one field marked
 otherwise.
@@ -99,9 +109,12 @@ Three contributions to the Uniswap stack, each usable on its own:
    factory pool discovery, and Messari AMM history. It needs no API key and
    imports nothing from the rest of our repo, so it installs and runs on its own.
 
-3. A PR to Uniswap/uniswap-ai fixing its v4-sdk-integration skill, which mandates
-   ethers v5's callStatic — removed in v6, and never present in viem — in a file
-   whose every other snippet is viem and whose install line contains no ethers.
+3. A defect report to Uniswap/uniswap-ai (issue #148): its v4-sdk-integration
+   skill mandated ethers v5's callStatic — removed in v6, never present in viem —
+   in a file whose every other snippet is viem and whose install line contains no
+   ethers. A Uniswap maintainer verified it and merged the fix the same day (PR
+   #149, seven files including both eval rubrics). The merged code is theirs; the
+   report and the shape of the fix were ours.
 ```
 
 ### What was the biggest blocker you faced?
@@ -136,8 +149,9 @@ This has reached Uniswap's own agent tooling. The v4-sdk-integration skill in
 Uniswap/uniswap-ai mandates callStatic as a strict rule, in a file that installs
 no ethers and whose other snippets are all viem — and its eval rubrics award
 points for "Uses Quoter contract with callStatic", so the graders actively reward
-generating code that does not run. We have written the fix and it is linked from
-our FEEDBACK.md.
+generating code that does not run. We reported it (uniswap-ai#148); Uniswap
+fixed and merged it the same day in #149, and traced it back to the v4 quoting
+guide, which the skill had faithfully copied.
 
 The concrete ask: state the eth_call rule once, library-neutrally, and give the
 viem / ethers v6 / ethers v5 spellings side by side. Then agent skills can be
@@ -175,8 +189,10 @@ useful. initializedTicksCrossed is the single most useful number we found anywhe
 in this build, and QuoterV2 needing no API key is the reason our MCP server is
 infrastructure anyone can run rather than something gated behind our credentials.
 
-We opened a PR against Uniswap/uniswap-ai for the skill bug rather than only
-reporting it.
+We reported the skill bug to Uniswap/uniswap-ai with a live mainnet reproduction
+rather than only flagging the name. A maintainer verified it and merged the fix the
+same day: https://github.com/Uniswap/uniswap-ai/pull/149 — the merged code is
+theirs, and the maintainer credited the report on the issue.
 ```
 
 ---
