@@ -6,10 +6,11 @@ Target: **"Best Recipe that uses ETHGlobal Hackathon Sponsor APIs"** ($1,000, 3 
 Bazantic account: **`IpastorSan`** (signed in via GitHub) — this handle must appear
 in the submission notes for Recipe attribution. It is a hard requirement, not a nicety.
 
-**Status: prepared, not registered.** Everything that can be authored ahead of time
-is in this branch. The four remaining steps all terminate in a browser or in a
-public URL, and neither exists on the build machine. See
-[What is blocking](#what-is-blocking).
+**Status: registered 2026-09-11, live.** Everything that could be authored
+is in this branch. What remains is the Recipe (web UI), a funded payer for one
+live `baz curl` payment, and the screen recording. The blockers below were true
+on 2026-09-07; #1–#3 are dead as of the deploy, and #4/#5 remain by nature.
+See [What is blocking](#what-is-blocking).
 
 ---
 
@@ -291,15 +292,32 @@ on Hedera testnet, with HCS receipts on topic `0.0.10408013`. See
 ## Submission notes
 
 - **Bazantic username: `IpastorSan`** (GitHub sign-in). Required for Recipe attribution.
-- Gateway: *record id, slug, mcpUrl and endpointUrl here after the registration run.*
-- Recipe: *record its URL here.*
+- **Registered 2026-09-11 09:42 UTC, status active:**
+  `{ id: a2313406-eb44-4a51-af1f-ce668dff514f, slug: uiytibxlirffdly7zzti372rj4 }`
+  — `mcpUrl`: `https://uiytibxlirffdly7zzti372rj4.bazgateway.com/mcp`,
+  `endpointUrl`: `https://uiytibxlirffdly7zzti372rj4.bazgateway.com` (read back
+  from `baz gateway list --json`, never hand-built). `--spec-url` is the
+  public-repo raw URL
+  `https://raw.githubusercontent.com/IpastorSan/turnstile/main/seller/service/openapi.yaml`;
+  `--auth-type x402-mpp`. The gateway's MCP `initialize` answers and names the
+  server "Turnstile Liquidity Analyst" — verified from outside the same day.
+- Recipe: *web-app paste at bazantic.com, copy in "The Recipe" above — still to do.*
+- Live payment through the gateway (`baz curl`, needs a funded payer via
+  `baz wallet` or `baz grant`): *still to do; record the transaction here the
+  first time it settles.*
 - Recording: *record its URL here.*
 
 ## Open items
 
-- [ ] A public HTTPS deployment of the seller service (blockers #2/#3 — **shared with MOV-230**; one deployment clears both)
-- [ ] `baz login` approved in a browser as `IpastorSan` (blocker #1)
-- [ ] `baz gateway add` run, and its output recorded above
+- [x] ~~A public HTTPS deployment of the seller service~~ — live since
+  2026-09-11: `https://turnstile.moveseventyeight.com` (blockers #2 and #3 are
+  dead: the endpoint is public HTTPS and the repo is public, so the spec is
+  fetchable). The gateway is registered against it.
+- [ ] A funded payer (`baz wallet` funding or a `baz grant`) for the live
+  `baz curl` 402 payment. Human action — it moves money.
+- [x] ~~`baz login` approved in a browser as `IpastorSan`~~ — done 2026-09-11,
+  `baz whoami` confirms (blocker #1 dead).
+- [x] ~~`baz gateway add` run~~ — done 2026-09-11, output recorded above.
 - [ ] Recipe created in the Bazantic web app from the copy above (blocker #4)
 - [ ] Screen recording captured (blocker #5)
 
