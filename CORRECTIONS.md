@@ -147,3 +147,29 @@ rather than a throw. Only the Hedera rail's *detection* of that result was
 missing. `web/lib/spend.test.ts` now pins the property in both directions, with
 a genuinely-empty topic as the negative control so `null` and `0` stay different
 answers.
+
+---
+
+**Correction (2026-09-11, MOV-277): the first real World proof was verified and
+then never shown.** A Sandbox App proof was verified by World's Developer Portal
+on 2026-09-11 at 09:06:02 UTC. `/onboard` hard-coded
+`const SELLER = 'liquidity.turnstile.eth'` and posted it as `agentUid`, and the
+verify route stored the proof under whatever the client sent. The market view
+joins `world_verification` on the ERC-8004 agent uid
+(`eip155:11155111:0x8004a818…/10127`), so the proof was orphaned and
+`/api/sellers` reported the seller as `unknown`. Verified against the live
+store: exactly one row, keyed by the name.
+
+**Fixed in the same branch.** The route no longer trusts the client for the key:
+`identity/canonical.ts` resolves a registered `turnstile.eth` name to its agent
+uid from the discovery store, keeps an unregistered subname as a labelled
+reservation keyed by the name, and refuses anything else. The proof's signal is
+still checked against the exact string the client signed. `/onboard` picks
+listings from the store. `scripts/world-rekey.ts` moves the orphaned row.
+
+Two adjacent holes were closed while there: a second human could take over a
+verified listing by verifying it, and a refused attempt overwrote the verified
+row it was refused for. Both now leave the verified row alone.
+
+**What is unchanged:** the three-listing cap, the nullifier never reaching the
+browser, and `unknown` rather than `unverified` for agents with no proof.

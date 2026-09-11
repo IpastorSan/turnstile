@@ -12,6 +12,7 @@
 // same human on a different app yields a different one. That is exactly enough
 // to count listings per person and not enough to identify anyone.
 
+import { hashSignal } from '@worldcoin/idkit-core/hashing';
 import { signRequest } from '@worldcoin/idkit-core/signing';
 
 /** Where the Developer Portal verifies proofs. Versioned; `rp_id` is a path segment. */
@@ -117,6 +118,44 @@ export function nullifierFrom(payload: unknown): string | null {
     }
   }
   return null;
+}
+
+export type SignalCheck =
+  | { ok: true; checked: boolean }
+  | { ok: false; reason: string };
+
+/**
+ * Is this proof bound to `signal`, the exact string the client handed to
+ * `selfieCheckLegacy({ signal })`?
+ *
+ * The portal checks the proof against the `signal_hash` inside the payload, so
+ * it will happily verify a proof made for a different listing. This compares
+ * that hash with `hashSignal(signal)` before we store anything under the
+ * listing the request names. Every `signal_hash` present must match.
+ *
+ * A payload with no `signal_hash` at all is let through as `checked: false`
+ * rather than refused. IDKit documents the field as optional, and the only
+ * real proof we have (2026-09-11) was not captured, so we cannot show that
+ * World App always sends it. Refusing on absence could break the one working
+ * path with no phone on hand to test the fix. Unchecked costs little here: the
+ * nullifier is the same for every listing a human verifies under this action,
+ * so a replayed proof can only spend its own human's allowance.
+ */
+export function checkSignal(idkitResult: unknown, signal: string): SignalCheck {
+  const responses = (idkitResult as { responses?: unknown } | null)?.responses;
+  const hashes = Array.isArray(responses)
+    ? responses
+        .map(item => (item as { signal_hash?: unknown } | null)?.signal_hash)
+        .filter((hash): hash is string => typeof hash === 'string' && hash.length > 0)
+    : [];
+  if (hashes.length === 0) return { ok: true, checked: false };
+
+  const expected = hashSignal(signal).toLowerCase();
+  const mismatch = hashes.find(hash => hash.toLowerCase() !== expected);
+  if (mismatch) {
+    return { ok: false, reason: `the proof was made for a different listing than "${signal}" (signal hash does not match)` };
+  }
+  return { ok: true, checked: true };
 }
 
 /**
