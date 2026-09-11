@@ -6,15 +6,18 @@ import { useState } from 'react';
 /**
  * Prove there is one human behind a listing.
  *
- * This is not a login and does not sign anybody in. It answers one question —
- * is this the same person as that other listing — and the answer caps how much
+ * This is not a login and does not sign anybody in. It answers one question,
+ * is this the same person as that other listing, and the answer caps how much
  * of the registry one human may occupy. Three listings; the fourth is refused.
  *
- * Two things this component deliberately does not do:
+ * Three things this component deliberately does not do:
  *
  *  - It never decides whether the proof is valid. `handleVerify` posts the whole
  *    IDKit result to our backend, which asks the Developer Portal. A client that
  *    judges its own proof is a client marking its own homework.
+ *  - It never decides which key the proof is stored under. It sends the listing
+ *    it signed (`listing`, the proof's signal) and the backend resolves that to
+ *    the agent id the market reads (MOV-277).
  *  - It never sees the nullifier. The backend takes that from the *verified*
  *    response, counts against it, and returns only the tally. A nullifier is a
  *    stable per-app pseudonym, so handing it to the browser would let anyone
@@ -27,20 +30,31 @@ interface Context {
   rp_context: Record<string, unknown>;
 }
 
-type Outcome =
-  | { kind: 'verified'; used: number; limit: number; remaining: number; agents: string[] }
-  | { kind: 'refused'; reason: string; used?: number; limit?: number }
+export interface HeldListing {
+  key: string;
+  kind: 'agent' | 'reservation';
+  ensName: string | null;
+}
+
+export type Outcome =
+  | { kind: 'verified'; used: number; limit: number; remaining: number; listings: HeldListing[]; stored: HeldListing & { note?: string } }
+  | { kind: 'refused'; reason: string; code?: string; used?: number; limit?: number; listings?: HeldListing[] }
   | { kind: 'error'; reason: string };
 
-export function SelfieCheck({ agentUid }: { agentUid: string }) {
+export function SelfieCheck({ listing, onOutcome }: { listing: string; onOutcome?: (outcome: Outcome) => void }) {
   const [context, setContext] = useState<Context | null>(null);
   const [open, setOpen] = useState(false);
-  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [outcome, setOutcomeState] = useState<Outcome | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function setOutcome(next: Outcome) {
+    setOutcomeState(next);
+    onOutcome?.(next);
+  }
 
   async function begin() {
     setBusy(true);
-    setOutcome(null);
+    setOutcomeState(null);
     try {
       // The context is signed by our backend, because the signing key is what
       // tells World the request is really from this app. A context a browser
@@ -66,16 +80,30 @@ export function SelfieCheck({ agentUid }: { agentUid: string }) {
     const response = await fetch('/api/world/verify', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ agentUid, proof: result }),
+      body: JSON.stringify({ listing, proof: result }),
     });
     const body = await response.json();
 
     if (body.ok) {
-      setOutcome({ kind: 'verified', used: body.used, limit: body.limit, remaining: body.remaining, agents: body.agents ?? [] });
+      setOutcome({
+        kind: 'verified',
+        used: body.used,
+        limit: body.limit,
+        remaining: body.remaining,
+        listings: body.listings ?? [],
+        stored: body.listing,
+      });
       return;
     }
 
-    setOutcome({ kind: 'refused', reason: body.reason ?? 'the proof was not accepted', used: body.used, limit: body.limit });
+    setOutcome({
+      kind: 'refused',
+      reason: body.reason ?? 'the proof was not accepted',
+      code: body.code,
+      used: body.used,
+      limit: body.limit,
+      listings: body.listings,
+    });
     // Throwing tells IDKit the verification failed, so the widget shows a
     // failure rather than a success the backend just rejected.
     throw new Error(body.reason ?? 'verification failed');
@@ -84,7 +112,7 @@ export function SelfieCheck({ agentUid }: { agentUid: string }) {
   return (
     <div className="probe">
       <button className="probe-button" onClick={begin} disabled={busy}>
-        {busy ? 'preparing…' : 'Verify with World Selfie Check'}
+        {busy ? 'preparing…' : `Verify ${listing} with World Selfie Check`}
       </button>
 
       {context ? (
@@ -95,7 +123,7 @@ export function SelfieCheck({ agentUid }: { agentUid: string }) {
           action={context.action}
           rp_context={context.rp_context as never}
           allow_legacy_proofs
-          preset={selfieCheckLegacy({ signal: agentUid })}
+          preset={selfieCheckLegacy({ signal: listing })}
           handleVerify={handleVerify}
           onSuccess={() => setOpen(false)}
         />
@@ -107,6 +135,7 @@ export function SelfieCheck({ agentUid }: { agentUid: string }) {
             Verified · {outcome.used} of {outcome.limit} listings used
           </b>
           <br />
+          {outcome.stored?.note ? `${outcome.stored.note}. ` : ''}
           One human is behind this listing, and {outcome.remaining === 0 ? 'no further listings' : `${outcome.remaining} more`}{' '}
           may be claimed by them. The proof was checked by World, not by this page.
         </p>
@@ -114,7 +143,10 @@ export function SelfieCheck({ agentUid }: { agentUid: string }) {
 
       {outcome?.kind === 'refused' ? (
         <p className="probe-result is-bad">
-          <b>Refused{outcome.used !== undefined ? ` · ${outcome.used} of ${outcome.limit} used` : ''}</b>
+          <b>
+            Refused{outcome.code ? ` · ${outcome.code}` : ''}
+            {outcome.used !== undefined ? ` · ${outcome.used} of ${outcome.limit} used` : ''}
+          </b>
           <br />
           {outcome.reason}
         </p>

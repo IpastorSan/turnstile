@@ -1107,6 +1107,65 @@ a {
   color: var(--chalk-faint);
 }
 
+/* --- /onboard listing picker (MOV-277) ------------------------------------ */
+
+.listing-picker { margin: 18px 0 0; }
+
+.listing-options {
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+}
+
+.listing-option { flex-wrap: wrap; font-size: 13px; color: var(--chalk); }
+
+.listing-kind {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--chalk-faint);
+}
+
+.listing-custom { max-width: 420px; margin: 0 0 14px; }
+
+.listing-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.listing-suffix { color: var(--chalk-dim); white-space: nowrap; }
+
+.standing {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border: var(--rail);
+  border-radius: var(--radius);
+}
+
+.standing-count { margin: 0; font-size: 14px; color: var(--chalk-dim); }
+.standing-count b { font-family: var(--font-mono); color: var(--brass); }
+
+.standing-list,
+.attempts {
+  margin: 10px 0 0;
+  padding: 0 0 0 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--chalk-dim);
+}
+
+.standing-list li,
+.attempts li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  overflow-wrap: anywhere;
+}
+
+.attempts { margin-top: 16px; }
+.attempts li.is-good .mono { color: var(--brass); }
+.attempts li.is-bad .mono { color: var(--vermilion); }
+
 /* Settled payments on /mandate. A dense five-column ledger rather than cards:
    the point is that there are a lot of them and each one is checkable. */
 

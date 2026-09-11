@@ -25,7 +25,7 @@
  */
 export const LISTINGS_PER_HUMAN = 3;
 
-export type ListingRefusalCode = 'listing_limit_reached' | 'operator_not_verified';
+export type ListingRefusalCode = 'listing_limit_reached' | 'operator_not_verified' | 'listing_held_by_another_human';
 
 export interface ListingAllowance {
   allowed: boolean;

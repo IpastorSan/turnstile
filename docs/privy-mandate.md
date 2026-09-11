@@ -138,6 +138,14 @@ approval. Until then the flag **refuses** rather than passing: a gate wired to
 nothing that returns "allowed" reads as a control in the demo and is not one.
 `buyer/mandate/mandate.ts`'s `verifiedOperatorGate` is four lines and says so.
 
+**Correction (2026-09-11, MOV-277):** "blocked on World Sandbox approval" is out
+of date. The approvals arrived on 2026-09-09 and the first real proof was
+verified on 2026-09-11. `operatorIsVerified` reads `world_verification` by agent
+uid, and until MOV-277 that proof was stored under the ENS name, so it would
+still have read as unverified. The transcripts above were captured before any
+proof existed and are left as they were. This branch did not re-run them, and
+did not re-check how the gate is wired into the payment path.
+
 ### The cap has to be decided before quoting
 
 MOV-225 verified against live Gateway that **no rail can settle below the

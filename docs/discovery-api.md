@@ -384,7 +384,7 @@ nested object.
 | Seam | Issue | State |
 | --- | --- | --- |
 | `settlement_receipt` | MOV-220 | Table exists, empty. Ranking falls back and labels itself. **Correction (2026-09-07, MOV-229):** the table is still empty and the ranking is still a labelled placeholder, so this row is accurate — but the *receipts* are not missing. Twelve exist on HCS topic `0.0.10408013` and every one verifies against the ledger; `npm run ingest-receipts` lands them here and the ranking flips to `settled_volume` on its own. What is outstanding is the ingest, not the evidence. |
-| `world_verification` | MOV-223 | Table exists, empty. Every agent reports `'unknown'` — deliberately not `'unverified'`, which would be a claim we have not earned. Blocked on World Sandbox approval. |
+| `world_verification` | MOV-223 | Table exists, empty. Every agent reports `'unknown'` — deliberately not `'unverified'`, which would be a claim we have not earned. Blocked on World Sandbox approval. **Correction (2026-09-11, MOV-277):** no longer blocked or empty. identity/ has written this table since 2026-09-09, and the first real proof landed 2026-09-11 09:06:02 UTC, but under the ENS name `liquidity.turnstile.eth` rather than the agent uid this view joins on, so the seller still read `unknown`. Rows are now keyed by the agent uid for registered listings, and by the ENS name only for reservations (subnames with no registered agent), which by design never join to an agent. `scripts/world-rekey.ts` moves a name-keyed row once its name is registered. The `unknown`-not-`unverified` rule is unchanged. |
 | `x402_quote` | — | Implemented and run; zero live quotes exist to store yet. |
 
 ## Not verified
