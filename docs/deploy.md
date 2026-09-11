@@ -78,6 +78,41 @@ curl -si localhost/analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640 | head -1 
 That last one returning `402 Payment Required` is the whole product in one line:
 the service is up, it knows its price, and it will not answer until it is paid.
 
+## The redeploy loop
+
+```bash
+gcloud compute ssh turnstile --zone=europe-southwest1-a --command=\
+  'cd /opt/turnstile && git pull --ff-only origin main && cd deploy && sudo docker compose up -d --build'
+```
+
+**The Caddy trap, learned the hard way (2026-09-11).** `./Caddyfile` is
+bind-mounted into the container as a **single file**, not a directory. `git
+pull` replaces the file rather than editing it in place, which swaps its inode
+— and a bind mount follows the *inode it was created with*, not the path. The
+container keeps serving the old config forever, `docker compose ps` says
+"Up (healthy)", `up -d` says "configuration unchanged" and does nothing, and
+the site silently runs the previous Caddyfile. The SSE routes went live on the
+containers and not through Caddy for exactly this reason.
+
+The fix is to recreate the proxy, not restart it:
+
+```bash
+sudo docker compose up -d --force-recreate caddy
+```
+
+And the verification is to ask the running config, not the file:
+
+```bash
+sudo docker exec turnstile-caddy-1 caddy adapt --config /etc/caddy/Caddyfile | grep -c liquidity
+```
+
+Anything nonzero proves the container actually sees the new file. `reload`
+would also re-read the path — but only if the mount still resolves it, which
+is precisely what a single-file mount does not guarantee after a pull. If a
+future Caddyfile change must be safe by construction, mount the *directory*
+(`./caddy:/etc/caddy:ro`) instead of the file; directory mounts follow the
+path.
+
 ## Live
 
 1. Point an A record at the box. The hostname must match what
