@@ -507,10 +507,17 @@ on Hedera testnet, with HCS receipts on topic `0.0.10408013`. See
 
   **Left:** publishing (the user's decision; publish locks the definition and
   makes it a public MCP tool) and the screen recording.
+
+  **Update (2026-09-11, MOV-281): published.** The user approved it and the
+  Recipe was published the same evening. It is in the public catalog, read back
+  from `https://api.bazantic.com/v1/recipes/uniswap-pool-safety-analysis`
+  (handle `uniswap-pool-safety-analysis`, author Ignacio Pastor). Published
+  Recipes are read-only; unpublish to edit. Only the screen recording is left.
 - [x] ~~`baz login` approved in a browser as `IpastorSan`~~ — done 2026-09-11,
   `baz whoami` confirms (blocker #1 dead).
 - [x] ~~`baz gateway add` run~~ — done 2026-09-11, output recorded above.
-- [ ] Recipe created in the Bazantic web app from the copy above (blocker #4)
+- [x] Recipe created in the Bazantic web app (blocker #4): published 2026-09-11,
+  Turnstile + Spectrum API, not the copy above (see MOV-280 and MOV-281)
 - [ ] Screen recording captured (blocker #5)
 
 ## Not verified by the agent
