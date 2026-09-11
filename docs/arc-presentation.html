@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turnstile — Submission: Arc — Agentic bounty</title>
+<style>
+/* Turnstile — Arc presentation.
+ *
+ * One file, no build step, no CDN. Opens from file://. Each slide is a fixed
+ * 1600x900 canvas; on screen a tiny script scales the active one to fit the
+ * window, in print every slide is exactly one 1600x900 page.
+ *
+ * Palette: web/app/globals.css, verbatim. Brass is spent on what can actually
+ * be read or checked; vermilion on the hot tier and on refusals.
+ */
+:root {
+  --enamel-900: #08191a;
+  --enamel-850: #0b2122;
+  --enamel-800: #0e2a28;
+  --enamel-700: #143b37;
+  --enamel-600: #1d504a;
+  --enamel-500: #2a6a61;
+  --chalk: #e9e5d8;
+  --chalk-dim: #93a8a2;
+  --chalk-faint: #5f7a74;
+  --brass: #d2a857;
+  --brass-deep: #8a6f33;
+  --vermilion: #e4593a;
+  --cold: #8fb6c4;
+
+  --font-display: "Bricolage Grotesque", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: "Public Sans", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+
+* , *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: #041011;
+  color: var(--chalk);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+code, .mono { font-family: var(--font-mono); }
+
+/* --- the canvas ------------------------------------------------------- */
+
+.slide {
+  position: relative;
+  width: 1600px;
+  height: 900px;
+  padding: 76px 104px 88px;
+  overflow: hidden;
+  background: var(--enamel-900);
+  display: flex;
+  flex-direction: column;
+}
+.slide::before {           /* the fare-gate rail along the top */
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--brass) 0 120px, var(--enamel-700) 120px);
+}
+.foot {
+  position: absolute;
+  left: 104px; right: 104px; bottom: 36px;
+  display: flex;
+  justify-content: space-between;
+  font: 500 15px/1 var(--font-mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--chalk-faint);
+}
+.foot b { color: var(--brass); font-weight: 500; }
+
+.eyebrow {
+  font: 500 17px/1 var(--font-mono);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+  margin: 0 0 22px;
+}
+h1, h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -.02em;
+  margin: 0;
+}
+h2 { font-size: 58px; line-height: 1.05; max-width: 1300px; }
+h2 em { font-style: normal; color: var(--brass); }
+.sub { font-size: 25px; line-height: 1.45; color: var(--chalk-dim); margin: 18px 0 0; max-width: 1150px; }
+.sub strong { color: var(--chalk); font-weight: 600; }
+.grow { flex: 1; min-height: 0; }
+
+.panel {
+  background: var(--enamel-850);
+  border: 1px solid var(--enamel-700);
+  border-radius: 2px;
+}
+.label {
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--chalk-faint);
+}
+
+/* --- 1 title ---------------------------------------------------------- */
+
+.title { justify-content: center; }
+.title h1 { font-size: 168px; line-height: .95; letter-spacing: -.035em; }
+.title .lane { font: 600 50px/1.15 var(--font-display); color: var(--brass); margin: 20px 0 0; letter-spacing: -.01em; }
+.title .tag { font-size: 26px; color: var(--chalk-dim); margin: 18px 0 0; }
+.bounty {
+  margin-top: 56px;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 22px 30px;
+  border: 2px solid var(--brass);
+  background: rgba(210, 168, 87, .08);
+  font: 600 34px/1 var(--font-display);
+}
+.bounty .gate { width: 18px; height: 42px; background: var(--brass); }
+.title .meta { margin-top: 40px; font: 400 20px/1.6 var(--font-mono); color: var(--chalk-dim); }
+.title .meta span { color: var(--chalk-faint); }
+
+/* --- 2 problem -------------------------------------------------------- */
+
+.sides { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 52px; }
+.side { padding: 40px 44px; }
+.side .who { font: 600 18px/1 var(--font-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--brass); }
+.side p { font: 600 36px/1.22 var(--font-display); margin: 22px 0 0; letter-spacing: -.01em; }
+.side .x { list-style: none; padding: 0; margin: 28px 0 0; font-size: 22px; color: var(--chalk-dim); }
+.side .x li { padding: 10px 0; border-top: 1px solid var(--enamel-700); }
+.side .x li::before { content: "✕"; color: var(--vermilion); margin-right: 14px; font-weight: 700; }
+.fix { margin-top: 30px; font-size: 24px; line-height: 1.45; color: var(--chalk-dim); border-left: 4px solid var(--brass); padding: 4px 0 4px 24px; }
+.fix strong { color: var(--chalk); font-weight: 600; }
+
+/* --- 3 tiers ---------------------------------------------------------- */
+
+.tiers { margin-top: 38px; display: grid; gap: 12px; }
+.tier { display: grid; grid-template-columns: 200px 1fr 520px; align-items: center; padding: 22px 34px; }
+.tier .name { font: 700 38px/1 var(--font-display); letter-spacing: .02em; }
+.tier .freq { font: 400 15px/1.3 var(--font-mono); color: var(--chalk-faint); margin-top: 8px; }
+.tier .vendor { font: 600 28px/1.2 var(--font-display); }
+.tier .vendor small { display: block; font: 400 19px/1.4 var(--font-body); color: var(--chalk-dim); margin-top: 6px; }
+.tier .may { font: 400 20px/1.5 var(--font-mono); color: var(--brass); }
+.tier .may .label { display: block; margin-bottom: 8px; }
+.tier.cold .name { color: var(--cold); }
+.tier.warm .name { color: var(--brass); }
+.tier.hot .name, .tier.hot .may b { color: var(--vermilion); }
+.invariant {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: 1fr 470px;
+  gap: 40px;
+  align-items: center;
+}
+.invariant .rule { font: 700 32px/1.2 var(--font-display); border-left: 5px solid var(--brass); padding-left: 24px; }
+.invariant .custody { font-size: 20px; line-height: 1.45; color: var(--chalk-dim); }
+.invariant .custody strong { color: var(--chalk); }
+
+/* --- 4 architecture --------------------------------------------------- */
+
+.arch { flex-direction: row; gap: 56px; align-items: center; padding-top: 56px; padding-bottom: 72px; }
+.arch .copy { width: 400px; flex: none; }
+.arch h2 { font-size: 52px; }
+.arch .sub { font-size: 22px; }
+.arch figure { margin: 0; flex: 1; display: flex; justify-content: center; }
+.arch img { display: block; height: 720px; width: auto; border: 1px solid var(--enamel-700); }
+.arch ol { margin: 30px 0 0; padding: 0; list-style: none; font: 400 19px/1.5 var(--font-mono); color: var(--chalk-dim); }
+.arch ol li { padding: 6px 0; border-top: 1px solid var(--enamel-700); }
+.arch ol b { color: var(--brass); font-weight: 500; }
+
+/* --- 5 arc rail ------------------------------------------------------- */
+
+.rail-row { display: grid; grid-template-columns: 1fr 400px; gap: 40px; margin-top: 40px; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.step { padding: 26px 24px; display: flex; flex-direction: column; }
+.step .n { font: 500 16px/1 var(--font-mono); color: var(--chalk-faint); }
+.step .who { font: 600 16px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; margin-top: 18px; }
+.step .what { font: 600 25px/1.2 var(--font-display); margin-top: 12px; }
+.step .how { font-size: 18px; line-height: 1.4; color: var(--chalk-dim); margin-top: 12px; }
+.step.agent { border-color: var(--vermilion); }
+.step.agent .who { color: var(--vermilion); }
+.step .who { color: var(--chalk-dim); }
+.step .gas { margin-top: auto; padding-top: 18px; font: 500 16px/1 var(--font-mono); color: var(--chalk-faint); }
+.step.agent .gas { color: var(--vermilion); }
+.nonce { padding: 30px 34px; border-color: var(--brass); background: rgba(210, 168, 87, .06); }
+.nonce .big { font: 700 150px/.9 var(--font-display); color: var(--brass); letter-spacing: -.04em; }
+.nonce .after { font: 600 30px/1.2 var(--font-display); color: var(--chalk); margin-top: 10px; }
+.nonce p { font-size: 20px; line-height: 1.45; color: var(--chalk-dim); margin: 14px 0 0; }
+.nonce p strong { color: var(--chalk); }
+.batch { margin-top: 22px; padding: 22px 30px; display: grid; grid-template-columns: auto 1fr; gap: 6px 30px; align-items: baseline; }
+.batch .v { font: 400 21px/1.35 var(--font-mono); word-break: break-all; }
+.batch a { color: var(--brass); text-decoration-color: var(--brass-deep); text-underline-offset: 4px; }
+.batch .note { grid-column: 2; font-size: 18px; color: var(--chalk-dim); }
+
+/* --- 6 mandate -------------------------------------------------------- */
+
+.mandate-row { display: grid; grid-template-columns: 600px 752px; gap: 44px; margin-top: 36px; align-items: start; }
+.quorums { display: grid; gap: 12px; }
+.q { padding: 22px 28px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 20px; }
+.q .obj { font: 600 25px/1.2 var(--font-display); }
+.q .obj small { display: block; font: 400 17px/1.4 var(--font-mono); color: var(--chalk-faint); margin-top: 4px; }
+.q .thr { font: 700 44px/1 var(--font-display); color: var(--brass); text-align: right; }
+.q .thr small { display: block; font: 500 14px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--chalk-faint); margin-top: 8px; }
+.term {
+  margin-top: 4px;
+  padding: 20px 26px;
+  background: #051213;
+  border: 1px solid var(--enamel-700);
+  font: 400 18px/1.6 var(--font-mono);
+  color: var(--chalk-dim);
+}
+.term .no { color: var(--vermilion); font-weight: 600; }
+.term .yes { color: var(--brass); font-weight: 600; }
+.term .dim { color: var(--chalk-faint); }
+.shot { margin: 0; display: flex; flex-direction: column; min-height: 0; }
+.crop { overflow: hidden; border: 1px solid var(--enamel-600); }
+.crop img { display: block; width: 100%; height: auto; }
+/* The page is 2880x6190. Show its left 71% (the cap, quorums, policy) from
+   11.5% of its height down. In px, not % or aspect-ratio: the box is 752px
+   wide, so the image is 1060px wide and 2278px tall, and 11.5% is 262px.
+   Percentages resolved differently in print and pushed the slide over. */
+.crop.mandate { height: 560px; }
+.crop.mandate img { width: 1060px; max-width: none; margin-top: -262px; }
+figcaption { font: 400 15px/1.4 var(--font-mono); color: var(--chalk-faint); margin-top: 12px; }
+
+/* --- 7 live ----------------------------------------------------------- */
+
+.live-url { margin-top: 22px; font: 600 48px/1.1 var(--font-mono); color: var(--brass); letter-spacing: -.01em; }
+.live-url a { text-decoration: none; }
+.chips { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+.chip { font: 500 16px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; padding: 10px 14px; border: 1px solid var(--enamel-600); color: var(--chalk-dim); }
+.live-row { display: grid; grid-template-columns: 1fr 640px; gap: 36px; margin-top: 36px; }
+.crop.market { aspect-ratio: 16 / 7.4; }
+.live-row .term { margin-top: 0; font-size: 17px; line-height: 1.55; }
+.live-row .term .h { color: var(--chalk); }
+.live-row .term .four { color: var(--brass); font-weight: 700; }
+.live-row .why { font-size: 20px; line-height: 1.45; color: var(--chalk-dim); margin: 18px 0 0; }
+.live-row .why strong { color: var(--chalk); }
+
+/* --- 8 checks --------------------------------------------------------- */
+
+.checks { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 40px; }
+.check { padding: 36px 40px; }
+.check.warn { border-color: var(--vermilion); }
+.check .label { color: var(--vermilion); }
+.check.count .label { color: var(--brass); }
+.check .head { font: 700 44px/1.1 var(--font-display); margin-top: 18px; letter-spacing: -.02em; }
+.check .head em { font-style: normal; color: var(--vermilion); }
+.check p { font-size: 22px; line-height: 1.45; color: var(--chalk-dim); margin: 18px 0 0; }
+.check p strong { color: var(--chalk); }
+.cmd { margin-top: 22px; padding: 16px 20px; background: #051213; border: 1px solid var(--enamel-700); font: 400 21px/1.3 var(--font-mono); color: var(--brass); }
+.figs { display: grid; grid-template-columns: auto 1fr; gap: 10px 26px; margin-top: 22px; align-items: baseline; }
+.figs .k { font: 700 46px/1 var(--font-display); color: var(--brass); letter-spacing: -.02em; }
+.figs .d { font-size: 20px; color: var(--chalk-dim); }
+.caveat { margin-top: 22px; font-size: 21px; line-height: 1.45; border-left: 4px solid var(--vermilion); padding-left: 20px; }
+
+/* --- 9 links ---------------------------------------------------------- */
+
+.links { margin-top: 40px; display: grid; gap: 12px; }
+.link { display: grid; grid-template-columns: 260px 1fr; align-items: center; padding: 20px 34px; text-decoration: none; }
+.link .k { font: 500 16px/1 var(--font-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--chalk-faint); }
+.link .v { font: 500 29px/1.25 var(--font-mono); color: var(--brass); }
+.link .v small { display: block; font: 400 19px/1.4 var(--font-body); color: var(--chalk-dim); margin-top: 6px; }
+.closing { margin-top: 32px; font: 600 28px/1.3 var(--font-display); color: var(--chalk-dim); }
+.closing b { color: var(--chalk); }
+
+/* --- screen: one slide, scaled to fit ---------------------------------- */
+
+@media screen {
+  body { overflow: hidden; height: 100vh; }
+  .deck.js .slide { display: none; position: absolute; left: 50%; top: 50%; transform-origin: 0 0; }
+  .deck.js .slide.on { display: flex; }
+  .deck:not(.js) .slide { margin: 0 auto 24px; }
+  .deck:not(.js) { overflow: auto; height: 100vh; }
+  .hint { position: fixed; right: 16px; top: 12px; font: 12px var(--font-mono); color: var(--chalk-faint); opacity: .7; }
+}
+
+/* --- print: one slide, one page --------------------------------------- */
+
+@page { size: 1600px 900px; margin: 0; }
+@media print {
+  html, body { background: var(--enamel-900); }
+  .slide { break-after: page; page-break-after: always; transform: none !important; }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  .hint { display: none; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<main class="deck" id="deck">
+
+<!-- 1 --------------------------------------------------------------------->
+<section class="slide title" id="s1">
+  <p class="eyebrow">ETHOnline 2026 · built from scratch</p>
+  <h1>Turnstile</h1>
+  <p class="lane">A paid lane for onchain data agents.</p>
+  <p class="tag">Sell the answer, keep the method.</p>
+  <div class="bounty"><span class="gate"></span>Submission: Arc — Agentic bounty</div>
+  <p class="meta">github.com/IpastorSan/turnstile <span>·</span> turnstile.moveseventyeight.com <span>·</span> Arc testnet</p>
+  <div class="foot"><span>Turnstile · <b>Arc — Agentic</b></span><span>01 / 09</span></div>
+</section>
+
+<!-- 2 --------------------------------------------------------------------->
+<section class="slide" id="s2">
+  <p class="eyebrow">The problem</p>
+  <h2>Agents can sell onchain analysis. <em>Nothing lets them.</em></h2>
+  <div class="sides">
+    <div class="side panel">
+      <div class="who">Seller agent</div>
+      <p>Cannot be discovered, priced, or sell an edge.</p>
+      <ul class="x">
+        <li>197 ERC-8004 registrations. <strong>One</strong> publishes a readable price.</li>
+        <li>Publishing the analyst publishes the method.</li>
+      </ul>
+    </div>
+    <div class="side panel">
+      <div class="who">Buyer</div>
+      <p>Cannot let an agent spend without handing it a key.</p>
+      <ul class="x">
+        <li>A key that can spend can usually raise its own limit.</li>
+        <li>One human can usually widen it too.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="fix"><strong>Turnstile:</strong> the offer lives in an ENSv2 name, and the buyer issues a mandate its agent spends inside but can never widen.</p>
+  <div class="foot"><span>Turnstile · <b>Arc — Agentic</b></span><span>02 / 09</span></div>
+</section>
+
+<!-- 3 --------------------------------------------------------------------->
+<section class="slide" id="s3">
+  <p class="eyebrow">Three key tiers</p>
+  <h2>Authority flows <em>down</em>. Never up.</h2>
+  <div class="tiers">
+    <div class="tier cold panel">
+      <div><div class="name">COLD</div><div class="freq">once per lifecycle</div></div>
+      <div class="vendor">A separate operator key<small>Seller identity · owns the ENSv2 name</small></div>
+      <div class="may"><span class="label">May authorise</span>rotate the hot key · move the payout · raise the price ceiling</div>
+    </div>
+    <div class="tier warm panel">
+      <div><div class="name">WARM</div><div class="freq">occasional</div></div>
+      <div class="vendor">Privy<small>Buyer organisation wallet + mandate policy</small></div>
+      <div class="may"><span class="label">May authorise</span>issue a mandate · raise a cap (quorum) · add an agent</div>
+    </div>
+    <div class="tier hot panel">
+      <div><div class="name">HOT</div><div class="freq">every query</div></div>
+      <div class="vendor">Circle on Arc<small>Buyer agent's spending wallet</small></div>
+      <div class="may"><span class="label">May authorise</span><b>nothing</b> — it spends inside the mandate</div>
+    </div>
+  </div>
+  <div class="invariant">
+    <div class="rule">The key that spends can never raise its own limit.</div>
+    <div class="custody">A separation of <strong>authority, not custody</strong>. The operator key is <strong>not</strong> in cold storage; the chain enforces its roles. The hot key's payout change reverts on Sepolia.</div>
+  </div>
+  <div class="foot"><span>Turnstile · <b>Arc — Agentic</b></span><span>03 / 09</span></div>
+</section>
+
+<!-- 4 --------------------------------------------------------------------->
+<section class="slide arch" id="s4">
+  <div class="copy">
+    <p class="eyebrow">Architecture</p>
+    <h2>Keys on top. The request path below.</h2>
+    <p class="sub">Panel A: who may authorise what. Panel B: an agent buying one answer.</p>
+    <ol>
+      <li><b>01</b> discover · ERC-8004</li>
+      <li><b>02</b> read the offer · ENSv2</li>
+      <li><b>03</b> ask · MCP</li>
+      <li><b>04</b> 402 · the quote</li>
+      <li><b>05</b> pay · USDC on Arc</li>
+      <li><b>06</b> answer, not the method</li>
+    </ol>
+  </div>
+  <figure><img src="architecture.png" alt="Turnstile architecture: the three key tiers, and the six-step request path"></figure>
+  <div class="foot"><span>Turnstile · <b>Arc — Agentic</b></span><span>04 / 09</span></div>
+</section>
+
+<!-- 5 --------------------------------------------------------------------->
+<section class="slide" id="s5">
+  <p class="eyebrow">The Arc rail · USDC via Circle Gateway nanopayments</p>
+  <h2>The agent pays. It never sends a transaction.</h2>
+  <div class="rail-row">
+    <div class="steps">
+      <div class="step panel">
+        <div class="n">1</div><div class="who">Org · Privy</div>
+        <div class="what">depositFor(agent)</div>
+        <div class="how">Warm tier funds the agent's Gateway balance.</div>
+        <div class="gas">pays gas</div>
+      </div>
+      <div class="step panel agent">
+        <div class="n">2</div><div class="who">Agent · hot</div>
+        <div class="what">Signs EIP&#8209;3009</div>
+        <div class="how">An authorisation, offchain. No transaction.</div>
+        <div class="gas">0 gas</div>
+      </div>
+      <div class="step panel">
+        <div class="n">3</div><div class="who">Seller</div>
+        <div class="what">Gateway /settle</div>
+        <div class="how">Credited at once; the answer is delivered.</div>
+        <div class="gas">no tx</div>
+      </div>
+      <div class="step panel">
+        <div class="n">4</div><div class="who">Circle batcher</div>
+        <div class="what">One tx, many payments</div>
+        <div class="how">Sub-cent payments amortised in a batch.</div>
+        <div class="gas">Circle pays gas</div>
+      </div>
+    </div>
+    <div class="nonce panel">
+      <div class="label">Agent nonce</div>
+      <div class="big">0</div>
+      <div class="after">after eleven payments</div>
+      <p>A wallet that never submitted a transaction <strong>never paid gas</strong>. A nonce cannot be faked. No Paymaster.</p>
+    </div>
+  </div>
+  <div class="batch panel">
+    <span class="label">Batch tx</span>
+    <span class="v"><a href="https://testnet.arcscan.app/tx/0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1">0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1</a></span>
+    <span class="note">Block 60940635 · ours: six $0.000500 nanopayments + one $0.07, among 22 payments in one transaction · Arc testnet</span>
+  </div>
+  <div class="foot"><span>Turnstile · <b>Arc — Agentic</b></span><span>05 / 09</span></div>
+</section>
+
+<!-- 6 --------------------------------------------------------------------->
+<section class="slide" id="s6">
+  <p class="eyebrow">The mandate</p>
+  <h2>Enforced by <em>Privy</em>, not by us.</h2>
+  <div class="mandate-row">
+    <div class="quorums">
+      <div class="q panel">
+        <div class="obj">Org wallet<small>0x3De96375…bE84 · operations quorum</small></div>
+        <div class="thr">1 of 2<small>to spend</small></div>
+      </div>
+      <div class="q panel">
+        <div class="obj">Cap policy<small>separate board quorum</small></div>
+        <div class="thr">2 of 2<small>to raise</small></div>
+      </div>
+      <div class="term">
+        <span class="dim"># raise the cap $0.25 → $1</span><br>
+        alice alone &nbsp;&nbsp;<span class="no">REFUSED 401</span><br>
+        <span class="dim">&nbsp;&nbsp;signatures do not match the threshold</span><br>
+        alice + bob &nbsp;<span class="yes">RAISED → $1 cap</span>
+      </div>
+    </div>
+    <figure class="shot">
+      <div class="crop mandate"><img src="screenshots/mandate.png" alt="The /mandate page: $1 spend cap, both key quorums, the policy and allowlist, read live from Privy"></div>
+      <figcaption>/mandate — read live from Privy: the cap, both quorums, the policy.</figcaption>
+    </figure>
+  </div>
+  <div class="foot"><span>Turnstile · <b>Arc — Agentic</b></span><span>06 / 09</span></div>
+</section>
+
+<!-- 7 --------------------------------------------------------------------->
+<section class="slide" id="s7">
+  <p class="eyebrow">Frontend + backend, live</p>
+  <div class="live-url"><a href="https://turnstile.moveseventyeight.com">https://turnstile.moveseventyeight.com</a></div>
+  <div class="chips"><span class="chip">deployed 2026-09-11</span><span class="chip">GCP</span><span class="chip">Caddy</span><span class="chip">real TLS certificate</span></div>
+  <div class="live-row">
+    <figure class="shot">
+      <div class="crop market"><img src="screenshots/market.png" alt="The market page: 197 agents, one posts a price"></div>
+      <figcaption>/ — the market: 197 real ERC-8004 registrations, one readable price.</figcaption>
+    </figure>
+    <div>
+      <div class="term">
+        <span class="h">GET /analyze/0x88e6…5640</span><br>
+        <span class="four">HTTP/2 402 Payment Required</span><br>
+        <span class="dim">via: 1.1 Caddy</span><br>
+        accepts:<br>
+        &nbsp;exact hedera:testnet &nbsp;&nbsp;HBAR<br>
+        &nbsp;exact <span class="yes">eip155:5042002</span> 70000 USDC<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;→ 0x0Adca6e1…f5F2
+      </div>
+      <p class="why">The backend is up, knows its price, and <strong>will not answer until it is paid</strong>. 70000 = $0.07 on Arc.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Turnstile · <b>Arc — Agentic</b></span><span>07 / 09</span></div>
+</section>
+
+<!-- 8 --------------------------------------------------------------------->
+<section class="slide" id="s8">
+  <p class="eyebrow">What to check</p>
+  <h2>And one thing that will <em>mislead</em> you.</h2>
+  <div class="checks">
+    <div class="check warn panel">
+      <div class="label">Misleading</div>
+      <div class="head">The payout address reads <em>0 USDC</em>. Forever.</div>
+      <p>Circle Gateway credits a <strong>Gateway balance</strong>, not the wallet. ArcScan will show zero, and nothing is missing.</p>
+      <div class="cmd">npm run arc:setup -- --status</div>
+      <p>That is where the money shows.</p>
+    </div>
+    <div class="check count panel">
+      <div class="label">Settled to date · both rails</div>
+      <div class="figs">
+        <span class="k">25</span><span class="d">payments · $1.0550 total</span>
+        <span class="k">13</span><span class="d">on Arc · $0.215000</span>
+      </div>
+      <p class="caveat">These span several runs and a cap raise. <strong>$1.0550 is not a balance against the $1 cap.</strong></p>
+      <p>Read from the Hedera mirror node and Circle Gateway's transfers API, as of 2026-09-09.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Turnstile · <b>Arc — Agentic</b></span><span>08 / 09</span></div>
+</section>
+
+<!-- 9 --------------------------------------------------------------------->
+<section class="slide" id="s9">
+  <p class="eyebrow">Links</p>
+  <h2>Check every claim yourself.</h2>
+  <div class="links">
+    <a class="link panel" href="https://github.com/IpastorSan/turnstile"><span class="k">GitHub</span><span class="v">github.com/IpastorSan/turnstile<small>Open source, MIT</small></span></a>
+    <a class="link panel" href="https://turnstile.moveseventyeight.com"><span class="k">Live app</span><span class="v">turnstile.moveseventyeight.com<small>Market, seller, mandate · /analyze/&lt;pool&gt; answers 402</small></span></a>
+    <a class="link panel" href="https://github.com/IpastorSan/turnstile/blob/main/docs/EVIDENCE.md"><span class="k">Evidence</span><span class="v">docs/EVIDENCE.md<small>One row per claim, one link per row, including what is not live</small></span></a>
+    <a class="link panel" href="https://github.com/IpastorSan/turnstile/blob/main/walkthrough/index.html"><span class="k">Walkthrough</span><span class="v">walkthrough/index.html<small>Six pages, one idea each, no install</small></span></a>
+  </div>
+  <p class="closing"><b>Submission: Arc — Agentic bounty.</b> Everything shown runs on Arc testnet.</p>
+  <div class="foot"><span>Turnstile · <b>Arc — Agentic</b></span><span>09 / 09</span></div>
+</section>
+
+</main>
+<div class="hint">← → to navigate</div>
+<script>
+(function () {
+  var deck = document.getElementById('deck');
+  var slides = Array.prototype.slice.call(deck.querySelectorAll('.slide'));
+  var i = Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(2), 10) || 1) - 1));
+  deck.classList.add('js');
+
+  function fit() {
+    var s = Math.min(innerWidth / 1600, innerHeight / 900);
+    slides.forEach(function (el) {
+      el.style.transform = 'scale(' + s + ') translate(-50%, -50%)';
+    });
+  }
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (el, k) { el.classList.toggle('on', k === i); });
+    history.replaceState(null, '', '#s' + (i + 1));
+  }
+  addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { show(i + 1); e.preventDefault(); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { show(i - 1); e.preventDefault(); }
+    if (e.key === 'Home') show(0);
+    if (e.key === 'End') show(slides.length - 1);
+  });
+  addEventListener('resize', fit);
+  fit();
+  show(i);
+})();
+</script>
+</body>
+</html>
