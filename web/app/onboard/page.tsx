@@ -1,15 +1,30 @@
 import Link from 'next/link';
 
-import { SelfieCheck } from '../../components/SelfieCheck.tsx';
-import { LISTINGS_PER_HUMAN, OPERATOR_ACTION, worldIsConfigured } from '../../../identity/index.ts';
+import { ListingPicker } from '../../components/ListingPicker.tsx';
+import { LISTINGS_PER_HUMAN, LISTING_PARENT, OPERATOR_ACTION, registeredListings, worldIsConfigured } from '../../../identity/index.ts';
+import { openDiscoveryStore } from '../../lib/discovery.ts';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Prove a human is behind it · Turnstile' };
 
-const SELLER = 'liquidity.turnstile.eth';
+/**
+ * The registered listings come from the discovery store, not from this file.
+ * Until MOV-277 the page hard-coded one name and posted it as the key, and the
+ * proof it produced never reached the market.
+ */
+function loadRegistered(): { listings: { ensName: string; agentUid: string }[]; reason: string | null } {
+  const store = openDiscoveryStore({ readOnly: true });
+  if (!store.ok) return { listings: [], reason: store.reason };
+  try {
+    return { listings: registeredListings(store.db), reason: null };
+  } finally {
+    store.close();
+  }
+}
 
 export default function OnboardPage() {
   const configured = worldIsConfigured();
+  const registered = loadRegistered();
 
   return (
     <div className="wrap seller">
@@ -33,8 +48,8 @@ export default function OnboardPage() {
         </div>
         <p className="section-note">
           It is <b>not a login</b>. Nothing here signs you in, and no account is created. Selfie
-          Check answers exactly one question — is this the same human as that other listing — and
-          the answer is used for one thing: {LISTINGS_PER_HUMAN} listings per person, and the
+          Check answers exactly one question, whether this is the same human as that other listing,
+          and the answer is used for one thing: {LISTINGS_PER_HUMAN} listings per person, and the
           {' '}{LISTINGS_PER_HUMAN + 1}th is refused.
         </p>
         <p className="section-note">
@@ -53,12 +68,21 @@ export default function OnboardPage() {
 
       <section className="section">
         <div className="section-head">
-          <h2 className="section-title">Verify {SELLER}</h2>
+          <h2 className="section-title">Verify a listing</h2>
           <p className="results-count">action {OPERATOR_ACTION}</p>
         </div>
+        <p className="section-note">
+          A listing is a name under <span className="mono">{LISTING_PARENT}</span>. A name
+          registered as an ERC-8004 agent is stored under its agent id, which is what the market
+          page reads. Any other name is a <b>reservation</b>: it holds one of your{' '}
+          {LISTINGS_PER_HUMAN} slots before the agent exists, because a cap that only applied after
+          registration would be dodged by registering first. Verify three and the fourth is refused,
+          with the reason.
+        </p>
+        {registered.reason ? <p className="field-note">{registered.reason}</p> : null}
 
         {configured ? (
-          <SelfieCheck agentUid={SELLER} />
+          <ListingPicker registered={registered.listings} parent={LISTING_PARENT} limit={LISTINGS_PER_HUMAN} />
         ) : (
           <div className="probe">
             <p className="probe-result is-bad">
@@ -79,8 +103,9 @@ export default function OnboardPage() {
         <p className="section-note">
           Every agent on the market page carries a verification state. Before any proof exists that
           state is <span className="mono">unknown</span>, never{' '}
-          <span className="mono">unverified</span> — absence of a proof is not evidence of a failed
-          one, and reporting it as a failure would be a claim we have not earned.
+          <span className="mono">unverified</span>. Absence of a proof is not evidence of a failed
+          one, and reporting it as a failure would be a claim we have not earned. Reservations do
+          not appear there, because there is no agent to show yet.
         </p>
         <p className="section-note">
           A mandate can also require one. <span className="mono">verifiedOperatorOnly</span> in{' '}
