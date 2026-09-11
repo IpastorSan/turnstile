@@ -32,6 +32,8 @@ services:
         condition: service_healthy
       seller:
         condition: service_healthy
+      mcp:
+        condition: service_healthy
 
   web:
     build:
@@ -75,6 +77,34 @@ services:
       - "4021"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4021/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  # --- the MCP server over HTTP/SSE ---
+  # The URL `agent-endpoint[mcp]` publishes on chain, served for real. One
+  # container, no .env: it can quote and discover but not pay, by construction
+  # (see mcp-turnstile/http-server.ts). Mounts the discovery store READ-ONLY —
+  # the tools refuse to invent data, and this process must not be able to
+  # corrupt the file the web app verifies against.
+  mcp:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.services
+    command: ["node", "mcp-turnstile/http-server.ts"]
+    restart: unless-stopped
+    volumes:
+      - ../graph/sink/data:/repo/graph/sink/data:ro
+    environment:
+      PORT: 4030
+      # Only the public hostname may appear in Host/Origin (DNS-rebinding
+      # protection). Caddy passes the original host through.
+      MCP_ALLOWED_HOSTS: ${TURNSTILE_SITE_ADDRESS:-}
+    expose:
+      - "4030"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4030/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 12

@@ -29,6 +29,18 @@
 		reverse_proxy seller:4021
 	}
 
+	# --- the MCP server: the URL the ENS record publishes ---
+	# `agent-endpoint[mcp]` points at /liquidity.turnstile.eth/sse. Both the
+	# stream (GET) and its named return path (POST /messages) live under that
+	# prefix; anything else for the name — the bare /liquidity.turnstile.eth —
+	# stays with the web app, which has a page for it.
+	handle /liquidity.turnstile.eth/sse {
+		reverse_proxy mcp:4030
+	}
+	handle /liquidity.turnstile.eth/messages* {
+		reverse_proxy mcp:4030
+	}
+
 	# --- the evidence bundle the CRE enclave fetches ---
 	# Bearer-token gated inside the service itself; Caddy only routes.
 	handle /evidence/* {
