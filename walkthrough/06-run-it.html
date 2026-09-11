@@ -204,6 +204,22 @@ $ curl -i http://localhost:4021/analyze/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f56
       </dl>
     </div>
 
+    <p>
+      <strong>Correction (2026-09-11, MOV-277):</strong> the block above says no
+      agent has ever been verified and that <code>/onboard</code> is a
+      placeholder. Both stopped being true on 2026-09-11. World Selfie Check has
+      run on <code>/onboard</code> since 2026-09-09, and the first real Sandbox
+      App proof was verified by World at 09:06:02 UTC. That proof was stored
+      under the ENS name <code>liquidity.turnstile.eth</code>, while the market
+      reads verifications by agent id, so the market kept showing
+      <code>unknown</code>. MOV-277 stores proofs under the agent id, re-keys
+      that row, and replaces the single hard-coded listing with a picker: the
+      registered listing, or another name under <code>turnstile.eth</code> as a
+      reservation, so the fourth refusal can be shown. The screenshot above
+      predates the picker. What is unchanged: an agent with no proof reads
+      <code>unknown</code>, never <code>unverified</code>.
+    </p>
+
     <h2>Where the code lives</h2>
 
     <table class="tbl">

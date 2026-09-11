@@ -145,6 +145,23 @@ Stated plainly, because a demo surface deserves the same honesty as a retracted 
 | A DON-attested verdict | `cre workflow deploy` is gated on access we do not have | The enclave and the settlement both work; the link between them is signed by us, not the DON |
 | World Selfie Check | Sandbox access, the Selfie Check Beta flag and the Sandbox mobile app are all pending approvals | `/onboard` is a labelled placeholder. `world_verification` is empty, so every agent reports `unknown`, never `unverified` |
 
+**Correction (2026-09-11, MOV-277): the World Selfie Check row above is no
+longer true.** The approvals arrived on 2026-09-09, `/onboard` has run Selfie
+Check since, and the first real Sandbox App proof was verified by World's
+Developer Portal on 2026-09-11 at 09:06:02 UTC. It did **not** reach the
+market: `/onboard` hard-coded one listing and posted its ENS name, the verify
+route stored the proof under `liquidity.turnstile.eth`, and the market joins
+`world_verification` on the ERC-8004 agent uid
+(`eip155:11155111:0x8004a818…/10127`). Verified against the live store on
+2026-09-11: one row, keyed by the name, and `/api/sellers` reporting the seller
+as `unknown`. MOV-277 resolves the listing to its agent uid on the server,
+turns `/onboard` into a picker (registered listings from the store, plus other
+`turnstile.eth` subnames as labelled reservations so the cap can be shown), and
+adds `scripts/world-rekey.ts` for the orphaned row. The market shows `verified`
+for our seller only once that script has run on the host, or the listing is
+verified again. What is unchanged: an agent with no proof reports `unknown`,
+never `unverified`.
+
 **Correction (2026-09-09, MOV-266): two rows above have been edited, and the
 reason for each is below.** Both were found while building `walkthrough/`, which
 reads this file as its source of truth and could not restate either.
