@@ -589,6 +589,13 @@ The lines below are appended rather than edited, per the union-merge rule.
   (MOV-228, not started). Neither shows invented data. A faked panel would put
   every honest number on the site in doubt, and the Graph tracks disqualify
   mocked datasets outright.
+- **Update (2026-09-11, MOV-275):** the bullet above is out of date on both routes.
+  `/mandate` was built on 2026-09-08 (MOV-012…015): it reads the live Privy org,
+  shows what the agent settled on both rails, and creates mandates with operator
+  keys generated in the browser. `/onboard` has run World Selfie Check since
+  2026-09-09 (MOV-223/224) and is waiting only on a first proof from the Sandbox
+  app — no verification has been recorded yet. What still stands: neither shows
+  invented data.
 - Re-cut `web/data/discovery.db` (`cd web && npm run snapshot`) close to the
   judging date, so the directory shown is current. It is a committed snapshot of
   the live store, dated in `web/data/provenance.json`.

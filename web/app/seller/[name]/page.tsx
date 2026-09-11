@@ -157,10 +157,15 @@ export default async function SellerPage({ params }: { params: Promise<{ name: s
           The MCP endpoint published in <span className="mono">agent-endpoint[mcp]</span> is{' '}
           <span className="mono">{o.mcpEndpoint ?? 'unset'}</span>.{' '}
           <strong style={{ color: 'var(--chalk)' }}>
-            That host does not answer yet — the seller service is MOV-219/220 and is not deployed.
+            The host answers; this exact path does not.
           </strong>{' '}
-          The record is real and readable on chain; the service behind it is not up. This page says
-          so rather than showing a working endpoint it cannot demonstrate.
+          The x402 service behind it is live and returns{' '}
+          <span className="mono">402 Payment Required</span> at{' '}
+          <span className="mono">/analyze/:pool</span>, but the published{' '}
+          <span className="mono">/…/sse</span> path returns 404: Turnstile&rsquo;s MCP server
+          speaks stdio, not SSE, so nothing serves it yet. The record is real and readable on
+          chain; this page says what answers and what does not, rather than showing a working
+          endpoint it cannot demonstrate.
         </p>
       </section>
     </div>
