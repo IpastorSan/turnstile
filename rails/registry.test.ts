@@ -8,6 +8,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createArcRail } from './arc-usdc/index.ts';
+import { createBaseRail } from './base-usdc/index.ts';
 import { createHederaRail } from './hedera-x402/index.ts';
 // The Hedera rail reads its facilitator and its exchange rate over HTTP. A unit
 // suite that hit the network for that would be slow, offline-hostile, and would
@@ -16,6 +17,9 @@ import { fakeFacilitatorFetch, offlineRailOptions } from './hedera-x402/testing.
 // Same reason for the Arc rail: it reads Circle Gateway's `/supported` on every
 // challenge, because the EIP-712 domain a payer signs against lives there.
 import { fakeGateway, offlineRailOptions as offlineArcOptions } from './arc-usdc/testing.ts';
+// And the same again for Base: its `/supported` is what says the network is
+// settleable at all.
+import { offlineOptions as offlineBaseOptions } from './base-usdc/testing.ts';
 import { PaymentRailError, usdToAtomic } from './PaymentRail.ts';
 import type { PaymentPayload, PaymentRail, PaymentRequirement } from './PaymentRail.ts';
 import { RailRegistry } from './registry.ts';
@@ -172,6 +176,7 @@ test('a rail that settles nothing says so, and one that settles says that instea
   const rails = [
     createHederaRail(offlineRailOptions(fakeFacilitatorFetch())),
     createArcRail(offlineArcOptions(fakeGateway())),
+    createBaseRail(offlineBaseOptions()),
   ];
 
   for (const r of rails) {
@@ -188,9 +193,10 @@ test('a rail that settles nothing says so, and one that settles says that instea
     }
   }
 
-  // Both shipped rails are live as of MOV-225. Asserted rather than assumed, so
-  // that a rail silently regressing to a stub fails here.
-  assert.deepEqual(rails.map(r => `${r.id}=${r.info.live}`).sort(), ['arc-usdc=true', 'hedera-x402=true']);
+  // All three shipped rails are live as of 2026-09-11 (Base joined the other
+  // two). Asserted rather than assumed, so that a rail silently regressing to a
+  // stub fails here.
+  assert.deepEqual(rails.map(r => `${r.id}=${r.info.live}`).sort(), ['arc-usdc=true', 'base-usdc=true', 'hedera-x402=true']);
 
   // And the stub rail still tells the truth in the other direction.
   const stub = rail('placeholder', 'chain:9');
@@ -209,23 +215,30 @@ test('the advertised rails reconcile with the on-chain turnstile:rails record', 
   //
   // The tokens are NOT the rail ids — see docs/ens-offer-records.md, and
   // RailInfo.ensRailToken.
+  //
+  // **The Base rail (added 2026-09-11) reuses `x402` deliberately.** It is an
+  // x402 rail, and the record has not been rewritten to name it: that costs a
+  // cold-key transaction. So the token SET still matches the chain — what the
+  // record slightly undersells is how many rails sit behind `x402`. If the
+  // record is ever rewritten to distinguish them, this test is where it fails,
+  // which is the point of pinning it.
   const ON_CHAIN = 'x402,usdc-arc';
 
-  const registry = new RailRegistry([createHederaRail(offlineRailOptions(fakeFacilitatorFetch())), createArcRail(offlineArcOptions(fakeGateway()))]);
+  const registry = new RailRegistry([createHederaRail(offlineRailOptions(fakeFacilitatorFetch())), createArcRail(offlineArcOptions(fakeGateway())), createBaseRail(offlineBaseOptions())]);
   const advertised = registry.describe().map(info => info.ensRailToken).sort();
-  assert.deepEqual(advertised, ON_CHAIN.split(',').sort());
+  assert.deepEqual([...new Set(advertised)], ON_CHAIN.split(',').sort());
 
   // And the ids stay the directory names, so a reader of either can find the other.
-  assert.deepEqual(registry.describe().map(info => info.id).sort(), ['arc-usdc', 'hedera-x402']);
+  assert.deepEqual(registry.describe().map(info => info.id).sort(), ['arc-usdc', 'base-usdc', 'hedera-x402']);
 });
 
-test('the two shipped rails are routable against each other', async () => {
-  // The property MOV-220 and MOV-225 both rely on: distinct (scheme, network),
-  // so a payment can be attributed. If either issue changes its network to the
-  // other's, this fails rather than the money going astray.
-  const registry = new RailRegistry([createHederaRail(offlineRailOptions(fakeFacilitatorFetch())), createArcRail(offlineArcOptions(fakeGateway()))]);
+test('the three shipped rails are routable against each other', async () => {
+  // The property MOV-220, MOV-225 and the Base rail all rely on: distinct
+  // (scheme, network), so a payment can be attributed. If any rail changes its
+  // network to another's, this fails rather than the money going astray.
+  const registry = new RailRegistry([createHederaRail(offlineRailOptions(fakeFacilitatorFetch())), createArcRail(offlineArcOptions(fakeGateway())), createBaseRail(offlineBaseOptions())]);
   const { accepts, failed } = await registry.challengeAll({ resource: RESOURCE, description: 'x', priceUsd: 0.07 });
   assert.deepEqual(failed, []);
-  assert.equal(accepts.length, 2);
-  assert.equal(new Set(accepts.map(a => `${a.scheme} ${a.network}`)).size, 2);
+  assert.equal(accepts.length, 3);
+  assert.equal(new Set(accepts.map(a => `${a.scheme} ${a.network}`)).size, 3);
 });
