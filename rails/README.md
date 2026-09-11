@@ -144,10 +144,30 @@ value, `info.live` is `true` on both, and both challenges carry
 `extra.turnstileSettlement: 'live'`. Everything below about *why* the placeholders
 existed is still the right explanation of the design; it is just history now.
 
+**Addition (2026-09-11): a third rail, and why it was not optional.** `base-usdc`
+settles USDC on **Base Sepolia** through the public x402 Foundation facilitator.
+It exists because the Bazantic gateway — the sponsor track with a Recipe prize —
+pays providers over x402 `exact` in USDC on Base and nothing else (its CLI
+defaults to `base`, with `base-sepolia` as the testnet and Tempo as the
+alternative). Until this rail existed, that client read our 402, found no
+`accepts[]` entry it could sign for, and stopped: a gateway nobody could buy
+through. Adding it was one constructor in `seller/service/server.ts` and a
+`rails/base-usdc/` directory, which is the seam working as designed.
+
+Two honest notes. **It is testnet, and `info.label` says so:** the public
+facilitator lists `eip155:84532` and not Base mainnet, so a mainnet quote would
+be one nothing could settle without our own relayer holding mainnet gas. The
+`network`, `asset` and `facilitatorUrl` options are the whole config surface if
+that changes. And **the on-chain `turnstile:rails` record has not been rewritten
+to name it** — that is a cold-key transaction, and the rail reuses the existing
+`x402` token, so a buyer filtering on the record's tokens still finds us. See
+`rails/registry.test.ts`, which pins exactly that.
+
 | Rail | State |
 |---|---|
 | `hedera-x402` | **live** — settles HBAR on Hedera testnet via Blocky402 (MOV-220) |
 | `arc-usdc` | **live** — settles USDC on Arc testnet via Circle Gateway Nanopayments (MOV-225). See `docs/arc-nanopayments.md` |
+| `base-usdc` | **live** — settles USDC on Base Sepolia via the public x402 facilitator (2026-09-11). Added for the Bazantic gateway; `BASE_PAYOUT_ADDRESS` overrides the payout, `X402_FACILITATOR_URL` the facilitator |
 
 ### What MOV-219 shipped
 
