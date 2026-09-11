@@ -80,6 +80,15 @@ export function createApp(options: ServiceOptions): Express {
   assertWithinCeiling([tiers.standard, tiers.premium]);
 
   const app = express();
+
+  // Behind Caddy the socket is plain http, so `req.protocol` reported http and
+  // the resource URL in the 402 body read `http://turnstile.moveseventyeight.com/…`
+  // on a deployment that is https-only — a payer being asked to pay for a URL it
+  // did not request. Trusting the proxy makes that URL the one the client used.
+  // A direct connection with no forwarded header still reads http, which is what
+  // the tests exercise.
+  app.set('trust proxy', true);
+
   app.disable('x-powered-by');
   app.use(express.json({ limit: '256kb' }));
 

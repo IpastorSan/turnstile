@@ -62,11 +62,17 @@ const authorization = {
   nonce: `0x${randomBytes(32).toString('hex')}` as `0x${string}`,
 };
 
+const CHAIN_ID_BY_CAIP2: Record<string, number> = { 'eip155:84532': 84532, 'eip155:8453': 8453 };
+
 const signature = await account.signTypedData({
   domain: {
     name: String(accept.extra['name']),
     version: String(accept.extra['version']),
-    chainId: 84532,
+    // From the chosen rail, not a constant: signing a mainnet authorization
+    // with the testnet chain id produces a well-formed signature over the wrong
+    // domain, which the facilitator reports as `invalid_exact_evm_signature` —
+    // indistinguishable from a genuinely bad signature until you look here.
+    chainId: CHAIN_ID_BY_CAIP2[CAIP2] ?? 84532,
     verifyingContract: accept.asset as `0x${string}`,
   },
   types: {
@@ -93,7 +99,12 @@ console.log(`signature: ${signature.slice(0, 12)}…`);
 
 const envelope = {
   x402Version: challenge.x402Version,
-  resource: typeof challenge.resource === 'string' ? challenge.resource : (challenge.resource as { url?: string })?.url,
+  // The v2 payload carries the whole ResourceInfo object, not its URL. PayAI's
+  // facilitator validates this strictly and answers 400 `invalid_payload:
+  // resource: expected object, received string`; the x402 Foundation's testnet
+  // facilitator accepted the string, which is how the difference went unnoticed
+  // until this ran against mainnet.
+  resource: challenge.resource,
   accepted: accept,
   payload: {
     signature,
