@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 import { DatabaseSync } from 'node:sqlite';
 
+import { migrateWorldVerificationFk } from '../../graph/sink/db.ts';
 import { findSellers } from '../../seller/service/discovery.ts';
 import type { FindSellersQuery, FindSellersResult } from '../../seller/service/discovery.ts';
 
@@ -151,6 +152,13 @@ export function openDiscoveryStore(
       };
     }
     const db = new DatabaseSync(WORKING_STORE);
+    // The mounted volume survives redeploys by design, and so does whatever
+    // schema it was built with. `CREATE TABLE IF NOT EXISTS` in schema.sql
+    // never edits an existing table, so the live store kept the FK that broke
+    // verification on 2026-09-11. Migrating on every write-open means the next
+    // verification fixes the store in place — no host access needed. Idempotent:
+    // it no-ops once the FK is gone.
+    migrateWorldVerificationFk(db);
     return { ok: true, db, path: WORKING_STORE, close: () => db.close() };
   }
 
