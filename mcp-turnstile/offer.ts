@@ -23,10 +23,12 @@
 //   4. A cached 402 from a previous probe, which is a price that *was* true.
 //
 // A published price is not a quote. `liquidity.turnstile.eth` publishes $0.07 on
-// chain and the MCP endpoint that record names does not resolve — so the offer
-// carries a price and `purchasable.ok === false`, with the DNS failure as the
-// reason. Reporting that as "buyable for seven cents" would be the single most
-// misleading thing this server could do.
+// chain, and the MCP endpoint that record names answers 404: the host has been
+// live since 2026-09-11, but nothing serves the published `/…/sse` path, because
+// mcp-turnstile is a stdio server. So the offer carries a price and
+// `purchasable.ok === false`, with that 404 as the reason — it was a DNS failure
+// until the deploy. Reporting that as "buyable for seven cents" would be the
+// single most misleading thing this server could do.
 
 import type { DatabaseSync } from 'node:sqlite';
 

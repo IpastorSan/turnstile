@@ -127,8 +127,11 @@ quote must not overwrite a published price.
 
 **Read `purchasable` before paying.** It is true only when the endpoint answered
 402 with a payable quote. See "What a judge should try to break", below: our own
-seller publishes an exact price on chain at an endpoint that does not resolve,
+seller publishes an exact price on chain at an endpoint that does not answer,
 and this tool reports the price and refuses to call it buyable.
+**Update (2026-09-11, MOV-273):** this said the endpoint "does not resolve". The
+host now resolves and is live; the exact URL the record publishes returns 404.
+See the honesty section below.
 
 `offer.basis` says how a dollar figure was arrived at, and `offer.comparable` is
 false when it came from the seller's own arithmetic. That distinction is not
@@ -275,11 +278,20 @@ supplied, and a caller that has one is trusting whoever supplied it. This is a
 real hole in the design and it is reported in every `receipts` result rather than
 papered over.
 
-**The endpoint published on chain is not deployed.** `liquidity.turnstile.eth`
+**The endpoint published on chain does not answer.** `liquidity.turnstile.eth`
 publishes `agent-endpoint[mcp]` pointing at
-`https://turnstile.moveseventyeight.com/…`, which does not resolve yet. The seller's service is real and runs from this
-repository; the hosted address is not up. The worked example shows the tool
+`https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`, and that
+exact URL returns **404** (verified 2026-09-11). This server is stdio-only and
+nothing serves MCP over HTTP at that path. The worked example shows the tool
 catching exactly this before it shows anything working.
+
+**Update (2026-09-11, MOV-273):** this paragraph was headed "not deployed" and
+said the host "does not resolve yet" and "is not up". The host has been live
+since 2026-09-11, and the seller's x402 service answers `402` at
+`https://turnstile.moveseventyeight.com/analyze/:pool` — pass that as `resource`
+to `purchase`. What has not changed is that the URL the ENS record names serves
+nothing, so an agent that follows the record literally still finds nothing to
+pay. See `docs/deploy.md`, "Known gap".
 
 ---
 
@@ -295,6 +307,14 @@ You get the $0.07 price, the $0.50 cold-key ceiling, `resolverVerified: true` �
 and `purchasable: false`, because the endpoint that name points at does not
 answer. A tool that reported that as buyable would have an agent trying to pay a
 dead host. This is the single most important behaviour in the server.
+
+**Update (2026-09-11, MOV-273):** "dead host" is now "dead path". The host is
+live; the published URL is not. Re-run live on 2026-09-11 against Sepolia and the
+public host, the result is still `purchasable.ok: false`, and the reason reads:
+`https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse did not return
+a payable 402 (POST expected 402, got 404)`. Previously the probe failed at DNS.
+To buy from the live service, pass `resource:
+"https://turnstile.moveseventyeight.com/analyze/<pool>"`.
 
 **2. Point it at a seller nobody here has ever heard of.**
 

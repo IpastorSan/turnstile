@@ -406,6 +406,17 @@ nested object.
   published price for a payable quote. `mcp-turnstile/examples/transcript.md`
   shows it happening.
 
+  **Update (2026-09-11, MOV-273):** the host is no longer unresolved. The two
+  dated notes above are left as the record of what was true on their dates.
+  `turnstile.moveseventyeight.com` has been live since 2026-09-11, and the x402
+  service answers `402` at `/analyze/:pool` on it. **The finding still holds at
+  the path:** the full URL in `agent-endpoint[mcp]`,
+  `…/liquidity.turnstile.eth/sse`, returns 404, since `mcp-turnstile` is
+  stdio-only. Re-run live on 2026-09-11, `get_offer` still reports
+  `purchasable: false`, with the reason now "POST expected 402, got 404" rather
+  than a DNS failure. `examples/transcript.md` predates this and was not
+  re-recorded. See `docs/deploy.md`, "Known gap".
+
 - **`x402_quote` was still empty when this was written; it has since been run.**
   **Correction (2026-09-07, MOV-229):** all 14 agents in the store that advertise
   `x402Support` *and* publish an HTTP endpoint were probed. **Zero returned a

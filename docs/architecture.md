@@ -186,7 +186,7 @@ permissions, not by a policy document. See
 
 | Tier | State on 2026-09-07 |
 |---|---|
-| Cold | **Live.** `liquidity.turnstile.eth` on Sepolia, resolver `0xb1B4Da2C49814c8CbF975E7a48fbB014EA0b075B`, operator proof published as a resolver record. **Correction (2026-09-08, MOV-000):** the published string is `ledger-key-ring` and this row used to quote it without comment. It is a **stale label** — the Ledger track is not pursued and no Ledger is used; the code now publishes `cold-key-offline` instead. The tier is still live and the split still enforced; only the label is wrong. See `ens-offer-records.md`. |
+| Cold | **Live.** `liquidity.turnstile.eth` on Sepolia, resolver `0xb1B4Da2C49814c8CbF975E7a48fbB014EA0b075B`, operator proof published as a resolver record. **Correction (2026-09-08, MOV-000):** the published string is `ledger-key-ring` and this row used to quote it without comment. It is a **stale label** — the Ledger track is not pursued and no Ledger is used; the code now publishes `cold-key-offline` instead. The tier is still live and the split still enforced; only the label is wrong. See `ens-offer-records.md`. **Update (2026-09-11, MOV-273):** both halves of that correction are now out of date. The `cold-key-offline` default was itself superseded the same day by MOV-005 — `PublishOffer.s.sol` has published `operator-key-role-scoped` since — and on 2026-09-11 the operator key `0x0Adca6e1…f5F2` rewrote the record on chain to match, in [`0x26195105…d4e1`](https://sepolia.etherscan.io/tx/0x261951055f300820830e66160c7a5d2437a489b15ee008aad39b4f47f2a3d4e1) (block 11680454, status 1). Code and chain now agree and the label is no longer stale. Custody is still not cold; the string claims role separation, not custody. |
 | Warm | **Live (MOV-228).** A Privy server wallet at `0x3De96375140717193f52c220Df5Ec460971cbE84` (Privy id `w0cxyoh1lnc1lqfyi9tb5yej`), owned by a 1-of-2 operations key quorum and governed by a mandate policy owned by a separate 2-of-2 board quorum. It signed the `depositFor()` that funds the agent, on chain. **Correction (2026-09-07, MOV-228):** this row previously read "Not built. MOV-228 (Privy) has not been started. `/mandate` in the web app is a labelled placeholder." The first two sentences are now wrong; the third is unchanged and still true — the web app's `/mandate` page is still a placeholder, and the mandate lives in `buyer/mandate/` and in the Privy policy, not in the UI. See `docs/privy-mandate.md`. |
 | Hot | **Built (MOV-225), and it is the Arc rail's buyer half.** `buyer/watchdog/arc-signer.ts` is the spending wallet: it signs EIP-3009 authorizations against Circle Gateway and submits nothing, so its nonce stays 0. Funded by the warm tier through `depositFor`. **Correction (2026-09-07, MOV-225):** this row previously read "Not built. The Arc/Circle spending wallet lands with the rails work." — that was accurate when written and the rails work has now landed. **Correction (2026-09-07, MOV-228):** MOV-225's note added here that "the `depositFor` caller is a plain key today rather than an org wallet with a quorum" — that is no longer true, and the Warm row above now says what replaced it. Everything else in this row is unchanged: the hot wallet's nonce is still 0, verified by `buyer/watchdog/hot-wallet.test.ts` after MOV-228's changes. |
 
@@ -202,7 +202,7 @@ permissions, not by a policy document. See
 |---|---|---|---|
 | **01 Discover** | ERC-8004 Identity Registry registrations, streamed cross-chain via Substreams into a queryable store | `graph/substreams/`, `graph/sink/` | **Live** — 197 agents, 3 chains |
 | **02 Read the offer** | The seller's ENSv2 resolver is read for `turnstile:price`, `turnstile:rails`, `agent-endpoint[mcp]` | `graph/sink/ens.ts`, `web/lib/ens.ts` | **Live** — read from Sepolia per request |
-| **03 Ask** | Buyer's agent calls the MCP endpoint named in `agent-endpoint[mcp]` | `mcp-turnstile/`, `seller/service/` | **Live locally** — the service runs from the repo; the hosted address is not deployed until Sept 14 |
+| **03 Ask** | Buyer's agent calls the MCP endpoint named in `agent-endpoint[mcp]` | `mcp-turnstile/`, `seller/service/` | **Host live; the published path is not.** The x402 service answers `402` at `https://turnstile.moveseventyeight.com/analyze/:pool` (verified 2026-09-11). The exact URL in `agent-endpoint[mcp]`, `…/liquidity.turnstile.eth/sse`, returns **404**: `mcp-turnstile` is stdio-only, so a buyer that follows the record literally does not reach the service. See `docs/deploy.md`. **Update (2026-09-11, MOV-273):** this cell previously read "Live locally — the service runs from the repo; the hosted address is not deployed until Sept 14". The stack went live on 2026-09-11 |
 | **04 402** | The endpoint answers `HTTP 402 Payment Required` with a quote that must match the posted price | `seller/service/` | **Live** (MOV-220) |
 | **05 Pay** | The hot key settles on x402 or USDC on Arc, inside the mandate | `rails/PaymentRail.ts` | **Live on both rails, with real money** (MOV-220, MOV-225) |
 | **06 Answer** | The result is returned. The method that produced it is not. | `seller/analyst/`, `seller/cre/` | **Live**, premium tier through the CRE enclave (MOV-227) |
@@ -215,10 +215,20 @@ Blocky402 and MOV-225 settled real USDC on Arc. The table had become the
 just as wrong: a judge reading it would have concluded the settlement half did
 not exist.
 
-All six steps run today. The one real gap is deployment, not capability: the
+All six steps run today. ~~The one real gap is deployment, not capability: the
 address in `agent-endpoint[mcp]` has no DNS record until the Sept 14 deploy, so
-step 03 works from the repo and not yet from the open internet. `CHECKLIST.md`
+step 03 works from the repo and not yet from the open internet.~~ `CHECKLIST.md`
 tracks that as a live gap rather than a cosmetic one.
+
+**Update (2026-09-11, MOV-273):** the struck sentence said the published host had
+no DNS record until a Sept 14 deploy. The deploy happened on 2026-09-11 and the
+host is live: step 03's service answers `402` at
+`https://turnstile.moveseventyeight.com/analyze/:pool` from the open internet.
+**The gap is still real, and it moved from the host to the path:** the URL
+`agent-endpoint[mcp]` publishes ends in `/liquidity.turnstile.eth/sse` and returns
+404, because `mcp-turnstile` is a stdio MCP server and nothing serves MCP over
+HTTP. A buyer that follows the record literally still does not reach step 04.
+See `docs/deploy.md`, "Known gap".
 
 ### Step 02 is the leg the registry cannot supply
 
@@ -271,6 +281,13 @@ runs as unreachable document origins come back.)*
   service behind it runs from this repo and is not hosted. The seller page says
   so on the page rather than only here. **Changed 2026-09-08 (MOV-010)** from
   `mcp-eu.turnstile.xyz`, a host on a domain we do not own.
+  **Update (2026-09-11, MOV-273):** the headline is still true; the reason
+  changed. This bullet said the host had no DNS record and the service was not
+  hosted. Since 2026-09-11 the host is live (GCP VM, Caddy, Let's Encrypt) and
+  the x402 service answers `402` at `/analyze/:pool` on it. The published URL
+  itself returns **404** (verified 2026-09-11): `mcp-turnstile` is a stdio MCP
+  server and nothing in the repo serves `/…/sse`. See `docs/deploy.md`,
+  "Known gap".
 - ~~**Steps 04–06 have never been executed end to end.** There is no settlement
   receipt anywhere in the system, which is also why discovery's ranking is a
   labelled placeholder rather than settled volume.~~

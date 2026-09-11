@@ -141,7 +141,7 @@ $ cast call $R "addr(bytes32)(address)" $N
           <td><code>agent-endpoint[mcp]</code></td>
           <td>ENSIP-26</td>
           <td><span class="addr">turnstile.moveseventyeight.com/&hellip;/sse</span></td>
-          <td>Where a buyer connects after paying. <strong>Not resolving yet</strong> &mdash; see below</td>
+          <td>Where a buyer connects after paying. The host is live; <strong>this exact path returns 404</strong> &mdash; see below</td>
         </tr>
         <tr>
           <td><code>agent-registration[&hellip;]</code></td>
@@ -176,23 +176,28 @@ $ cast call $R "addr(bytes32)(address)" $N
         <tr>
           <td><code>turnstile:operator-proof</code></td>
           <td>ours</td>
-          <td><code>ledger-key-ring</code></td>
-          <td>How the operator identity is held. <strong>A stale label</strong> &mdash; see below</td>
+          <td><code>operator-key-role-scoped</code></td>
+          <td>What the operator key&rsquo;s authority rests on: role checks on chain, not custody. Rewritten 11 September 2026 &mdash; see below</td>
         </tr>
       </tbody>
     </table>
 
     <p class="note">
-      The last row is a live seam and the screenshot above shows it. The chain
-      still returns <code>ledger-key-ring</code>, a label written before the
-      Ledger track was dropped. The code now publishes
+      <strong>Updated 2026-09-11.</strong> This note previously called the last
+      row a live seam: the chain returned <code>ledger-key-ring</code>, a label
+      written before the Ledger track was dropped, while the code published
       <code>cold-key-offline</code>, which the custody correction on
-      <a href="03-three-keys.html">page 03</a> shows is <em>also</em> wrong, and
-      neither string has been rewritten on chain. Nothing reads this key to make
-      a decision &mdash; the authority split is enforced by role checks, not by a
-      string &mdash; but it is on chain, a judge will find it, and it is
-      documented in <a href="../docs/ens-offer-records.md"><code>ens-offer-records.md</code></a>
-      rather than quietly fixed.
+      <a href="03-three-keys.html">page 03</a> shows is <em>also</em> wrong. The
+      seam is closed. The code has published
+      <code>operator-key-role-scoped</code> since that correction, and on
+      11 September 2026 the operator key rewrote the record to match, in
+      <a href="https://sepolia.etherscan.io/tx/0x261951055f300820830e66160c7a5d2437a489b15ee008aad39b4f47f2a3d4e1"><span class="addr">0x26195105&hellip;d4e1</span></a>
+      (block 11,680,454). The screenshot above was captured on 9 September and
+      still shows the old value. What has not changed: nothing reads this key to
+      make a decision &mdash; the authority split is enforced by role checks, not
+      by a string &mdash; and the string claims role separation, not custody.
+      The history is in
+      <a href="../docs/ens-offer-records.md"><code>ens-offer-records.md</code></a>.
     </p>
 
     <h2>Two claims that check each other</h2>
@@ -234,26 +239,39 @@ $ cast call $R "addr(bytes32)(address)" $N
       <p class="claim-label">Not claimed</p>
       <p class="claim-statement">
         The endpoint published in <code>agent-endpoint[mcp]</code> does not
-        answer. Nothing on the open internet will sell you an answer today.
+        answer. The host is live; the path the record names is not.
       </p>
       <dl class="claim-evidence">
         <dt>Why</dt>
         <dd>
           The record names
-          <span class="addr">turnstile.moveseventyeight.com</span>, which has no
-          DNS record yet. The deploy is scheduled for 14 September 2026.
+          <span class="addr">turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse</span>.
+          The host has been live since 11 September 2026 and the x402 service
+          answers <code>402</code> at <code>/analyze/:pool</code> on it, but that
+          exact path returns 404: the MCP server is stdio-only, and nothing
+          serves MCP over HTTP.
         </dd>
         <dt>Consequence</dt>
         <dd>
           A judge who reads only the ENS record and then tries to call it finds
-          nothing. This is a deployment gap, not a capability gap: the service is
-          real, and <a href="06-run-it.html">page 06</a> runs it in one command.
+          nothing. This is a gap between the record and the deployment, not a
+          capability gap: the paid service is real and public, and
+          <a href="06-run-it.html">page 06</a> runs it in one command.
         </dd>
         <dt>Scope</dt>
         <dd>
           The record itself is real, on chain and readable, and every settlement
           on <a href="04-two-rails.html">page 04</a> is a real transaction on a
-          public testnet. Only the hosting is missing.
+          public testnet. Only the path is wrong: the record does not name the
+          URL where the service answers.
+        </dd>
+        <dt>Updated</dt>
+        <dd>
+          2026-09-11. This block previously said the second sentence was
+          &ldquo;Nothing on the open internet will sell you an answer
+          today&rdquo;, that the host had no DNS record, and that the deploy was
+          scheduled for 14 September. The host went live early; the path is
+          still the gap.
         </dd>
       </dl>
     </div>
