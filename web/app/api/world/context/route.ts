@@ -4,11 +4,20 @@
 // client could mint itself is a context anyone could mint, and the signature is
 // the only thing telling World the request came from this app.
 
+import { NextRequest } from 'next/server';
+
 import { OPERATOR_ACTION, signRpContext, worldConfigFromEnv, worldIsConfigured } from '../../../../../identity/index.ts';
+import { WORLD_CONTEXT, rateLimit } from '../../../../lib/rate-limit.ts';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(): Promise<Response> {
+export async function POST(request: NextRequest): Promise<Response> {
+  // Signing is cheap locally, but the route exists to feed a widget an attacker
+  // could drive; the paired /verify route is the one that calls World, so this
+  // keeps their per-context window honest with ours.
+  const limited = rateLimit(request, WORLD_CONTEXT.name, WORLD_CONTEXT.limit);
+  if (limited) return limited;
+
   if (!worldIsConfigured()) {
     return Response.json(
       {
