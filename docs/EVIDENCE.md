@@ -19,7 +19,7 @@ came from. There is a [48-second recording](./walkthrough.mp4) too.
 
 ## The screens these claims describe
 
-Every image is the live stack, captured 2026-09-09, waiting on real data rather
+Every image is the live stack, captured 2026-09-11 from the public deployment, waiting on real data rather
 than a timer — a shot taken on page load would show a structurally complete page
 with none of the thing it exists to show.
 
@@ -37,6 +37,15 @@ on chain 2026-09-11), and a "Where to ask" section saying the published host doe
 not answer yet (the host is live since 2026-09-11; the published *path* still
 404s). What it claims in the table above — a live, uncached read from Sepolia — is
 unaffected. It was not re-captured in this change.
+
+**Update (2026-09-11, MOV-276): re-captured.** All five screenshots were taken
+again on 2026-09-11 from the **public deployment**, `https://turnstile.moveseventyeight.com`,
+after the seller-page copy fix (MOV-275) went live. `seller.png` now shows
+`turnstile:operator-proof` = `operator-key-role-scoped`, and a "Where to ask"
+section saying the host answers while the published `/…/sse` path returns 404.
+`mandate.png` shows both rails read from the deployed VM (12 on Hedera at
+$0.840000, 13 on Arc at $0.215000). The note above was accurate for the images it
+described; those images have been replaced.
 
 **Run the product end to end in one command:**
 
