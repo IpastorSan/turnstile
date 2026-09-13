@@ -8,7 +8,7 @@ repository.
 **The short version.** Essentially all of the code in this repository was
 written by AI agents (Claude Code, models Opus and Sonnet), one agent per issue,
 each in its own git worktree and on its own branch. A single human, Ignacio
-Pastor ([@IpastorSan](https://github.com/IpastorSan)), wrote the plan those
+Pastor ([@IpastorSan](https://github.com/IpastorSan)), directed the plan those
 agents were pointed at, set the architecture and the scope, chose the sponsors
 and designed the three-tier key model, reviewed the output, forced the
 corrections recorded in [`CORRECTIONS.md`](./CORRECTIONS.md), and personally did
@@ -33,7 +33,8 @@ consider, `streamingfast/substreams-skills` for the Rust module and Ledger's
 whether either was actually loaded, so we do not claim it either way. The Ledger
 track was dropped regardless.
 
-No other AI product was used. There is no code in this repository copied from a
+This repository records no other AI tooling, and the operator used none that he
+has not listed here. There is no code in this repository copied from a
 model's training-data-shaped answer to a prompt like "write me an x402 server":
 every integration was written against the sponsor's own primary docs, and where
 those docs were wrong we wrote it down in [`FEEDBACK.md`](./FEEDBACK.md) and
@@ -45,10 +46,23 @@ those docs were wrong we wrote it down in [`FEEDBACK.md`](./FEEDBACK.md) and
 
 ### The day-1 plan
 
-Before any code existed, on **2026-09-04**, the human wrote a build plan against
-the sponsors' primary documentation: the product, the architecture, the
-per-sponsor qualification gates, the sequencing, and pre-declared cut lines so
-that scope reduction would be a decision already made rather than a panic at 3am.
+Before any code existed, on **2026-09-04**, a build plan was written against the
+sponsors' primary documentation: the product, the architecture, the per-sponsor
+qualification gates, the sequencing, and pre-declared cut lines so that scope
+reduction would be a decision already made rather than a panic at 3am.
+
+**Who wrote it, precisely, because this is the document the spec-driven rule is
+about.** The plan text was drafted by Claude during a planning session, from the
+sponsors' own documentation, and then revised in that session against the
+human's decisions. What the human contributed is the part that determined the
+project: the choice to enter From Scratch only, the sponsor set, the merge of two
+earlier drafts into one market with a buyer half and a seller half, the
+three-tier key model as the spine, the explicit call to take full scope with a
+stated concern about twelve shallow integrations, and the cut lines. The plan
+records those decisions where they were made, for example the "Scope decision
+(user, explicit): full scope, built by us" line in section 1. Read it as a
+human-directed document drafted by an AI, not as a human-authored specification,
+and not as an AI's own idea of what to build.
 
 It is published unedited at
 [`planning/turnstile-v3-day1-plan.md`](./planning/turnstile-v3-day1-plan.md),
