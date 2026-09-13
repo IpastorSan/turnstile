@@ -33,6 +33,16 @@ kickoff (2026-09-04) and every commit is dated in-window.
   This is tracked as a hard gate in `CHECKLIST.md` under **Before submitting**.
   Open source, MIT.
 
+**Correction (2026-09-13, MOV-282):** the bullet above says a private repo "fails
+all 12 submissions". There are not 12 submissions. ETHGlobal's rules for this
+event let a project select **at most 3 Partner Prizes**, and a partner with
+multiple tracks still counts as one; the entry itself is **one** submission form.
+The "12" is a day-1 figure that counted sponsor tracks, not submissions. **What
+is unchanged is the gate itself**: every partner requires a public repo, so the
+visibility flip still blocks the submission. The three partners entered, and why
+the other gate blocks stay ticked but unentered, are recorded in `CHECKLIST.md`
+under **Before submitting**.
+
 `CHECKLIST.md` is the list of binary prize gates. Every line in it is a
 disqualifier. If your work satisfies one, tick it in the same commit.
 
@@ -375,6 +385,13 @@ The report is read once, by one person. The file is read by everyone who comes a
 `plan/turnstile-v3.md` in the research repo is a **day-1 snapshot** and is deliberately not
 maintained — treat it as history, never as truth. Linear issues and `CHECKLIST.md` are the
 live record.
+
+**Update (2026-09-13, MOV-282):** that file now also lives in this repo, at
+`planning/turnstile-v3-day1-plan.md`, copied verbatim under a dated header, so
+that ETHGlobal's spec-driven-development rule is satisfied and judges can see
+what the agents were pointed at. **The rule above is unchanged and applies to the
+copy**: it is history, not truth, and it is not to be maintained. `AI-USE.md` at
+the repo root is the AI-use disclosure it belongs to.
 
 **Where two owners share a line** — e.g. a `CHECKLIST.md` row covering two issues — append
 rather than editing in place, and say who should tick it. `merge=union` keeps *both* sides of
