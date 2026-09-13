@@ -13,6 +13,14 @@ same buyer code.
 - **[`examples/`](examples/)** — the worked example, and a captured transcript
   with real Hedera transaction ids.
 
+> **Correction (2026-09-13, MOV-289):** `mcp-turnstile` is **not published to npm**
+> (`npm view mcp-turnstile` returns 404, checked 2026-09-13), so the `npx -y mcp-turnstile`
+> commands in this file do not work as written. What works today: from a clone of the repo,
+> `npm install` then `npm run mcp` (stdio, same four tools), or point an MCP client at the
+> hosted endpoint `https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`
+> (MCP over HTTP/SSE). The package metadata and bundle entry are ready for a publish; the
+> publish itself has not happened.
+
 ```bash
 npx -y mcp-turnstile                      # published package
 claude mcp add turnstile -- npx -y mcp-turnstile

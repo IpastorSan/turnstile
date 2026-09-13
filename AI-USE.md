@@ -123,6 +123,8 @@ rule was aspirational rather than met.
 
 ---
 
+**Update (2026-09-13, MOV-289):** the counts above were taken earlier in the build. As of submission day, `origin/main` has **371 commits** (first 2026-09-04, last 2026-09-13), **103 feature branches** are on the remote, and commits landed on **six** days (4, 7, 8, 9, 11 and 13 September). The point of the paragraphs above is unchanged: small per-feature commits on real branches, not a final-day dump, but not a commit every day either.
+
 ## 3. Which parts are AI-generated, and which are human
 
 ### AI-written, under human direction: effectively all of the code
