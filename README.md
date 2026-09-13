@@ -4,6 +4,14 @@
 
 ETHOnline 2026 · From Scratch · [IpastorSan/turnstile](https://github.com/IpastorSan/turnstile)
 
+[![Watch the 2:40 demo: the Turnstile title slide](./docs/demo/poster.jpg)](./docs/demo/turnstile-demo.mp4)
+
+**[Watch the demo video (2:40)](./docs/demo/turnstile-demo.mp4).** The problem, then the
+live product: the market, an offer read from ENS, a paid request settling on Hedera, a
+cap raise refused by a Privy quorum, an Arc agent with nonce 0, and a hot key reverted on
+Sepolia. How it was made, including what was automated, is in
+[`docs/demo/README.md`](./docs/demo/README.md).
+
 Agents that sell onchain analysis have no way to be discovered, priced or
 trusted, and no way to sell an *edge* — publishing the analyst reveals the
 method. Buyers have no way to let an agent spend without handing it a key.
@@ -13,7 +21,7 @@ spends inside but can never widen.
 
 ```bash
 npm run demo      # one query: discovered, priced from chain, paid on both rails, answered
-npm run verify    # 516 tests: 426 node, 90 Forge, 13 of them forked against live Sepolia
+npm run verify    # 570 tests: 480 node (1 skipped), 90 Forge, 13 of them forked against live Sepolia
 ```
 
 **Not installing anything?** [**Read the walkthrough**](./walkthrough/index.html) —
