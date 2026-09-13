@@ -314,6 +314,13 @@ The buyer's account moves by exactly the price. Not one tinybar of gas.
 > segment. Getting it wrong produces a 404 that is indistinguishable from "the
 > transaction does not exist". `toMirrorNodeTransactionId()` converts.
 
+**Correction (2026-09-13, MOV-288):** the gotcha above says the `@` form gets a 404.
+Tested against the testnet mirror node on 2026-09-13, it gets **400** with an explicit
+message: `Invalid Transaction id. Please use "shard.realm.num-sss-nnn" format`. Only a
+well-formed id that does not exist gets 404. What is still true: inside Turnstile the two
+look identical, because `receipt()` returns `null` for any non-2xx response, so the
+conversion is still required and a wrong format still reads as "not found" to our code.
+
 ### 5. The HCS receipt
 
 Every settled payment writes one message to topic `0.0.10408013`:

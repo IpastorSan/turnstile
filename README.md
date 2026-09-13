@@ -115,6 +115,14 @@ in this repo serves MCP over HTTP. A buyer's agent that follows the ENS record
 literally still finds nothing to pay. See [`docs/deploy.md`](./docs/deploy.md).
 `docs/architecture.md` gives the per-step state.
 
+**Correction (2026-09-13, MOV-288):** the paragraph above says the published
+`…/liquidity.turnstile.eth/sse` URL returns 404 and nothing serves MCP over HTTP. Both
+stopped being true: the deployment now runs an `mcp` service that serves the toolbox
+over MCP HTTP/SSE, and that exact URL answers `200 text/event-stream` (verified from
+outside the host on 2026-09-13). A buyer's agent that follows the ENS record literally
+now reaches the four tools. What is unchanged: the paid service itself is still the
+`402` at `/analyze/:pool`. `docs/EVIDENCE.md` carries the same correction.
+
 ## The web app
 
 ```bash
