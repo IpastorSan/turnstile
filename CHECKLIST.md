@@ -285,6 +285,44 @@ far less revealing. Worth keeping those two decisions separate rather than treat
 as one switch.
 
 ### Before submitting — blocks all 12 submissions
+
+**Correction (2026-09-13, MOV-282): there are not 12 submissions. There is one, and
+it may name at most three partner prizes.** This section's heading says "blocks all
+12 submissions" and the visibility-flip row further down says "a private repo fails
+all 12 submissions". Both phrases date from the day-1 plan, which sized the entry as
+12 sponsor submissions and budgeted $38,667 across them. That was never how ETHGlobal
+counts.
+
+ETHGlobal's rules for this event, read 2026-09-13:
+
+- **A project selects at most 3 Partner Prizes.** If a partner has multiple tracks,
+  the project can be eligible for all of them while still counting as **1** Partner
+  Prize.
+- **The entry is one submission form.** Not one per sponsor.
+
+**The decision actually taken, 2026-09-13.** Three partners are entered:
+
+| Partner | Tracks entered | Counts as |
+|---|---|---|
+| **The Graph** | Composable **and** AI (From Scratch) | 1 partner prize |
+| **Hedera** | Agentic Payments | 1 partner prize |
+| **Arc** | Agentic **and** Launch | 1 partner prize |
+
+Submission option: **Finalist + Partner Prizes.**
+
+**What this does not change, and why nothing below is being unticked.** The
+per-sponsor gate blocks for **World, Uniswap, Chainlink, Privy, ENS and Bazantic**
+stay exactly as they are, ticks and all. That work was done, it is real, and its
+evidence is what the rest of this file exists to hold. Those tracks are simply **not
+being entered**, because the cap is three partners and these three are the ones
+chosen. Nothing in those blocks is withdrawn or in doubt; they are evidence of the
+build, not claims of a submission.
+
+**What still blocks the one submission** is everything else in this section: the
+public-repo flip, the `dev` to `main` merge that precedes it, the live-figure
+timestamps, and the decision recorded about `docs/manual-steps.md`. Those are
+unchanged.
+
 - [ ] **Decide on `docs/manual-steps.md` in git history.** Untracked from the tree as of
       2026-09-07, but still reachable in commit `711c0083` and its merge. Contains **no
       credentials** — machine specifics, the World app ID, the deployer address, Ledger
