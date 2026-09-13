@@ -29,6 +29,13 @@ rather than hidden.
 chain, 97 will answer if you ask and none do, 99 have no price at all. Captured
 2026-09-11 from the public deployment; the directory itself is a 2026-09-07 snapshot.*
 
+**Built with AI, and documented as such.** Claude Code agents wrote essentially
+all of this code, one issue per worktree and per branch, directed by a human who
+made every outward-facing decision and forced the corrections in
+[`CORRECTIONS.md`](./CORRECTIONS.md). The full disclosure is
+[**`AI-USE.md`**](./AI-USE.md), and the planning artifacts the agents were
+pointed at are in [`planning/`](./planning/).
+
 **Every claim in this README is linked to a transaction or marked as unproven, in
 [`docs/EVIDENCE.md`](./docs/EVIDENCE.md).** That page has a "what is not live"
 section, and two rows that tell you not to cite something as attested when it
@@ -177,6 +184,7 @@ gated.
 | `identity/` | World Selfie Check, nullifier ↔ cold key binding |
 | `web/` | Next.js frontend and backend — market + seller pages, live ENS and discovery reads |
 | `docs/` | Architecture notes, submission copy, on-chain evidence |
+| `planning/` | The day-1 build plan the AI agents were pointed at, and how it became issues. See [`AI-USE.md`](./AI-USE.md) |
 | `scripts/` | `wt.sh`, the worktree helper the git workflow runs on; the end-to-end paid request on each rail (`hedera-paid-request.ts`, `arc-paid-request.ts`) |
 
 ## Uniswap contributions
