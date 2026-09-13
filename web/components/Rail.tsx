@@ -11,15 +11,16 @@ import { usePathname } from 'next/navigation';
  *
  * `/mandate` was marked pending until 2026-09-08 and no longer is: it reads the
  * live organization from Privy, shows what the agent actually settled on both
- * rails, and lets anyone create their own. `/onboard` is still pending, and
- * genuinely blocked on a World Sandbox approval rather than on us.
+ * rails, and lets anyone create their own. `/onboard` was marked pending until
+ * 2026-09-13: the World Sandbox approval arrived on 2026-09-09, a real Selfie Check
+ * proof was verified on 2026-09-11, and the market reads it (MOV-277).
  */
 const LINKS = [
   { href: '/', label: 'Market', pending: false },
   { href: '/seller', label: 'Seller', pending: false },
   { href: '/mandate', label: 'Mandate', pending: false },
   { href: '/mandate/new', label: 'Create', pending: false },
-  { href: '/onboard', label: 'Onboard', pending: true },
+  { href: '/onboard', label: 'Onboard', pending: false },
 ];
 
 export function Rail() {

@@ -157,15 +157,16 @@ export default async function SellerPage({ params }: { params: Promise<{ name: s
           The MCP endpoint published in <span className="mono">agent-endpoint[mcp]</span> is{' '}
           <span className="mono">{o.mcpEndpoint ?? 'unset'}</span>.{' '}
           <strong style={{ color: 'var(--chalk)' }}>
-            The host answers; this exact path does not.
+            It answers.
           </strong>{' '}
-          The x402 service behind it is live and returns{' '}
-          <span className="mono">402 Payment Required</span> at{' '}
-          <span className="mono">/analyze/:pool</span>, but the published{' '}
-          <span className="mono">/…/sse</span> path returns 404: Turnstile&rsquo;s MCP server
-          speaks stdio, not SSE, so nothing serves it yet. The record is real and readable on
-          chain; this page says what answers and what does not, rather than showing a working
-          endpoint it cannot demonstrate.
+          A client that follows the record literally connects over MCP HTTP/SSE and finds four
+          tools: <span className="mono">find_sellers</span>, <span className="mono">get_offer</span>,{' '}
+          <span className="mono">purchase</span> and <span className="mono">receipts</span>. The
+          paid service behind them returns <span className="mono">402 Payment Required</span> at{' '}
+          <span className="mono">/analyze/:pool</span> until a payment settles on one of the
+          advertised rails. The record is read from chain on every request, so if it ever points
+          somewhere that stops answering, this page will show the new value rather than a stale
+          one.
         </p>
       </section>
     </div>
