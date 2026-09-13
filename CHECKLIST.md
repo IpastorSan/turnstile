@@ -58,6 +58,7 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 - [ ] Meaningful work — reasoning/decisions/automation/NL interface, not a raw query dump
 - [x] Tooling must be **reusable infrastructure**, not one end-user app — done (MOV-229). `mcp-turnstile` is four MCP tools with no code path for any particular seller. Proven rather than asserted: `mcp-turnstile/examples/discover-pay-reason.ts` runs the same buyer against two unrelated sellers, and `mcp-turnstile/examples/stranger-seller.test.ts` pins it offline in CI
 - [x] Clear `README` **or** `SKILL.md` so judges can run it — done (MOV-229). `mcp-turnstile/SKILL.md`: `npx -y mcp-turnstile`, the four tools, the credential ledger, what the tools do not know, and five things a judge should try to break. The published tarball carries the 197-agent snapshot, so it answers a real query with an empty environment
+  - **Correction (2026-09-13, MOV-289):** the `npx -y mcp-turnstile` this row cites does not work: the package was never published to npm (404). The row stays ticked because the SKILL is clear and runnable from a clone (`npm run mcp`) or via the hosted SSE endpoint; both files now say so.
 - [ ] Public repo + video 2–4 min
 
 **Hedera — Agentic Payments ($6,000)**
@@ -885,7 +886,7 @@ replied. What is now known is that the config difference is small enough to be
 mechanical: `@circle-fin/x402-batching` covers Arc mainnet and Arc testnet
 through the same `CHAIN_CONFIGS` table, differing in chain id, Gateway host
 (`gateway-api.circle.com` vs `gateway-api-testnet.circle.com`) and GatewayWallet
-address. `rails/arc-usdc/config.ts` holds all three as named constants. Arc
+address. ~~`rails/arc-usdc/config.ts` holds all three as named constants.~~ **Correction (2026-09-13, MOV-289):** it does not; `config.ts` holds only the testnet values (chain id `5042002`, `gateway-api-testnet.circle.com`, the testnet GatewayWallet) plus a comment naming the mainnet Gateway host. The mainnet values live in the SDK's `CHAIN_CONFIGS`, not in our config. Arc
 mainnet has **no public RPC** (Circle's own SDK comment says partners must supply
 a private one), which is a real obstacle to the Launch track and is not something
 we can solve ourselves.
