@@ -10,7 +10,7 @@ first if you are looking for the seam.
 **Verify the whole repo in one command:**
 
 ```bash
-npm run verify      # 426 node tests + 90 Forge tests, including 13 fork tests against live Sepolia
+npm run verify      # 570 tests: 480 node (1 skipped) + 90 Forge, including 13 fork tests against live Sepolia (re-run 2026-09-13, exit 0)
 ```
 
 **Read it rather than run it:** [`walkthrough/index.html`](../walkthrough/index.html)
@@ -146,6 +146,15 @@ Stated plainly, because a demo surface deserves the same honesty as a retracted 
 | Not live | Why | Consequence |
 |---|---|---|
 | The MCP endpoint published on chain | `agent-endpoint[mcp]` publishes `https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`, and that exact URL returns **404** (verified 2026-09-11). `mcp-turnstile` is a stdio MCP server; nothing in the repo serves that path. The *host* is live — see [Deployment](#deployment-the-host-is-live) | A buyer's agent that follows the ENS record literally finds nothing to pay. The payable service is on the same host at `/analyze/:pool`, and the record does not say so. See [`docs/deploy.md`](./deploy.md), "Known gap" |
+
+**Correction (2026-09-13, MOV-283): the first row above is no longer true.** The
+URL the ENS record publishes,
+`https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`, now serves
+the toolbox over MCP HTTP/SSE and answers `200 text/event-stream`, verified from
+outside the host on 2026-09-13. A client that follows the record literally
+reaches `initialize` and `tools/list` and finds all four tools. What is
+unchanged: the two rows below it. `cre workflow deploy` is still gated, so the
+settled verdict is still not DON-attested.
 | A DON-attested verdict | `cre workflow deploy` is gated on access we do not have | The enclave and the settlement both work; the link between them is signed by us, not the DON |
 | World Selfie Check | Sandbox access, the Selfie Check Beta flag and the Sandbox mobile app are all pending approvals | `/onboard` is a labelled placeholder. `world_verification` is empty, so every agent reports `unknown`, never `unverified` |
 
