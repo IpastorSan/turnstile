@@ -275,8 +275,15 @@ The rest of this list could not have been done by an agent at all.
 | `docs/walkthrough.webm` and `.mp4` | A 48-second silent Playwright recording of the real application, scripted by [`scripts/walkthrough-video.ts`](./scripts/walkthrough-video.ts) so it can be re-recorded after any change rather than re-acted. **It is not a submission video**: no audio, no narration, no human on camera. The README says so too. |
 | `docs/architecture.svg` and `.png` | Drawn by an agent. |
 
-No image in this repository is model-generated imagery. There is no AI-generated
-art, no synthetic voice and no avatar anywhere in the submission.
+~~No image in this repository is model-generated imagery. There is no AI-generated
+art, no synthetic voice and no avatar anywhere in the submission.~~
+
+**Correction (2026-09-13, MOV-288):** this section used to end by saying no image in
+the repository is model-generated. That stopped being true when the submission cover
+(MOV-285) and the demo video's title slide (MOV-287) reused a background generated with
+FAL, as the rows above disclose. What is still true: that one background is the only
+AI-generated imagery; every word on the cover and slides is typeset, not generated;
+there is no synthetic voice (the narration is Ignacio's own) and no avatar.
 
 ---
 

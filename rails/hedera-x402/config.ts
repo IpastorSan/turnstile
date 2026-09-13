@@ -91,9 +91,13 @@ export function mirrorNodeTransactionUrl(transactionId: string, mirrorNodeUrl = 
  * Hedera writes a transaction id two ways and they are not interchangeable.
  *
  * The SDK and HashScan use `0.0.7162784@1788789662.378811934`; the mirror node
- * REST API wants `0.0.7162784-1788789662-378811934` in a path segment. Getting
- * this wrong produces a 404 that looks exactly like "the transaction does not
- * exist", which is the expensive way to find out.
+ * REST API wants `0.0.7162784-1788789662-378811934` in a path segment.
+ *
+ * Correction (2026-09-13, MOV-288): this said the `@` form gets a 404. The
+ * mirror node answers 400 ("Invalid Transaction id") for the `@` form and 404
+ * only for a well-formed id that does not exist. Our `receipt()` returns null
+ * for any non-2xx, so to this codebase the two still look the same, which is
+ * why the conversion below is not optional.
  */
 export function toMirrorNodeTransactionId(transactionId: string): string {
   return transactionId.replace('@', '-').replace(/\.(\d+)$/, '-$1');
