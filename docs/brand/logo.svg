@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Turnstile">
+  <title>Turnstile</title>
+  <!-- The site's fare-gate mark (components/Rail.tsx), scaled onto enamel.
+       Two chalk posts, one brass bar: brass is only ever a readable price. -->
+  <rect width="512" height="512" rx="56" fill="#08191a"/>
+  <g transform="translate(96 96) scale(19.2941)">
+    <rect x="0.5" y="1" width="2" height="15" fill="#e9e5d8"/>
+    <rect x="14.5" y="1" width="2" height="15" fill="#e9e5d8"/>
+    <rect x="2.5" y="7.5" width="12" height="2" fill="#d2a857"/>
+  </g>
+</svg>
