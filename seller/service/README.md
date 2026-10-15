@@ -205,13 +205,20 @@ yourself to the list; it is the audit trail for the rule.
 
 ### Why the middleware is ours and not `@x402/express`'s
 
-The SDK splits challenge construction into `parsePrice(price, network)` and
-`enhancePaymentRequirements(...)`, and **neither is given the resource being
-sold** — so a rail cannot bind its challenge to the URL it was issued for, which
-is what stops a payment authorized for the $0.07 route being replayed against the
-$0.35 one. Adopting that split would also have made the SDK's scheme-server shape
-(asset transfer methods, payment flows, facilitator `/supported` sync) the thing
-MOV-220 and MOV-225 implement, instead of four methods.
+Two reasons. The SDK builds challenges through per-scheme hooks,
+`parsePrice(price, network)` and `enhancePaymentRequirements(...)`, so adopting
+it would have made the SDK's scheme-server shape (asset transfer methods, payment
+flows, facilitator `/supported` sync) the thing MOV-220 and MOV-225 implement,
+instead of four methods. And it matches the payer's chosen entry against the
+route's requirements with an exact `deepEqual` on the amount, while the Hedera
+rail's quote moves with the HBAR rate; `x402.ts` accepts `amount >= quoted`.
+
+**Correction (2026-10-15):** this section previously said the SDK could not stop
+a payment authorized for the $0.07 route being replayed against the $0.35 one,
+because neither hook is given the resource. The SDK's middleware rebuilds the
+requirements per route and compares scheme, network, amount, asset and `payTo`
+exactly (`findMatchingRequirements` in `@x402/core` 2.25.0), so it blocks that
+replay too. Tier binding was never the reason to write our own.
 
 Header codecs and zod schemas still come from `@x402/core`, so the bytes on the
 wire are the specification's rather than our reading of it, and
