@@ -19,16 +19,24 @@
 // `x402-interop.test.ts` proves it the only way that really counts: the real
 // `@x402/fetch` client pays this server.
 //
-// The SDK's own resource-server middleware is not used, and the reason is
-// specific rather than aesthetic. It splits challenge construction into
-// `parsePrice(price, network)` and `enhancePaymentRequirements(reqs, kind, ext)`,
-// and **neither is given the resource being sold**. A rail therefore cannot bind
-// its challenge to the URL it was issued for, which is what stops a payment
-// authorized for the cheap tier being replayed against the premium one. Adopting
-// that split would also have pushed the SDK's scheme-server shape — asset
-// transfer methods, payment flows, facilitator `/supported` sync — onto MOV-220
-// and MOV-225 as the thing they implement, instead of four methods. The seam is
-// the deliverable here, so the ~120 lines below are the cheaper trade.
+// The SDK's own resource-server middleware is not used, for two reasons.
+// It builds challenges through per-scheme hooks, `parsePrice(price, network)`
+// and `enhancePaymentRequirements(reqs, kind, ext)`, so adopting it would have
+// pushed the SDK's scheme-server shape — asset transfer methods, payment flows,
+// facilitator `/supported` sync — onto MOV-220 and MOV-225 as the thing they
+// implement, instead of four methods. And it matches the payer's chosen entry
+// against the route's requirements with an exact `deepEqual` on the amount,
+// while the Hedera rail's quote moves with the HBAR rate; the check below
+// accepts `amount >= quoted`. The seam is the deliverable here, so the ~120
+// lines below are the cheaper trade.
+//
+// **Correction (2026-10-15):** this paragraph previously said the SDK could not
+// stop a cheap-tier payment being replayed against the premium tier, because
+// neither hook is given the resource. The hooks aren't, but the middleware
+// rebuilds the requirements per route and `findMatchingRequirements` compares
+// scheme, network, amount, asset and `payTo` exactly (`@x402/core` 2.25.0,
+// `x402ResourceServer`), so a $0.07 payment does not match the $0.35 route there
+// either. Tier binding was never the reason to write our own.
 //
 // ## Ordering, and who eats the loss
 //

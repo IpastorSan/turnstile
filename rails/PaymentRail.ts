@@ -123,12 +123,13 @@ export type VerifyFailureReason =
 /**
  * What the service knows about the request the payment arrived on.
  *
- * Optional, and a rail that ignores it still works. It exists so a rail *can*
- * bind its challenge to the resource it was issued for — the payer's chosen
- * entry travels back to us intact, so without something to compare it against, a
- * challenge minted for one URL could be replayed against another. The service
- * cannot make that check itself: the binding lives in the rail's own `extra`,
- * which the service must not read.
+ * Optional, and a rail that ignores it still works. The service already
+ * re-issues the challenge for the URL being bought and checks the payer's chosen
+ * entry against it (same scheme, network, asset and `payTo`, and an amount at
+ * least the fresh quote), so a challenge minted for the cheap tier cannot buy the
+ * premium one. This context lets a rail go further and check a binding it wrote
+ * into its own `extra`, which the service must not read. That binding is
+ * advisory: an EIP-3009 authorization does not commit to a URL.
  */
 export interface VerifyContext {
   /** Absolute URL of the resource being bought, right now. */
