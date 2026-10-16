@@ -31,11 +31,19 @@ with either a transaction you can open or a sentence saying we did not prove it.
 Pages three and five are where this project is weakest; they are on the page
 rather than hidden.
 
-![The market page: 197 real ERC-8004 registrations across Base, mainnet and Sepolia, of which exactly one publishes a price you can read before calling it](./docs/screenshots/market.png)
+![The market page: 197 real ERC-8004 registrations across Base, mainnet and Sepolia. 78 post a price in three formats, none of them an ERC-8004 field, and only 2 of them in a unit you can compare](./docs/screenshots/market.png)
 
-*The whole problem in one screen. 197 real registrations; one posts a price on
-chain, 97 will answer if you ask and none do, 99 have no price at all. Captured
-2026-09-11 from the public deployment; the directory itself is a 2026-09-07 snapshot.*
+*The whole problem in one screen. 197 real registrations; 78 post a price, in
+three formats and none of them ERC-8004: ours in an ENS record, Capminal's in a
+live x402 v2 402 (0.50 USDC on Base), and 76 Virtuals agents' in an ACP-only
+`jobOfferings` field with no currency. 20 more advertise x402 with no quote on
+record, and 99 have no price at all. Captured 2026-10-16 from a local build
+against the committed 2026-09-07 snapshot plus a 2026-10-16 x402 probe.*
+
+**Correction (2026-10-16, TUR-1):** this caption previously read "one posts a
+price on chain, 97 will answer if you ask and none do, 99 have no price at all",
+over a screenshot saying "One posts a price." Both halves were wrong; see
+[`CORRECTIONS.md`](./CORRECTIONS.md).
 
 **Built with AI, and documented as such.** Claude Code agents wrote essentially
 all of this code, one issue per worktree and per branch, directed by a human who
@@ -143,10 +151,22 @@ npm run dev        # http://localhost:3210
 `SEPOLIA_RPC_URL` must be set for the seller page to read anything; without it
 the page says so rather than serving a cached price.
 
-**One agent in 197 publishes a price anyone can read, and it is ours.** That
-contrast is the product, so the market page gives "no knowable price" three
-distinct states — posted on chain, askable but unanswered, nothing published —
+**78 of 197 agents publish a price, in three formats, and none of them is an
+ERC-8004 field.** Ours is an ENS record in dollars, readable without calling the
+seller. Capminal's is a live x402 v2 402 (0.50 USDC on Base) that exists only
+when asked. 76 Virtuals agents list per-job prices in an ACP-only `jobOfferings`
+field that names no currency. Only two of the 78 can be compared in dollars, and
+only one is readable without asking. That contrast is the product, so the market
+page gives every price and every absence its own state — priced in dollars,
+price with no currency, x402 advertised with no quote, nothing published —
 instead of a blank cell. See [`docs/discovery-api.md`](./docs/discovery-api.md).
+
+**Correction (2026-10-16, TUR-1):** this paragraph previously said "One agent in
+197 publishes a price anyone can read, and it is ours." That was wrong: the
+probe asked one endpoint per agent and missed Capminal's v2 header quote, and
+the store never read Virtuals' `jobOfferings`. What survives is that ours is the
+only price stated in a unit and readable without calling the seller. Details in
+[`CORRECTIONS.md`](./CORRECTIONS.md).
 
 ## Sell the answer, keep the method
 

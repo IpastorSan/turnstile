@@ -260,6 +260,20 @@ rather than being folded into "free" or "unknown". It is also why `get_offer`
 insists on a live 402 before it will call anything purchasable — in a directory
 this sparse, a tool that inferred a price would be wrong almost every time.
 
+**Correction (2026-10-16, TUR-1): "exactly one has a readable price" and "not
+one of the 14 returned a 402" were wrong.** The probe asked one endpoint per
+agent and read only the body. Capminal (`eip155:8453:0x8004a169…a432/1380`)
+answers a POST to its `custom` service with an x402 v2 402 whose quote — 500000
+USDC units, $0.50 on Base — is in the `PAYMENT-REQUIRED` header. And 76 Virtuals
+agents publish per-job prices in an ACP-only `jobOfferings` field with no
+currency, which `find_sellers` now reports as `priceSource: "acp"` with
+`price.usd: null` and `comparable: false`. Counts as of 2026-10-16: `turnstile`
+1, `x402` 1, `acp` 76, `ask_x402` 20, `none` 99. `get_offer` now asks **every**
+http(s) endpoint an agent publishes until one quotes, and the reproduction above
+needs `--limit 20` to cover all 14 agents (it does). What is unchanged: no price
+lives in an ERC-8004 field, a published price is still not a quote, and most of
+the directory is still unpriced. See `CORRECTIONS.md`.
+
 **The ranking is a placeholder and says so.** `find_sellers` orders by
 registration recency and sets `ranking.placeholder: true` with a note explaining
 why. Settled volume is the ranking signal worth having — it is the one number an
@@ -371,10 +385,10 @@ distinction is provenance, not the address.
    └────────────────────────────────────────────────────────┘
         │                          │
    find_sellers ───────────► get_offer ──── live HTTP 402 ────► the seller
-                                   │        (the only price
-                                   ▼         that exists for
-                              purchase ──── an agent that is
-                                   │         not a Turnstile one)
+                                   │        (the only PAYABLE
+                                   ▼         price for an agent
+                              purchase ──── that is not a
+                                   │         Turnstile one)
                                    ▼
                           x402 payment, inside a mandate
                                    │

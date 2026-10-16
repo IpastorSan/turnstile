@@ -63,8 +63,10 @@ export const GET_OFFER_DESCRIPTION =
   'Accepts an ENS name, an agentUid from find_sellers, or a bare endpoint URL — nothing about the ' +
   'resolution is specific to any seller.\n\n' +
   'A price can come from an ENSv2 turnstile:price record (exact, published in advance), a live HTTP ' +
-  '402 (what the seller will actually take, right now), a cached 402 (a price that WAS true), or a ' +
-  'non-standard price object in the registration document. `offer.source` always says which.\n\n' +
+  '402 (what the seller will actually take, right now), a cached 402 (a price that WAS true), a ' +
+  'non-standard price object in the registration document, or Virtuals ACP job prices (source "acp": ' +
+  'raw numbers with no currency, never converted to dollars). `offer.source` always says which. ' +
+  'Every http(s) endpoint the agent publishes is asked, in turn, until one quotes.\n\n' +
   'Read `purchasable` before paying. It is true only when the endpoint answered 402 with a payable ' +
   'quote. A published price is not a quote: an agent can publish an exact price on chain and name an ' +
   'endpoint that does not resolve, and this tool will report the price and refuse to call it buyable.';
@@ -94,6 +96,11 @@ export function summarizeOffer(record: OfferRecord): string {
         ? 'That dollar figure is comparable to a budget: it is a recognised dollar stablecoin unit.'
         : "That dollar figure is the SELLER's own arithmetic and is NOT safe to check a budget against. " +
           "`purchase` re-prices the same offer with the buyer's own rate before the mandate sees it.",
+    );
+  } else if (o.source === 'acp') {
+    lines.push(
+      `Virtuals ACP job price ${o.priceRaw} (cheapest listed). No currency or asset is published, so this ` +
+      'is a number, not a cost, and cannot be checked against a budget.',
     );
   } else if (o.priceUsd === null && o.source === 'ask_x402') {
     lines.push('No price published. The agent advertises x402 support, which means "ask the endpoint" — not "free".');

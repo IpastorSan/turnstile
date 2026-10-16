@@ -35,9 +35,16 @@ and the UI says which one it is reading. **Both paths run the same
 placeholder-ranking switch are the tested parts of MOV-222, and a second
 implementation here would drift from them.
 
-The one readable price is *not* served from the snapshot. `lib/ens.ts` reads
+Our own price is *not* served from the snapshot. `lib/ens.ts` reads
 `turnstile:price` off the Sepolia resolver on every request, because a price
 that is not read live is not one this app can vouch for.
+
+**Correction (2026-10-16, TUR-1):** this paragraph began "The one readable price".
+It is not the only one: the snapshot also carries Capminal's cached x402 quote
+($0.50 in USDC on Base) and 76 Virtuals ACP job prices with no currency, and the
+market page counts all of them from the store rather than stating a number. The
+snapshot's agents are still the 2026-09-07 capture; its `agent_current` view and
+`x402_quote` rows were refreshed in place on 2026-10-16 (see `data/provenance.json`).
 
 ## Rules this app is built to
 

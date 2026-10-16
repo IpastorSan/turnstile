@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>01 · The problem — Turnstile walkthrough</title>
-<meta name="description" content="197 real ERC-8004 registrations read across three chains. Exactly one publishes a price you can read before you call it.">
+<meta name="description" content="197 real ERC-8004 registrations read across three chains. 78 publish a price, in three formats, none of them an ERC-8004 field; only one is in a stated unit and readable before you call it.">
 <link rel="stylesheet" href="assets/walkthrough.css">
 </head>
 <body>
@@ -18,7 +18,7 @@
 
   <div class="page-head">
     <p class="eyebrow">The problem</p>
-    <h1>197 agents. One posts a price.</h1>
+    <h1>197 agents. 78 prices, three formats, none of them ERC-8004.</h1>
     <p class="lede">
       An agent that sells onchain analysis cannot be discovered, cannot state a
       price you can read before calling it, and cannot sell an <em>edge</em>
@@ -30,15 +30,16 @@
 
     <figure class="fig fig-wide">
       <img src="../docs/screenshots/market.png"
-           alt="The Turnstile market page. A headline reads 197 agents, one posts a price. Below it, a bar of 197 ticks with a single brass tick at the left, and three counters: 1 posted on chain, 97 askable and none answer, 99 no price at all.">
+           alt="The Turnstile market page. A headline reads 197 agents, 78 post a price, in three formats. Below it, a bar of 197 ticks: two solid brass ticks at the left, 76 brass outlines, 20 hatched and 99 empty, and four counters: 2 priced in dollars, 76 price with no currency, 20 x402 advertised with no quote, 99 no price at all.">
       <figcaption>
-        The market page, reading the live discovery store. The bar is one tick
-        per registration; the single brass tick at the far left is the only
-        agent in the directory whose price can be read before you call it. The
+        The market page, reading the discovery store. The bar is one tick per
+        registration; the two solid brass ticks are the prices in a unit you can
+        compare (ours from ENS, Capminal&rsquo;s from a live x402 402), and the
+        76 outlined ones are Virtuals ACP job prices that name no currency. The
         ranking banner underneath says the ordering is registration recency and
         carries no reputation signal &mdash; the page labels its own placeholder
         rather than implying a score it has not earned.
-        <span class="fig-date">Captured 2026-09-11 from the public deployment, over a 2026-09-07 directory snapshot.</span>
+        <span class="fig-date">Captured 2026-10-16 from a local build, over the 2026-09-07 directory snapshot plus a 2026-10-16 x402 probe.</span>
       </figcaption>
     </figure>
 
@@ -52,24 +53,28 @@
         <code>npm run discover</code>; the count drifts by a few between runs as
         unreachable document origins come back.
       </span>
-      Of the 197, exactly one publishes a price a buyer&rsquo;s agent can read
-      from chain and act on, and it is ours. That single number is the whole
-      reason this project exists, so it is the first thing on the page and the
-      first thing in the evidence file.
+      Of the 197, 78 publish a price somewhere, and none of them in a field the
+      registry defines. They come in three incompatible formats: one ENS record
+      (ours, in dollars), one live x402 402 quote (Capminal, 0.50 USDC on Base,
+      which exists only when asked), and 76 Virtuals ACP job lists whose prices
+      name no currency. Only ours is both in a stated unit and readable before
+      you call anyone. That gap is the reason this project exists, so it is the
+      first thing on the page and the first thing in the evidence file.
     </p>
 
     <div class="claim">
       <p class="claim-label">Claim</p>
       <p class="claim-statement">
-        197 real ERC-8004 registrations were read across three chains. Exactly
-        one of them publishes a readable price.
+        197 real ERC-8004 registrations were read across three chains. 78
+        publish a price in one of three formats, none of them ERC-8004; one is
+        in a stated unit and readable without calling the seller.
       </p>
       <dl class="claim-evidence">
         <dt>Proof</dt>
         <dd>
           The discovery store, built by an authored ERC-8004 Substreams module
-          over Base, mainnet and Sepolia. Counts verified 2026-09-07 against the
-          live store.
+          over Base, mainnet and Sepolia. Agents read 2026-09-07; price sources
+          re-counted 2026-10-16 after a probe of every published endpoint.
         </dd>
         <dt>Rerun it</dt>
         <dd><code>npm run discover</code> &mdash; the same query the market page and the MCP tool both call.</dd>
@@ -81,6 +86,19 @@
         </dd>
       </dl>
     </div>
+
+    <p>
+      <strong>Correction (2026-10-16, TUR-1):</strong> this page previously
+      said &ldquo;197 agents. One posts a price.&rdquo; and that exactly one of
+      the 197 publishes a readable price. That was wrong. Our probe asked one
+      endpoint per agent and read only the 402 body, so it missed Capminal,
+      whose x402 v2 quote is in the <code>PAYMENT-REQUIRED</code> header of a
+      service it never asked; and the store never read the
+      <code>jobOfferings</code> field 76 Virtuals agents publish. What survives
+      is narrower: no price lives in an ERC-8004 field, and ours is the only one
+      in a unit that can be read in advance. See
+      <a href="../CORRECTIONS.md"><code>CORRECTIONS.md</code></a>.
+    </p>
 
     <h2>Why a registry cannot fix this</h2>
 
@@ -112,18 +130,23 @@
         </tr>
         <tr>
           <td><code>x402</code></td>
-          <td>A live 402 quote we actually fetched</td>
-          <td class="num">0</td>
+          <td>A live x402 402 quote we actually fetched &mdash; Capminal, 500000 USDC units on Base</td>
+          <td class="num"><strong>1</strong></td>
         </tr>
         <tr>
           <td><code>document</code></td>
-          <td>A price written into the registration document</td>
+          <td>An ERC-8004-shaped price written into the registration document</td>
           <td class="num">0</td>
         </tr>
         <tr>
+          <td><code>acp</code></td>
+          <td>Virtuals ACP job prices in the document. Readable, but no currency or asset is named, so not comparable</td>
+          <td class="num"><strong>76</strong></td>
+        </tr>
+        <tr>
           <td><code>ask_x402</code></td>
-          <td>Advertises x402 support. The price is knowable in principle, but only by calling</td>
-          <td class="num">97</td>
+          <td>Advertises x402 support, no quote on record. Knowable in principle, but only by calling</td>
+          <td class="num">20</td>
         </tr>
         <tr>
           <td><code>none</code></td>
@@ -134,16 +157,19 @@
     </table>
 
     <p>
-      The 97 are the interesting row.<span class="sidenote-ref"></span>
+      97 agents advertise <code>x402Support</code>.<span class="sidenote-ref"></span>
       <span class="sidenote">
-        The remaining 84 of the 97 publish no endpoint at all, so there is
-        nothing to ask. Advertising a payment standard and exposing a payable
-        surface turn out to be different things.
+        76 of them are the Virtuals agents in the <code>acp</code> row: they set
+        the flag, publish no service endpoint, and list their prices in a format
+        only Virtuals&rsquo; own marketplace reads. Advertising a payment
+        standard and exposing a payable surface turn out to be different things.
       </span>
-      They advertise <code>x402Support</code>, so in theory a buyer could ask
-      them. Only 13 publish an endpoint that <em>can</em> be asked, and
-      <strong>none of those 13 returned a 402</strong> when we asked. Comparison
-      shopping across this market is not expensive today. It is unavailable.
+      Only 14 publish an endpoint that <em>can</em> be asked, and of the 40
+      URLs those 14 list, <strong>one returned a payable 402</strong>:
+      Capminal&rsquo;s, on a POST to a service named <code>custom</code>, with
+      the quote in a header. Comparison shopping across this market is not
+      expensive today. It is very nearly unavailable: two prices in a unit, one
+      of which you only learn by asking.
     </p>
 
     <p class="note">
@@ -169,8 +195,8 @@
       </li>
       <li>
         <span class="step-name">A seller cannot state a price.</span> With no
-        price field and no answered 402, the only way to learn a cost is to
-        incur it. That is fine for one agent and impossible for a market.
+        price field and almost no answered 402, the only way to learn a cost is
+        usually to incur it. That is fine for one agent and impossible for a market.
       </li>
       <li>
         <span class="step-name">A seller cannot sell an edge.</span> An analyst
