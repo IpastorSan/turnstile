@@ -233,3 +233,28 @@ readable but say nothing about what they are denominated in. 99 agents publish
 no price anywhere. So the case for the ENS leg survives; the "only one" framing
 does not. The market page now counts these from the store instead of stating
 them.
+
+---
+
+**Correction (2026-10-16, TUR-3): "the 402 charges the `turnstile:price`
+record" was true by coincidence, not by construction.** The seller service
+charged `ENS_PRICE_USD = 0.07` and checked against `ENS_PRICE_CEILING_USD =
+0.5`, constants in `seller/service/tiers.ts` copied by hand from
+`liquidity.turnstile.eth` on 2026-09-07. Nothing compared them to the records.
+Discovery read the record live, so a hot-key reprice would have changed what
+buyers were told and not what the 402 asked for — the exact disagreement the old
+`tiers.ts` header said would "make the discovery layer a liar".
+
+**Fixed in the same branch.** The service reads both records through
+`graph/sink/ens.ts` and caches them for 60 seconds (`seller/service/pricing.ts`).
+Standard is the record; premium is five times it, capped at the ceiling; a price
+above the ceiling, or an unset or non-decimal record, is never charged. When the
+records cannot be read the service keeps the last-known-good price and says
+`stale` in `/health`; if it has never read them, the paid routes answer 503.
+Discovery and `get_offer` now derive their exact price through the same function
+the 402 is priced by (`publishedPrice()` → `priceTiers()`), so a record the
+seller would refuse is no longer advertised as exact.
+
+**What is unchanged.** The prices. Re-read live 2026-10-16 at Sepolia block
+11927016: `turnstile:price` = `"0.07"`, `turnstile:price-ceiling` = `"0.50"`, and
+the service's `/health` and 402 report $0.07 / $0.35 from that read.
