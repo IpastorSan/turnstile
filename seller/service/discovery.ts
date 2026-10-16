@@ -137,8 +137,15 @@ export interface FindSellersResult {
 
 // --- price normalization ----------------------------------------------------
 
-/** Stablecoins whose smallest unit is 1e-6 of a dollar. */
-const USD_STABLES = new Set(['usdc', 'usdt', 'pyusd', 'usd', 'usdbc']);
+/**
+ * Stablecoins whose smallest unit is 1e-6 of a dollar.
+ *
+ * `usd coin` is USDC's EIP-712 domain name, which is what an x402 v2 `exact`
+ * requirement carries in `extra.name` — Capminal's live quote on Base does
+ * (TUR-1, verified 2026-10-16). Without it a 500000 USDC quote read as an
+ * unknown currency and reported no dollar figure.
+ */
+const USD_STABLES = new Set(['usdc', 'usdt', 'pyusd', 'usd', 'usdbc', 'usd coin']);
 const SIX_DECIMALS = 1_000_000;
 
 /**

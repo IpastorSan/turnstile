@@ -34,7 +34,7 @@ import type { DatabaseSync } from 'node:sqlite';
 
 import { normalizePriceUsd } from '../seller/service/discovery.ts';
 import type { PriceSource } from '../seller/service/discovery.ts';
-import { probeEndpoint } from '../graph/sink/probe-x402.ts';
+import { probeEndpoint, probeableEndpoints } from '../graph/sink/probe-x402.ts';
 import type { ProbeResult } from '../graph/sink/probe-x402.ts';
 import { makePublicClient, readSellerOffer } from '../graph/sink/ens.ts';
 import type { SellerOffer } from '../graph/sink/ens.ts';
@@ -227,23 +227,16 @@ export interface GetOfferOptions {
 // --- picking an endpoint ----------------------------------------------------
 
 /**
- * Endpoint roles in the order worth *paying*, best first.
+ * The endpoint to name as the resource when nothing quotes: the one that ranks
+ * first in `graph/sink/probe-x402.ts`'s ordering (x402 > api > mcp > a2a > other).
  *
- * An agent that publishes both an `x402` service and a Twitter profile has told
- * us which of the two takes money. Same ordering as
- * `graph/sink/probe-x402.ts::selectProbeCandidates`, so a price this finds is
- * the price that file would have cached.
+ * **Correction (2026-10-16, TUR-1):** this used to be the ONLY endpoint asked.
+ * An agent's service names do not say which one takes money — Capminal's quote
+ * is on its `custom` service while its MCP URL serves HTML — so `getOffer` now
+ * asks every published http(s) endpoint, in this order, until one quotes.
  */
-const ENDPOINT_PRIORITY = ['x402', 'api', 'mcp', 'a2a'];
-
 export function preferredEndpoint(endpoints: readonly OfferAgentEndpoint[]): OfferAgentEndpoint | null {
-  const http = endpoints.filter((e) => e.uri && /^https?:\/\//i.test(e.uri));
-  if (http.length === 0) return null;
-  const rank = (e: OfferAgentEndpoint): number => {
-    const i = ENDPOINT_PRIORITY.indexOf((e.name ?? '').toLowerCase());
-    return i === -1 ? ENDPOINT_PRIORITY.length : i;
-  };
-  return [...http].sort((a, b) => rank(a) - rank(b))[0] ?? null;
+  return probeableEndpoints(endpoints)[0] ?? null;
 }
 
 // --- reading the store ------------------------------------------------------
@@ -508,6 +501,13 @@ export async function getOffer(db: DatabaseSync, ref: string, options: GetOfferO
       resolvedVia.push(`resource taken from the agent's '${chosen.name ?? 'unnamed'}' endpoint in its registration document`);
     }
   }
+  // Every endpoint the agent published is a place a quote might be. Only the
+  // document's endpoints fan out: a URL the caller named, or the one an ENS
+  // record names, is the resource by assertion and is asked alone.
+  const fromDocument = resource !== null && !callerSupplied && !ens?.mcpEndpoint && agent !== null;
+  const toProbe = fromDocument
+    ? probeableEndpoints(agent!.endpoints).map((e) => e.uri!)
+    : resource ? [resource] : [];
 
   // --- what does it cost? ---------------------------------------------------
 
@@ -567,10 +567,20 @@ export async function getOffer(db: DatabaseSync, ref: string, options: GetOfferO
 
   let probe: (ProbeResult & { url: string }) | null = null;
   if (resource && options.probe !== false) {
-    const result = await (options.probeFn ?? probeEndpoint)(resource, timeoutMs, { allowPrivateHosts: callerSupplied });
-    probe = { ...result, url: resource };
-    resolvedVia.push(`probed ${resource} for a live 402: ${result.status}`);
-    if (result.status === 'quoted' && result.amount) {
+    for (const url of toProbe) {
+      const attempt = await (options.probeFn ?? probeEndpoint)(url, timeoutMs, { allowPrivateHosts: callerSupplied });
+      resolvedVia.push(`probed ${url} for a live 402: ${attempt.status}`);
+      // Keep the first answer as the reported one unless a later endpoint quotes.
+      if (!probe || attempt.status === 'quoted') probe = { ...attempt, url };
+      if (attempt.status === 'quoted') break;
+    }
+    if (probe && probe.url !== resource) {
+      resource = probe.url;
+      resolvedVia.push(`resource moved to ${probe.url}, the endpoint that quoted`);
+    }
+    terms.resource = resource;
+    const result = probe;
+    if (result?.status === 'quoted' && result.amount) {
       // A live quote supersedes a published price, including our own. The
       // published one says what a seller intends to charge; this one is what it
       // will actually take, and it is the number a payment is signed against.

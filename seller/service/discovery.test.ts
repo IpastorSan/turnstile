@@ -196,6 +196,8 @@ test('normalizePriceUsd refuses units it cannot convert', () => {
   assert.deepEqual(normalizePriceUsd('70000', 'USDC', 'x402').usd, 0.07);
   // Already decimal: not a smallest-unit integer.
   assert.deepEqual(normalizePriceUsd('0.07', 'USDC', 'x402').usd, 0.07);
+  // USDC's EIP-712 name, as x402 v2 carries it in extra.name (Capminal, TUR-1).
+  assert.deepEqual(normalizePriceUsd('500000', 'USD Coin', 'x402').usd, 0.5);
   assert.equal(normalizePriceUsd('1000', 'ETH', 'document').usd, null);
   assert.equal(normalizePriceUsd('1000', null, 'document').usd, null);
   assert.equal(normalizePriceUsd('not a number', 'USDC', 'x402').usd, null);

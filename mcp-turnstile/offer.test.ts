@@ -220,3 +220,30 @@ test('a URL ref skips the directory entirely', async () => {
   assert.equal(offer.purchasable.ok, true);
   db.close();
 });
+
+test('every published endpoint is asked, so a quote on a non-preferred service is found (TUR-1)', async () => {
+  // Capminal's shape: an MCP URL that serves HTML, and the paid API under a
+  // service named `custom`, which the old one-endpoint ranking never reached.
+  const db = openDb(':memory:');
+  upsertAgent(db, agent({ agentUid: 'eip155:8453:0xreg/1380', agentId: '1380', name: 'Capminal-like', x402Support: true }));
+  replaceEndpoints(db, 'eip155:8453:0xreg/1380', 'in_module', [
+    { name: 'MCP', uri: 'https://cap.example/mcp' },
+    { name: 'custom', uri: 'https://cap.example/api/x402/deploy' },
+  ], []);
+  const asked: string[] = [];
+  const offer = await getOffer(db, 'eip155:8453:0xreg/1380', {
+    probeFn: async (url) => {
+      asked.push(url);
+      return url.endsWith('/deploy')
+        ? { status: 'quoted', httpStatus: 402, amount: '500000', currency: 'USD Coin',
+            asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', network: 'eip155:8453', scheme: 'exact', payTo: '0xf9d1' }
+        : { status: 'no_402', httpStatus: 200, error: 'GET expected 402, got 200' };
+    },
+  });
+  assert.deepEqual(asked, ['https://cap.example/mcp', 'https://cap.example/api/x402/deploy']);
+  assert.equal(offer.offer.resource, 'https://cap.example/api/x402/deploy');
+  assert.equal(offer.offer.source, 'x402_live');
+  assert.equal(offer.offer.priceUsd, 0.5, "'USD Coin' is USDC's EIP-712 name, so 500000 is $0.50");
+  assert.equal(offer.purchasable.ok, true);
+  db.close();
+});
