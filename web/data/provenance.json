@@ -50,5 +50,14 @@
     "off_module": 126
   },
   "turnstileSellers": 1,
-  "note": "Prices are not frozen here in any meaningful sense: only one agent in the whole store has a readable price, and the seller page reads that price live from Sepolia rather than from this file."
+  "note": "Prices come from three places, none of them an ERC-8004 field: our ENS turnstile:price record (read live from Sepolia by the seller page, not from this file), live x402 402 quotes cached in x402_quote at x402ProbedAt, and Virtuals ACP jobOfferings in fetched registration documents, which publish no currency. See priceSources.",
+  "priceSources": {
+    "acp": 76,
+    "ask_x402": 20,
+    "none": 99,
+    "turnstile": 1,
+    "x402": 1
+  },
+  "x402ProbedAt": "2026-10-16T10:10:17.000Z",
+  "correction": "Correction (2026-10-16, TUR-1): this note previously said only one agent in the whole store has a readable price. That was wrong: Capminal answers a live x402 v2 402 (0.50 USDC on Base) and 76 Virtuals agents publish ACP job prices. The agent data is unchanged from capturedAt; on 2026-10-16 the agent_current view was refreshed in place and the x402 probe results were added, so priceSources reflects both."
 }
