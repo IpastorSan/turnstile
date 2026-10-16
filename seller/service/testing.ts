@@ -7,6 +7,8 @@ import { RailRegistry } from '../../rails/registry.ts';
 import { createStubRail } from '../../rails/stub-rail.ts';
 import type { AnalystInput, Verdict } from '../analyst/types.ts';
 import type { AnalystPort } from './app.ts';
+import { PriceBook } from './pricing.ts';
+import type { PriceRecords } from './tiers.ts';
 
 /**
  * Two rails on fictional networks, matching neither real rail.
@@ -107,4 +109,17 @@ export async function withServer<T>(app: Express, fn: (baseUrl: string) => Promi
   } finally {
     await new Promise<void>(resolve => server.close(() => { resolve(); }));
   }
+}
+
+/**
+ * The price records as they read on the seller's name when the tiers were first
+ * priced (2026-09-07), and again on 2026-10-16 (TUR-3). A fixture, not a price:
+ * the service charges whatever the records say at request time, and these
+ * values exist so tests have something realistic to read.
+ */
+export const RECORDED_PRICE_RECORDS = { price: '0.07', ceiling: '0.50' } as const;
+
+/** A price book over fixed records — no I/O, never stale. */
+export function fixturePricing(records: PriceRecords = RECORDED_PRICE_RECORDS): PriceBook {
+  return new PriceBook({ read: async () => ({ ...records, provenance: 'test fixture' }) });
 }

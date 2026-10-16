@@ -16,14 +16,14 @@ import {
 
 import type { PaymentPayload, PaymentRequirement } from '../../rails/PaymentRail.ts';
 import { createApp } from './app.ts';
-import { TIERS } from './tiers.ts';
+import { PriceBook } from './pricing.ts';
 import type { PaymentRequiredBody } from './x402.ts';
-import { fakeAnalyst, testRegistry, withServer } from './testing.ts';
+import { RECORDED_PRICE_RECORDS, fakeAnalyst, fixturePricing, testRegistry, withServer } from './testing.ts';
 
 const POOL = '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640';
 
 function app() {
-  return createApp({ registry: testRegistry(), analyst: fakeAnalyst() });
+  return createApp({ registry: testRegistry(), analyst: fakeAnalyst(), pricing: fixturePricing() });
 }
 
 /** Sign an offer the way the stub rails' `verify()` expects. */
@@ -150,7 +150,7 @@ test('a payment issued for the cheap tier cannot buy the premium one', async () 
 
 test('the two tiers are priced differently, and the premium one buys more', async () => {
   const analyst = fakeAnalyst();
-  await withServer(createApp({ registry: testRegistry(), analyst }), async baseUrl => {
+  await withServer(createApp({ registry: testRegistry(), analyst, pricing: fixturePricing() }), async baseUrl => {
     const { body: premium } = await challengeFor(baseUrl, `/analyze/${POOL}/attested`);
     const { body: standard } = await challengeFor(baseUrl, `/analyze/${POOL}`);
     assert.ok(BigInt(premium.accepts[0]!.amount) > BigInt(standard.accepts[0]!.amount));
@@ -191,18 +191,47 @@ test('the two tiers are priced differently, and the premium one buys more', asyn
   });
 });
 
-test('the standard tier is priced at the turnstile:price record, and neither tier exceeds the ceiling', async () => {
-  // 0.07 and 0.50 were read off liquidity.turnstile.eth on Sepolia, 2026-09-07.
-  // Discovery reports that record as an exact price, so a service charging
-  // something else would make the discovery layer a liar.
-  assert.equal(TIERS.standard.priceUsd, 0.07);
-  assert.ok(TIERS.premium.priceUsd <= 0.5);
+test('the 402 charges what the price record says, and follows a reprice', async () => {
+  // The record is the source of truth (TUR-3): the same app, with nothing
+  // rebuilt, charges the new price once the record changes and the cache expires.
+  let records: { price: string; ceiling: string } = { ...RECORDED_PRICE_RECORDS };
+  let clock = 0;
+  const pricing = new PriceBook({ read: async () => records, ttlMs: 60_000, now: () => clock });
 
-  await withServer(app(), async baseUrl => {
-    const { body } = await challengeFor(baseUrl, `/analyze/${POOL}`);
+  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst(), pricing }), async baseUrl => {
+    const before = await challengeFor(baseUrl, `/analyze/${POOL}`);
     // 0.07 USD at 6 decimals. Pinned as an integer because 0.07 * 1e6 in
     // floating point is 69999.99999999999.
-    assert.equal(body.accepts[0]!.amount, '70000');
+    assert.equal(before.body.accepts[0]!.amount, '70000');
+    assert.equal((await challengeFor(baseUrl, `/analyze/${POOL}/attested`)).body.accepts[0]!.amount, '350000');
+
+    records = { price: '0.09', ceiling: '0.50' };
+    clock = 59_999;
+    assert.equal((await challengeFor(baseUrl, `/analyze/${POOL}`)).body.accepts[0]!.amount, '70000', 'still cached');
+
+    clock = 60_000;
+    assert.equal((await challengeFor(baseUrl, `/analyze/${POOL}`)).body.accepts[0]!.amount, '90000');
+    // 5 x 0.09 = 0.45, under the 0.50 ceiling.
+    assert.equal((await challengeFor(baseUrl, `/analyze/${POOL}/attested`)).body.accepts[0]!.amount, '450000');
+  });
+});
+
+test('with no readable price, paid routes answer 503 with the reason and charge nothing', async () => {
+  const pricing = new PriceBook({ read: async () => { throw new Error('rpc unreachable'); } });
+  const analyst = fakeAnalyst();
+  await withServer(createApp({ registry: testRegistry(), analyst, pricing }), async baseUrl => {
+    for (const path of [`/analyze/${POOL}`, `/analyze/${POOL}/attested`]) {
+      const res = await fetch(`${baseUrl}${path}`);
+      assert.equal(res.status, 503, path);
+      assert.equal(res.headers.get('payment-required'), null, 'no challenge at a guessed price');
+      assert.deepEqual(await res.json(), { error: 'no price can be charged', reason: 'rpc unreachable' });
+    }
+    assert.equal(analyst.calls.length, 0);
+
+    // Health still answers, and says why there is nothing on sale.
+    const health = await (await fetch(`${baseUrl}/health`)).json() as { tiers: unknown[]; pricing: { ok: boolean; reason: string } };
+    assert.deepEqual(health.tiers, []);
+    assert.deepEqual(health.pricing, { ok: false, reason: 'rpc unreachable' });
   });
 });
 

@@ -18,6 +18,11 @@
 //     *does*, and a comment naming the chain a price was verified against is
 //     documentation rather than a dependency. `tiers.ts` records that its $0.07
 //     came off Sepolia, and that is a fact worth keeping.
+//
+//     **Correction (2026-10-16, TUR-3):** `tiers.ts` no longer holds a price; it
+//     reads one from the seller's records at request time, through
+//     `price-records.ts` (exempt by name, below). The rule about comments is
+//     unchanged.
 //   - It is lexical. It catches the realistic failure — reaching for
 //     `payload.hederaTransaction`, branching on `network === 'eip155:296'` — and
 //     not a chain-specific idea expressed in neutral words. Nothing mechanical
@@ -57,6 +62,12 @@ const NOT_ON_THE_PAYMENT_PATH = new Set([
   // this guard is what moved the whole on-chain half into
   // `seller/cre/attestation.ts`, which is where it belonged.
   'premium-cli.ts',
+  // TUR-3. `price-records.ts` is the composition half of pricing: it names the
+  // seller's ENS resolver and the RPC variable once, and hands `pricing.ts` a
+  // `PriceReader` with no chain vocabulary in it. `pricing.ts` and `tiers.ts`,
+  // which decide what is charged, are NOT exempt and are scanned.
+  'price-records.ts',
+  'price-records.test.ts',
 ]);
 
 /**

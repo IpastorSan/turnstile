@@ -16,7 +16,7 @@ import type { AnalystInput, Verdict } from '../analyst/types.ts';
 import { createApp } from './app.ts';
 import type { AttestationPort } from './attestation.ts';
 import { attestOrDegrade, unattestedPort } from './attestation.ts';
-import { fakeAnalyst, testRegistry, withServer } from './testing.ts';
+import { fakeAnalyst, fixturePricing, testRegistry, withServer } from './testing.ts';
 
 const POOL = '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640';
 
@@ -44,7 +44,7 @@ function recordingPort(result: Partial<Awaited<ReturnType<AttestationPort['attes
 }
 
 test('the premium tier is unattested by default, and says so rather than claiming a failure', async () => {
-  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst() }), async baseUrl => {
+  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst(), pricing: fixturePricing() }), async baseUrl => {
     const res = await pay()(`${baseUrl}/analyze/${POOL}/attested`);
     assert.equal(res.status, 200);
     const body = await res.json() as { attestation: { status: string; note: string } };
@@ -58,7 +58,7 @@ test('the premium tier is unattested by default, and says so rather than claimin
 
 test('an injected port reaches the premium response', async () => {
   const { port } = recordingPort();
-  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst(), attestation: port }), async baseUrl => {
+  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst(), pricing: fixturePricing(), attestation: port }), async baseUrl => {
     const res = await pay()(`${baseUrl}/analyze/${POOL}/attested`);
     const body = await res.json() as { attestation: { status: string; evidenceHash: string } };
     assert.equal(body.attestation.status, 'attested');
@@ -68,7 +68,7 @@ test('an injected port reaches the premium response', async () => {
 
 test('the port is handed exactly the bytes the buyer receives', async () => {
   const { port, seen } = recordingPort();
-  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst(), attestation: port }), async baseUrl => {
+  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst(), pricing: fixturePricing(), attestation: port }), async baseUrl => {
     const res = await pay()(`${baseUrl}/analyze/${POOL}/attested`);
     const body = await res.json() as { analystInput: unknown; verdict: unknown };
 
@@ -90,7 +90,7 @@ test('the verdict the port attests is the one assess() gives back for that input
   // so a buyer holding the input can re-derive the verdict and get the same
   // bytes. Measured at 9,210 bytes on a real pool — see seller/analyst/README.md.
   const { port, seen } = recordingPort();
-  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst(), attestation: port }), async baseUrl => {
+  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst(), pricing: fixturePricing(), attestation: port }), async baseUrl => {
     await pay()(`${baseUrl}/analyze/${POOL}/attested`);
     const { input } = seen[0]!;
     const roundTripped = JSON.parse(JSON.stringify(input)) as AnalystInput;
@@ -102,7 +102,7 @@ test('a dead enclave degrades the answer instead of withholding it', async () =>
   const exploding: AttestationPort = {
     async attest() { throw new Error('enclave unreachable'); },
   };
-  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst(), attestation: exploding }), async baseUrl => {
+  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst(), pricing: fixturePricing(), attestation: exploding }), async baseUrl => {
     const res = await pay()(`${baseUrl}/analyze/${POOL}/attested`);
 
     // Deliberately asymmetric with a settlement failure, which withholds. There
@@ -125,7 +125,7 @@ test('a dead enclave degrades the answer instead of withholding it', async () =>
 
 test('the standard tier never calls the attestation port', async () => {
   const { port, seen } = recordingPort();
-  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst(), attestation: port }), async baseUrl => {
+  await withServer(createApp({ registry: testRegistry(), analyst: fakeAnalyst(), pricing: fixturePricing(), attestation: port }), async baseUrl => {
     const res = await pay()(`${baseUrl}/analyze/${POOL}`);
     assert.equal(res.status, 200);
     const body = await res.json() as Record<string, unknown>;

@@ -10,10 +10,15 @@
 // Routes:
 //
 //   GET /health                     free    what this seller sells and accepts
-//   GET /analyze/:pool              $0.07   the verdict, from the subgraph
-//   GET /analyze/:pool/attested     $0.35   the verdict, a live depth ladder,
-//                                           and the scorer input behind both
-//   GET /receipts/:transaction      free    audit-trail lookup across rails
+//   GET /analyze/:pool              standard   the verdict, from the subgraph
+//   GET /analyze/:pool/attested     premium    the verdict, a live depth ladder,
+//                                              and the scorer input behind both
+//   GET /receipts/:transaction      free       audit-trail lookup across rails
+//
+// Prices are whatever the seller's `turnstile:price` record says at the time of
+// the request (standard), five times that up to `turnstile:price-ceiling`
+// (premium). They were $0.07 and $0.35 when this was written; see `tiers.ts`
+// and `pricing.ts`.
 
 import express from 'express';
 import type { Express, Request } from 'express';
@@ -22,8 +27,8 @@ import type { RailRegistry } from '../../rails/registry.ts';
 import type { AnalystInput, Verdict } from '../analyst/types.ts';
 import { attestOrDegrade, unattestedPort } from './attestation.ts';
 import type { AttestationPort } from './attestation.ts';
-import { TIERS, assertWithinCeiling } from './tiers.ts';
-import type { Tier } from './tiers.ts';
+import type { PriceState, TierPricing } from './pricing.ts';
+import { TIER_SHAPES } from './tiers.ts';
 import { paidRoute } from './x402.ts';
 import type { GatewayTrust } from './gateway.ts';
 
@@ -52,8 +57,13 @@ export interface ServiceOptions {
    * `server.ts`.
    */
   attestation?: AttestationPort;
+  /**
+   * What each tier costs right now. `livePricing()` (in `price-records.ts`)
+   * reads the seller's price records; tests pass `fixturePricing()`. Required,
+   * because there is no price this service may assume.
+   */
+  pricing: TierPricing;
   serviceName?: string;
-  tiers?: { standard: Tier; premium: Tier };
   /** Payment gateways in front of this service that settle on its behalf. Default: none. */
   gateways?: GatewayTrust;
 }
@@ -72,15 +82,30 @@ function poolParam(req: Request): string {
   return pool.toLowerCase();
 }
 
+/**
+ * The tiers on sale and where their prices came from. `stale` means the latest
+ * read of the records failed and the last good price is still being charged.
+ */
+function healthPricing(price: PriceState) {
+  if (!price.ok) return { tiers: [], pricing: { ok: false, reason: price.reason } };
+  const { standard, premium, records, ceilingUsd } = price.tiers;
+  return {
+    tiers: [standard, premium].map(({ id, priceUsd, description }) => ({ id, priceUsd, description })),
+    pricing: {
+      ok: true, stale: price.stale, reason: price.reason, records, ceilingUsd,
+      readAt: new Date(price.readAt).toISOString(), provenance: price.provenance ?? null,
+    },
+  };
+}
+
 export function createApp(options: ServiceOptions): Express {
   const { registry, analyst } = options;
   const attestation = options.attestation ?? unattestedPort();
-  const tiers = options.tiers ?? { standard: TIERS.standard, premium: TIERS.premium };
+  const { pricing } = options;
   const serviceName = options.serviceName ?? 'liquidity.turnstile.eth';
 
-  // A seller that would charge above its own published ceiling should refuse to
-  // start rather than find out on the first sale.
-  assertWithinCeiling([tiers.standard, tiers.premium]);
+  // No ceiling check here any more (TUR-3): prices are not fixed at
+  // construction, so `priceTiers()` checks the ceiling on every read instead.
 
   const app = express();
 
@@ -95,47 +120,48 @@ export function createApp(options: ServiceOptions): Express {
   app.disable('x-powered-by');
   app.use(express.json({ limit: '256kb' }));
 
-  app.get('/health', (_req, res) => {
+  app.get('/health', async (_req, res) => {
+    const price = await pricing.current();
     res.json({
       service: serviceName,
       // Says out loud when every advertised rail is still a placeholder. A
       // demo that quietly settles nothing is worse than one that says so.
       settlementLive: registry.rails.some(rail => rail.info.live),
       rails: registry.describe(),
-      tiers: Object.values(tiers).map(tier => ({
-        id: tier.id, priceUsd: tier.priceUsd, description: tier.description,
-      })),
+      ...healthPricing(price),
     });
   });
 
   app.get('/analyze/:pool', paidRoute(
     {
       registry,
-      tier: tiers.standard,
+      pricing,
+      tier: 'standard',
       serviceName,
       gateways: options.gateways,
       describe: req => `Liquidity Analyst verdict for pool ${req.params['pool']} (subgraph only)`,
     },
     async req => {
       const pool = poolParam(req);
-      const { verdict } = await analyst.analyze(pool, { liveDepth: tiers.standard.liveDepth });
-      return { tier: tiers.standard.id, verdict };
+      const { verdict } = await analyst.analyze(pool, { liveDepth: TIER_SHAPES.standard.liveDepth });
+      return { tier: TIER_SHAPES.standard.id, verdict };
     },
   ));
 
   app.get('/analyze/:pool/attested', paidRoute(
     {
       registry,
-      tier: tiers.premium,
+      pricing,
+      tier: 'premium',
       serviceName,
       gateways: options.gateways,
       describe: req => `Liquidity Analyst verdict for pool ${req.params['pool']}, with live depth and the scorer input`,
     },
     async req => {
       const pool = poolParam(req);
-      const { verdict, input } = await analyst.analyze(pool, { liveDepth: tiers.premium.liveDepth });
+      const { verdict, input } = await analyst.analyze(pool, { liveDepth: TIER_SHAPES.premium.liveDepth });
       return {
-        tier: tiers.premium.id,
+        tier: TIER_SHAPES.premium.id,
         verdict,
         // The premium tier's actual deliverable, and the MOV-227 seam.
         //

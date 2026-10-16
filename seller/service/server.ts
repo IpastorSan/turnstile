@@ -14,17 +14,24 @@ import { RailRegistry } from '../../rails/registry.ts';
 import { liveAnalyst } from './analyst-port.ts';
 import { createApp } from './app.ts';
 import { parseGatewayKeys } from './gateway.ts';
+import { livePricing } from './price-records.ts';
 
 const port = Number(process.env['PORT'] ?? 4021);
 
 const registry = new RailRegistry([createHederaRail(), createArcRail(), createBaseRail(), createBaseMainnetRail()]);
 const gateways = parseGatewayKeys(process.env['TURNSTILE_GATEWAY_KEYS']);
-const app = createApp({ registry, analyst: liveAnalyst(), gateways });
+// The price is the `turnstile:price` record on the seller's name, re-read at
+// most once a minute (TUR-3). Primed below so the log says what is being
+// charged, but a failed first read does not stop the service: paid routes
+// answer 503 until a read succeeds. See pricing.ts.
+const pricing = livePricing({ log: line => console.log(line) });
+const app = createApp({ registry, analyst: liveAnalyst(), gateways, pricing });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   const live = registry.rails.filter(rail => rail.info.live);
   console.log(`turnstile seller service on :${port}`);
   console.log(`  gateways trusted: ${gateways.names.length ? gateways.names.join(', ') : 'none'}`);
+  await pricing.current();
   for (const rail of registry.describe()) {
     console.log(`  rail ${rail.id.padEnd(12)} ${rail.scheme}/${rail.network}  ${rail.live ? 'LIVE' : 'PLACEHOLDER — settles nothing'}`);
   }

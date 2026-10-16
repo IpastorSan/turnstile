@@ -56,7 +56,8 @@ import {
 import type { PaymentPayload, PaymentRequirement, Receipt } from '../../rails/PaymentRail.ts';
 import { PaymentRailError } from '../../rails/PaymentRail.ts';
 import type { RailRegistry } from '../../rails/registry.ts';
-import type { Tier } from './tiers.ts';
+import type { TierPricing } from './pricing.ts';
+import type { TierId } from './tiers.ts';
 import { GATEWAY_KEY_HEADER, NO_GATEWAYS } from './gateway.ts';
 import type { GatewayTrust } from './gateway.ts';
 
@@ -73,7 +74,14 @@ export interface PaymentRequiredBody {
 
 export interface PaidRouteOptions {
   registry: RailRegistry;
-  tier: Tier;
+  /**
+   * What the tiers cost right now. Asked per request rather than fixed at
+   * construction, because the price is read from the seller's records and can
+   * change while the service runs (TUR-3).
+   */
+  pricing: TierPricing;
+  /** The tier this route sells. */
+  tier: TierId;
   serviceName?: string;
   /** Overrides the tier description on the wire — used for per-pool descriptions. */
   describe?: (req: Request) => string;
@@ -160,7 +168,7 @@ function matchesOffer(chosen: PaymentRequirement, offered: readonly PaymentRequi
  * @param handler - produces the response body, once, after verification
  */
 export function paidRoute(options: PaidRouteOptions, handler: PaidHandler): RequestHandler {
-  const { registry, tier } = options;
+  const { registry, pricing } = options;
   const gateways = options.gateways ?? NO_GATEWAYS;
 
   return async function x402Gate(req, res) {
@@ -182,6 +190,16 @@ export function paidRoute(options: PaidRouteOptions, handler: PaidHandler): Requ
       return;
     }
 
+    // Priced per request, after the gateway check: a call a gateway already
+    // settled does not need our price, and must not fail for want of one.
+    const price = await pricing.current();
+    if (!price.ok) {
+      // Never a guessed price. Like a rail outage below, this is our fault and
+      // not the payer's, so it is a 503 and not a 402. See pricing.ts.
+      res.status(503).json({ error: 'no price can be charged', reason: price.reason });
+      return;
+    }
+    const tier = price.tiers[options.tier];
     const resource = absoluteUrl(req);
     const description = options.describe ? options.describe(req) : tier.description;
     const resourceInfo = {
