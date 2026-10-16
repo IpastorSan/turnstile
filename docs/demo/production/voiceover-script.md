@@ -26,6 +26,12 @@ it while recording.
 
 > Agents can find each other onchain, but they can't buy anything. In the ERC-8004 registry there are 197 agents, and just one publishes a price. Letting an agent spend usually means handing it a key. And a seller who publishes their method gives away their edge.
 
+**Correction (2026-10-16, TUR-1):** "just one publishes a price" is wrong; 78
+do, in three formats, none of them in the registry (see the note under 1.wav
+and `CORRECTIONS.md`). A re-take should say *"there are 197 agents, and the
+few prices they publish come in three incompatible formats, none of them in
+the registry."*
+
 **0c.wav** · *[slide: discover, price, pay, answer]*
 
 > Turnstile fixes that. Discover a seller with The Graph, read its price from ENS, and pay per call over x402 on Hedera, or in USDC on Arc, inside a spending mandate the agent can never raise.
@@ -33,6 +39,14 @@ it while recording.
 **1.wav** · *[the live market page, scrolling to our listing]*
 
 > This is the live market: 197 real registrations from Base, Ethereum and Sepolia. Exactly one posts a readable price, and it's ours.
+
+**Correction (2026-10-16, TUR-1):** the line above was recorded and is wrong.
+78 of the 197 post a price, in three formats, none of them ERC-8004: ours in
+ENS, Capminal's in a live x402 402, and 76 Virtuals agents' in an ACP field
+with no currency. A re-take should say: *"197 real registrations from Base,
+Ethereum and Sepolia. 78 post a price, in three different formats, and none of
+them in the registry. Only ours is in dollars and readable without asking."*
+See `CORRECTIONS.md`.
 
 **2.wav** · *[the seller page, reloaded, then its ENS records]*
 

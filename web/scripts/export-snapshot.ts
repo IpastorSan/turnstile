@@ -46,6 +46,10 @@ const blocks = db
   .prepare('select network, min(block_number) as fromBlock, max(block_number) as toBlock from agent_current group by network order by network')
   .all() as { network: string; fromBlock: number; toBlock: number }[];
 const turnstileSellers = (db.prepare('select count(*) as n from turnstile_seller').get() as { n: number }).n;
+const priceSources = db
+  .prepare('select price_source as source, count(*) as n from agent_current group by price_source order by source')
+  .all() as { source: string; n: number }[];
+const lastProbe = (db.prepare('select max(probed_at) as t from x402_quote').get() as { t: number | null }).t;
 db.close();
 
 const provenance = {
@@ -62,7 +66,9 @@ const provenance = {
   blockRanges: blocks,
   documentStates: Object.fromEntries(documentStates.map((d) => [d.state, d.n])),
   turnstileSellers,
-  note: 'Prices are not frozen here in any meaningful sense: only one agent in the whole store has a readable price, and the seller page reads that price live from Sepolia rather than from this file.',
+  priceSources: Object.fromEntries(priceSources.map((p) => [p.source, p.n])),
+  x402ProbedAt: lastProbe ? new Date(lastProbe * 1000).toISOString() : null,
+  note: 'Prices come from three places, none of them an ERC-8004 field: our ENS turnstile:price record (read live from Sepolia by the seller page, not from this file), live x402 402 quotes cached in x402_quote at x402ProbedAt, and Virtuals ACP jobOfferings in fetched registration documents, which publish no currency. See priceSources.',
 };
 
 writeFileSync(OUT_PROVENANCE, JSON.stringify(provenance, null, 2) + '\n');

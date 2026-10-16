@@ -196,6 +196,8 @@ test('normalizePriceUsd refuses units it cannot convert', () => {
   assert.deepEqual(normalizePriceUsd('70000', 'USDC', 'x402').usd, 0.07);
   // Already decimal: not a smallest-unit integer.
   assert.deepEqual(normalizePriceUsd('0.07', 'USDC', 'x402').usd, 0.07);
+  // USDC's EIP-712 name, as x402 v2 carries it in extra.name (Capminal, TUR-1).
+  assert.deepEqual(normalizePriceUsd('500000', 'USD Coin', 'x402').usd, 0.5);
   assert.equal(normalizePriceUsd('1000', 'ETH', 'document').usd, null);
   assert.equal(normalizePriceUsd('1000', null, 'document').usd, null);
   assert.equal(normalizePriceUsd('not a number', 'USDC', 'x402').usd, null);
@@ -221,5 +223,51 @@ test('a null price says which kind of nothing it is', () => {
   assert.equal(askable?.price, null);
   assert.equal(nothing?.price, null);
   assert.notEqual(askable?.priceSource, nothing?.priceSource);
+  db.close();
+});
+
+test('Virtuals ACP job prices are recorded as acp, raw, and never as dollars (TUR-1)', () => {
+  const db = fixture();
+  // The shape Virtuals publishes: per-job price and priceV2, no currency or
+  // asset anywhere. A percentage is a trade fee, and a hidden job is not on sale.
+  const doc = {
+    name: 'Virtuals Agent', x402Support: true, services: [],
+    jobOfferings: [
+      { name: 'cheap', hide: false, price: 0.02, priceV2: { type: 'fixed', value: 0.02 } },
+      { name: 'dear', price: 40, priceV2: { type: 'fixed', value: 40 } },
+      { name: 'fee', hide: false, price: 0, priceV2: { type: 'percentage', value: 0.003 } },
+      { name: 'hidden', hide: true, price: 69.99, priceV2: { type: 'fixed', value: 69.99 } },
+      { name: 'free', hide: false, price: 0, priceV2: { type: 'fixed', value: 0 } },
+    ],
+  };
+  upsertAgent(db, agent({
+    agentUid: 'eip155:8453:0xreg/77', agentId: '77', inModuleResolved: false,
+    agentUri: 'https://acpx.virtuals.io/77.json', blockTimestamp: 1_700_000_400,
+  }));
+  db.prepare(`
+    INSERT INTO agent_card (agent_uid, agent_uri, source, status, attempts, attempted_at, x402_support, raw_json)
+    VALUES ('eip155:8453:0xreg/77', 'https://acpx.virtuals.io/77.json', 'https', 'resolved', 1, 1, 1, ?)
+  `).run(JSON.stringify(doc));
+  // A malformed document elsewhere must not take the view down.
+  upsertAgent(db, agent({ agentUid: 'eip155:8453:0xreg/78', agentId: '78', inModuleResolved: false, agentUri: 'https://x/78' }));
+  db.prepare(`
+    INSERT INTO agent_card (agent_uid, agent_uri, source, status, attempts, attempted_at, raw_json)
+    VALUES ('eip155:8453:0xreg/78', 'https://x/78', 'https', 'resolved', 1, 1, '{"jobOfferings": [')
+  `).run();
+
+  const result = findSellers(db, { includeUnknownPrice: true });
+  const acp = result.sellers.find((s) => s.agentId === '77')!;
+  assert.equal(acp.priceSource, 'acp', 'a published job price is not "ask_x402"');
+  assert.equal(acp.price?.raw, '0.02–40');
+  assert.equal(acp.price?.usd, null, 'no currency is published, so no dollar figure');
+  assert.equal(acp.price?.comparable, false);
+  assert.equal(acp.price?.currency, null);
+  assert.match(acp.price?.note ?? '', /2 priced job offerings/);
+  assert.equal(result.priceSources.acp, 1);
+  assert.equal(result.priceSources.document, 0, 'jobOfferings is not an ERC-8004 price field');
+
+  // A ceiling cannot be applied to a number with no unit.
+  const capped = findSellers(db, { maxPriceUsd: 1 });
+  assert.ok(!capped.sellers.some((s) => s.agentId === '77'));
   db.close();
 });

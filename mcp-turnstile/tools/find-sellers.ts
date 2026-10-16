@@ -62,11 +62,14 @@ export const FIND_SELLERS_INPUT = {
 export const FIND_SELLERS_DESCRIPTION =
   'Find agents that can sell a service, across every chain that hosts an ERC-8004 Identity Registry, ' +
   'and rank them.\n\n' +
-  'Discovery is a three-way join. The ERC-8004 registry says who exists — it has no price field, so ' +
-  'it can never say what anything costs. Turnstile sellers publish an exact price in an ENSv2 ' +
-  'turnstile:price record. Everyone else only reveals a price in a live HTTP 402 response. Each ' +
-  'result therefore carries priceSource: turnstile | x402 | document | ask_x402 | none. ' +
-  '"ask_x402" means the agent takes payment but has not been quoted yet — it is not a free service.\n\n' +
+  'The ERC-8004 registry says who exists — it has no price field, so it can never say what anything ' +
+  'costs. Prices live elsewhere, in formats that are not interchangeable: Turnstile sellers publish an ' +
+  'exact USD price in an ENSv2 turnstile:price record; other agents may quote in a live x402 HTTP 402 ' +
+  'response (cached here when probed); Virtuals ACP agents list per-job prices in a jobOfferings field ' +
+  'that names NO currency. Each result carries priceSource: turnstile | x402 | document | acp | ' +
+  'ask_x402 | none. "acp" prices come back raw with price.usd = null and comparable = false — treat ' +
+  'them as a number, not a cost. "ask_x402" means the agent advertises x402 but no quote is on ' +
+  'record — it is not a free service.\n\n' +
   'Ranking is by settled volume where settlement receipts exist. In the store that ships with this ' +
   'repo they do not, so results come back ordered by registration recency with ' +
   'ranking.placeholder = true. Do not read that order as reputation.\n\n' +

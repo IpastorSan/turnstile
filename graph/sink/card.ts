@@ -221,20 +221,17 @@ interface FetchJsonOptions {
 }
 
 /**
- * GET a URL and read at most `maxBytes` of it as text.
- *
- * Redirects are followed by hand rather than by `fetch`, so the private-address
- * guard runs on every hop. A public URL that 302s to `http://127.0.0.1:8545`
- * would otherwise walk straight through the check.
+ * `fetch` with redirects followed by hand, so the private-address guard runs on
+ * every hop. A public URL that 302s to `http://127.0.0.1:8545` would otherwise
+ * walk straight through the check. Returns the first non-redirect response, or
+ * the reason none was reached. Shared by document resolution and the x402 probe.
  */
-async function fetchTextGuarded(url: string, opts: FetchJsonOptions): Promise<{
-  status: FetchStatus;
-  finalUrl: string;
-  httpStatus?: number;
-  error?: string;
-  text?: string;
-}> {
-  const maxBytes = opts.maxBytes ?? MAX_BODY_BYTES;
+export async function guardedFetch(
+  url: string,
+  init: RequestInit & { timeoutMs?: number },
+  options: { allowPrivateHosts?: boolean } = {},
+): Promise<{ response: Response; finalUrl: string } | { status: FetchStatus; finalUrl: string; httpStatus?: number; error: string }> {
+  const { timeoutMs, ...rest } = init;
   let current = url;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
@@ -247,16 +244,16 @@ async function fetchTextGuarded(url: string, opts: FetchJsonOptions): Promise<{
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       return { status: 'unsupported_scheme', finalUrl: current, error: `protocol ${parsed.protocol}` };
     }
-    if (await isBlockedHost(parsed.hostname)) {
+    if (!options.allowPrivateHosts && await isBlockedHost(parsed.hostname)) {
       return { status: 'blocked_host', finalUrl: current, error: `refusing private host ${parsed.hostname}` };
     }
 
     let response: Response;
     try {
       response = await fetch(current, {
+        ...rest,
         redirect: 'manual',
-        signal: AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS),
-        headers: { accept: 'application/json, */*' },
+        signal: AbortSignal.timeout(timeoutMs ?? DEFAULT_TIMEOUT_MS),
       });
     } catch (err) {
       const name = (err as Error).name;
@@ -272,22 +269,36 @@ async function fetchTextGuarded(url: string, opts: FetchJsonOptions): Promise<{
       current = new URL(location, current).toString();
       continue;
     }
-
-    if (!response.ok) {
-      return { status: 'http_error', finalUrl: current, httpStatus: response.status, error: `HTTP ${response.status}` };
-    }
-
-    try {
-      const text = await readCapped(response, maxBytes);
-      return { status: 'resolved', finalUrl: current, httpStatus: response.status, text };
-    } catch (err) {
-      const name = (err as Error).name;
-      const status: FetchStatus = name === 'TimeoutError' || name === 'AbortError' ? 'timeout' : 'network_error';
-      return { status, finalUrl: current, httpStatus: response.status, error: (err as Error).message.slice(0, 300) };
-    }
+    return { response, finalUrl: current };
   }
 
   return { status: 'http_error', finalUrl: current, error: `more than ${MAX_REDIRECTS} redirects` };
+}
+
+/** GET a URL through `guardedFetch` and read at most `maxBytes` of it as text. */
+async function fetchTextGuarded(url: string, opts: FetchJsonOptions): Promise<{
+  status: FetchStatus;
+  finalUrl: string;
+  httpStatus?: number;
+  error?: string;
+  text?: string;
+}> {
+  const result = await guardedFetch(url, { headers: { accept: 'application/json, */*' }, timeoutMs: opts.timeoutMs });
+  if (!('response' in result)) return result;
+  const { response, finalUrl } = result;
+
+  if (!response.ok) {
+    return { status: 'http_error', finalUrl, httpStatus: response.status, error: `HTTP ${response.status}` };
+  }
+
+  try {
+    const text = await readCapped(response, opts.maxBytes ?? MAX_BODY_BYTES);
+    return { status: 'resolved', finalUrl, httpStatus: response.status, text };
+  } catch (err) {
+    const name = (err as Error).name;
+    const status: FetchStatus = name === 'TimeoutError' || name === 'AbortError' ? 'timeout' : 'network_error';
+    return { status, finalUrl, httpStatus: response.status, error: (err as Error).message.slice(0, 300) };
+  }
 }
 
 /**

@@ -33,8 +33,10 @@ export function parseQuery(sp: URLSearchParams): FindSellersQuery {
     requireX402: sp.get('x402') === 'true' ? true : undefined,
     turnstileOnly: sp.get('turnstileOnly') === 'true' ? true : undefined,
     // The default is deliberately inverted from the CLI's. A directory that
-    // hides the 196 agents with no readable price would be showing a market
-    // that does not exist; the missing price is the finding, not a blank row.
+    // hides the agents with no comparable price — most of it, including the 76
+    // Virtuals ACP agents whose prices carry no currency (TUR-1) — would be
+    // showing a market that does not exist; the missing price is the finding,
+    // not a blank row.
     includeUnknownPrice: sp.get('includeUnknownPrice') !== 'false',
     limit: limit === undefined ? MAX_LIMIT : Math.min(Math.max(1, limit), MAX_LIMIT),
     offset: numberParam(sp.get('offset')),

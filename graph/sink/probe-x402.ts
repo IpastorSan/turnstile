@@ -19,9 +19,11 @@
 import { fileURLToPath } from 'node:url';
 import type { DatabaseSync } from 'node:sqlite';
 
+import { decodePaymentRequiredHeader } from '@x402/core/http';
+
 import { flag, main, numberFlag } from './cli.ts';
 import { DEFAULT_DB_PATH, openDb } from './db.ts';
-import { DEFAULT_TIMEOUT_MS, isBlockedHost } from './card.ts';
+import { DEFAULT_TIMEOUT_MS, guardedFetch, isBlockedHost } from './card.ts';
 
 export type ProbeStatus = 'quoted' | 'no_402' | 'http_error' | 'timeout' | 'network_error' | 'parse_error' | 'blocked_host';
 
@@ -71,46 +73,97 @@ export function parseX402Body(body: unknown): Partial<ProbeResult> {
   };
 }
 
+/**
+ * Read a 402 the way a v2 client does: the `PAYMENT-REQUIRED` header first,
+ * then the body.
+ *
+ * v2 moved the challenge out of the body: the header carries the whole
+ * `PaymentRequired` object base64-encoded, and the body may be `{}`. Reading only
+ * the body reported a perfectly good v2 quote as "402 body carried no amount" —
+ * that is how Capminal's 0.50 USDC quote on Base was missed (TUR-1, verified
+ * 2026-10-16). Decoding is `@x402/core`'s, the same helper `purchase.ts` pays
+ * through. A malformed header falls through to the body rather than hiding a
+ * body that does quote. `raw` is what the quote was read from, for storage.
+ */
+export function parseX402Response(
+  headerValue: string | null,
+  bodyText: string,
+): { fields: Partial<ProbeResult>; from: 'header' | 'body' | null; raw: string; error?: string } {
+  let headerError: string | undefined;
+  if (headerValue) {
+    try {
+      const decoded = decodePaymentRequiredHeader(headerValue) as unknown;
+      const fields = parseX402Body(decoded);
+      if (fields.amount) return { fields, from: 'header', raw: JSON.stringify(decoded) };
+    } catch (err) {
+      headerError = `PAYMENT-REQUIRED header: ${(err as Error).message.slice(0, 160)}`;
+    }
+  }
+  const raw = headerValue ?? bodyText;
+  try {
+    const fields = parseX402Body(JSON.parse(bodyText));
+    if (fields.amount) return { fields, from: 'body', raw: bodyText };
+  } catch (err) {
+    return { fields: {}, from: null, raw, error: headerError ?? (err as Error).message.slice(0, 200) };
+  }
+  return {
+    fields: {},
+    from: null,
+    raw,
+    error: headerError ?? (headerValue ? '402 header and body carried no amount' : '402 body carried no amount'),
+  };
+}
+
+/**
+ * The requests a probe makes, in order, stopping at the first 402.
+ *
+ *   GET            an x402-gated HTTP resource answers this with a 402.
+ *   POST {}        a gated JSON API that only routes POST answers GET with 405
+ *                  and this with 402 — Capminal's `/api/x402/deploy` does exactly
+ *                  that (verified 2026-10-16, TUR-1).
+ *   POST tools/list an MCP endpoint answers JSON-RPC, so a body-less POST is a
+ *                  protocol error rather than a request. `tools/list` is the
+ *                  cheapest legitimate call, and a paid MCP server should answer
+ *                  it with a 402.
+ */
+const PROBE_ATTEMPTS = ['GET', 'POST', 'POST tools/list'] as const;
+type ProbeAttempt = typeof PROBE_ATTEMPTS[number];
+
 async function attempt(
   url: string,
-  method: 'GET' | 'POST',
+  kind: ProbeAttempt,
   timeoutMs: number,
+  allowPrivateHosts: boolean,
 ): Promise<{ response?: Response; error?: { status: ProbeStatus; error: string } }> {
-  try {
-    const response = await fetch(url, {
-      method,
-      redirect: 'follow',
-      signal: AbortSignal.timeout(timeoutMs),
-      headers: method === 'POST'
-        ? { accept: 'application/json, text/event-stream', 'content-type': 'application/json' }
-        : { accept: 'application/json' },
-      // An MCP endpoint answers JSON-RPC, so a bare POST with no body is a
-      // protocol error rather than a request. `tools/list` is the cheapest
-      // legitimate call, and a paid MCP server should answer it with a 402.
-      body: method === 'POST'
-        ? JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
-        : undefined,
-    });
-    return { response };
-  } catch (err) {
-    const name = (err as Error).name;
-    return {
-      error: {
-        status: name === 'TimeoutError' || name === 'AbortError' ? 'timeout' : 'network_error',
-        error: (err as Error).message.slice(0, 300),
-      },
-    };
-  }
+  const method = kind === 'GET' ? 'GET' : 'POST';
+  // `guardedFetch` re-checks the private-host guard on every redirect hop, the
+  // same code that guards document resolution: now that every endpoint an agent
+  // lists is asked, a stranger gets more URLs to bounce us through.
+  const result = await guardedFetch(url, {
+    method,
+    timeoutMs,
+    headers: method === 'POST'
+      ? { accept: 'application/json, text/event-stream', 'content-type': 'application/json' }
+      : { accept: 'application/json' },
+    body: kind === 'POST tools/list'
+      ? JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
+      : kind === 'POST' ? '{}' : undefined,
+  }, { allowPrivateHosts });
+  if ('response' in result) return { response: result.response };
+  const status: ProbeStatus = result.status === 'unsupported_scheme' || result.status === 'resolved' || result.status === 'parse_error'
+    ? 'network_error'
+    : result.status;
+  return { error: { status, error: result.error } };
 }
 
 /**
  * Ask an endpoint for its price.
  *
- * Tried as a GET first, then as an MCP `tools/list` POST. An x402-gated HTTP
- * resource answers the GET with a 402; an x402-gated MCP server has nothing to
- * say to a GET and only quotes on the JSON-RPC call. Most `agent-endpoint[mcp]`
- * URIs in the directory are the second kind, so a GET-only probe would report
- * "no price" for agents that do in fact have one.
+ * Tried as each of `PROBE_ATTEMPTS` in turn. An x402-gated HTTP resource
+ * answers the GET with a 402; a POST-only API answers GET with 405; an
+ * x402-gated MCP server has nothing to say to a GET and only quotes on the
+ * JSON-RPC call. A probe that asked one way would report "no price" for agents
+ * that do in fact have one.
  */
 export interface ProbeOptions {
   /**
@@ -149,9 +202,12 @@ export async function probeEndpoint(
   }
 
   let last: ProbeResult | undefined;
-  for (const method of ['GET', 'POST'] as const) {
-    const { response, error } = await attempt(url, method, timeoutMs);
+  for (const method of PROBE_ATTEMPTS) {
+    const { response, error } = await attempt(url, method, timeoutMs, options.allowPrivateHosts ?? false);
     if (!response) {
+      // A redirect into a private address is a refusal, not a flaky endpoint:
+      // report it and stop asking this URL.
+      if (error!.status === 'blocked_host') return { status: 'blocked_host', error: `${method}: ${error!.error}` };
       last = { status: error!.status, error: `${method}: ${error!.error}` };
       continue;
     }
@@ -169,69 +225,114 @@ export async function probeEndpoint(
     }
 
     const text = (await response.text()).slice(0, 16_384);
-    try {
-      const fields = parseX402Body(JSON.parse(text));
-      if (!fields.amount) {
-        return { status: 'parse_error', httpStatus: 402, error: '402 body carried no amount', raw: text };
-      }
-      return { status: 'quoted', httpStatus: 402, raw: text, ...fields };
-    } catch (err) {
-      return { status: 'parse_error', httpStatus: 402, error: (err as Error).message.slice(0, 200), raw: text };
+    const { fields, raw, error: parseError } = parseX402Response(response.headers.get('payment-required'), text);
+    if (!fields.amount) {
+      return { status: 'parse_error', httpStatus: 402, error: `${method}: ${parseError}`, raw };
     }
+    return { status: 'quoted', httpStatus: 402, raw, ...fields };
   }
 
   return last ?? { status: 'network_error', error: 'no attempt produced a response' };
 }
 
-interface Candidate {
-  agent_uid: string;
-  uri: string;
+/**
+ * Endpoint roles in the order worth asking first. Order only — every http(s)
+ * endpoint is asked (see `probeAgent`).
+ */
+const ENDPOINT_PRIORITY = ['x402', 'api', 'mcp', 'a2a'];
+
+export interface ProbeEndpointRef {
+  name: string | null;
+  uri: string | null;
+}
+
+/** The http(s) endpoints of an agent, deduplicated, in `ENDPOINT_PRIORITY` order. */
+export function probeableEndpoints<T extends ProbeEndpointRef>(endpoints: readonly T[]): T[] {
+  const rank = (e: T): number => {
+    const i = ENDPOINT_PRIORITY.indexOf((e.name ?? '').toLowerCase());
+    return i === -1 ? ENDPOINT_PRIORITY.length : i;
+  };
+  const http = endpoints.filter((e) => e.uri && /^https?:\/\//i.test(e.uri));
+  // Array.prototype.sort is stable, so equal ranks keep document order.
+  const ordered = [...http].sort((a, b) => rank(a) - rank(b));
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const e of ordered) {
+    if (seen.has(e.uri!)) continue;
+    seen.add(e.uri!);
+    out.push(e);
+  }
+  return out;
 }
 
 /**
- * Agents worth asking: they advertise x402 support and publish an endpoint we
- * can GET. One endpoint per agent — the one it nominated for payment where it
- * named one, since an agent that lists both an `x402` service and a Twitter
- * profile is telling us which of the two takes money.
+ * Ask every http(s) endpoint of one agent, in priority order.
+ *
+ * **Correction (2026-10-16, TUR-1):** this used to probe ONE endpoint per agent,
+ * ranked x402 > api > mcp > a2a > other, on the theory that an agent naming an
+ * MCP service had told us where it takes money. Capminal disproves it: its MCP
+ * URL is an HTML page that answers 200, and the quote lives on its `custom`
+ * service (`/api/x402/deploy`), which the ranking never reached. The name an
+ * agent gives a service says nothing reliable about which one is paid. The
+ * ranking survives as an ordering only.
+ *
+ * Every endpoint is asked even after one quotes, so the store records each
+ * endpoint's answer rather than stopping at the first.
+ */
+export async function probeAgent<T extends ProbeEndpointRef>(
+  endpoints: readonly T[],
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  options: ProbeOptions & { probeFn?: typeof probeEndpoint } = {},
+): Promise<{ endpoint: T; result: ProbeResult }[]> {
+  const probe = options.probeFn ?? probeEndpoint;
+  const out: { endpoint: T; result: ProbeResult }[] = [];
+  for (const endpoint of probeableEndpoints(endpoints)) {
+    out.push({ endpoint, result: await probe(endpoint.uri!, timeoutMs, options) });
+  }
+  return out;
+}
+
+export interface Candidate {
+  agent_uid: string;
+  endpoints: ProbeEndpointRef[];
+}
+
+/**
+ * Agents worth asking: they advertise x402 support and publish at least one
+ * http(s) endpoint we have not asked yet. Every unasked endpoint is returned,
+ * not the one that ranks first — see the correction on `probeAgent`.
+ *
+ * An (agent, endpoint) pair already in `x402_quote` is skipped, whatever its
+ * status, so a re-run picks up new endpoints without re-asking old ones. Delete
+ * an agent's rows to ask again.
  */
 export function selectProbeCandidates(db: DatabaseSync, limit: number, network?: string): Candidate[] {
   const params: (string | number)[] = [];
   const networkClause = network ? 'AND a.network = ?' : '';
   if (network) params.push(network);
-  params.push(limit);
-  return db.prepare(`
-    SELECT agent_uid, uri FROM (
-      SELECT
-        a.agent_uid,
-        e.uri,
-        a.block_timestamp,
-        ROW_NUMBER() OVER (
-          PARTITION BY a.agent_uid
-          ORDER BY
-            CASE LOWER(COALESCE(e.name, ''))
-              WHEN 'x402' THEN 0
-              WHEN 'api'  THEN 1
-              WHEN 'mcp'  THEN 2
-              WHEN 'a2a'  THEN 3
-              ELSE 4
-            END,
-            e.idx
-        ) AS rn
-      FROM agent_current a
-      JOIN agent_endpoint e ON e.agent_uid = a.agent_uid
-      WHERE a.x402_support = 1
-        AND e.uri LIKE 'http%'
-        ${networkClause}
-        -- One probe per AGENT, not per endpoint. An agent that publishes an
-        -- x402, API or MCP service has told us where it takes money; if that
-        -- URL is dead, that is the finding. Falling through to whatever else it
-        -- listed just probes its GitHub link.
-        AND NOT EXISTS (SELECT 1 FROM x402_quote q WHERE q.agent_uid = a.agent_uid)
-    )
-    WHERE rn = 1
-    ORDER BY block_timestamp DESC
-    LIMIT ?
-  `).all(...params) as unknown as Candidate[];
+  const rows = db.prepare(`
+    SELECT a.agent_uid, e.name, e.uri
+    FROM agent_current a
+    JOIN agent_endpoint e ON e.agent_uid = a.agent_uid
+    WHERE a.x402_support = 1
+      AND e.uri LIKE 'http%'
+      ${networkClause}
+      AND NOT EXISTS (
+        SELECT 1 FROM x402_quote q WHERE q.agent_uid = a.agent_uid AND q.endpoint = e.uri
+      )
+    ORDER BY a.block_timestamp DESC, a.agent_uid, e.idx
+  `).all(...params) as unknown as { agent_uid: string; name: string | null; uri: string }[];
+
+  const byAgent = new Map<string, ProbeEndpointRef[]>();
+  for (const r of rows) {
+    if (!byAgent.has(r.agent_uid)) {
+      if (byAgent.size >= limit) continue;
+      byAgent.set(r.agent_uid, []);
+    }
+    byAgent.get(r.agent_uid)!.push({ name: r.name, uri: r.uri });
+  }
+  // Ordering and dedup happen once, in probeAgent.
+  return [...byAgent].map(([agent_uid, endpoints]) => ({ agent_uid, endpoints }));
 }
 
 export function writeQuote(db: DatabaseSync, agentUid: string, endpoint: string, result: ProbeResult): void {
@@ -259,15 +360,19 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         return;
       }
       const candidates = selectProbeCandidates(db, numberFlag(argv, '--limit', 25), flag(argv, '--network'));
-      process.stderr.write(`${candidates.length} x402 endpoints to probe\n`);
+      const total = candidates.reduce((n, c) => n + c.endpoints.length, 0);
+      process.stderr.write(`${candidates.length} x402 agents, ${total} endpoints to probe\n`);
       const byStatus: Record<string, number> = {};
+      const quotedAgents = new Set<string>();
       for (const c of candidates) {
-        const result = await probeEndpoint(c.uri, timeoutMs);
-        writeQuote(db, c.agent_uid, c.uri, result);
-        byStatus[result.status] = (byStatus[result.status] ?? 0) + 1;
-        process.stderr.write(`  ${result.status.padEnd(14)} ${result.amount ?? ''} ${result.currency ?? ''} ${c.uri}\n`);
+        for (const { endpoint, result } of await probeAgent(c.endpoints, timeoutMs)) {
+          writeQuote(db, c.agent_uid, endpoint.uri!, result);
+          byStatus[result.status] = (byStatus[result.status] ?? 0) + 1;
+          if (result.status === 'quoted') quotedAgents.add(c.agent_uid);
+          process.stderr.write(`  ${result.status.padEnd(14)} ${result.amount ?? ''} ${result.currency ?? ''} ${endpoint.uri}\n`);
+        }
       }
-      process.stderr.write(`\n${JSON.stringify(byStatus)}\n`);
+      process.stderr.write(`\nendpoints ${JSON.stringify(byStatus)}; agents quoted: ${quotedAgents.size}\n`);
     } finally {
       db.close();
     }

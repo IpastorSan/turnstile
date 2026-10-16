@@ -15,6 +15,36 @@ actually publish, and `liquidity.turnstile.eth` read off Sepolia.
 
 **One agent out of 197 has a price anyone can read.** It is ours.
 
+**Correction (2026-10-16, TUR-1): the sentence above, the tables below and the
+"Probing" section are wrong.** 78 of the 197 publish a price, in three formats,
+none of them an ERC-8004 field:
+
+| Price source | Agents | Unit |
+| --- | ---: | --- |
+| `turnstile` — our ENSv2 `turnstile:price` record | 1 | USD |
+| `x402` — a live x402 v2 402 from Capminal (agent 1380 on Base) | **1** | 500000 USDC units = $0.50 |
+| `document` — an ERC-8004-shaped price in the registration document | 0 | — |
+| `acp` — Virtuals ACP `jobOfferings` in the registration document | **76** | none published |
+| `ask_x402` — advertises x402, no quote on record | **20** | — |
+| `none` — no price and no way to get one | 99 | — |
+
+Re-read 2026-10-16 against the committed 2026-09-07 snapshot after a fresh probe
+of all 40 http(s) endpoints the 14 endpoint-publishing x402 agents list. Two
+bugs hid the first two prices. The probe asked **one** endpoint per agent,
+ranked x402 > api > mcp > a2a, so for Capminal it asked an MCP URL that serves
+HTML and never the `custom` service (`POST /api/x402/deploy`) that quotes; and
+it read the quote only from the body, while x402 v2 puts it base64-encoded in
+the `PAYMENT-REQUIRED` header with a body of `{}`. The view's `document` bucket
+read only an ERC-8004-shaped price field, so 76 Virtuals agents' per-job prices
+(`{"price": 0.02, "priceV2": {"type": "fixed", "value": 0.02}}`, 221 offerings
+from 0.01 to 79.99, no currency or asset) counted as `ask_x402`. They are now
+`price_source: 'acp'`, kept raw, and never converted: `price.usd` is null and a
+`maxPriceUsd` ceiling treats them as unknown.
+
+**What is unchanged:** registration-v1 has no price field and none of the 197
+fills one, and ours is the only price that is both in a unit and readable
+without calling the seller. See [`CORRECTIONS.md`](../CORRECTIONS.md).
+
 | Price source | Agents |
 | --- | ---: |
 | `turnstile` — an ENSv2 `turnstile:price` record | **1** |
@@ -69,6 +99,11 @@ So discovery is a three-way join, and the second leg is the one that pays:
 | ERC-8004 registry, via Substreams | who exists, cross-chain | 197 |
 | Our ENSv2 `turnstile:price` record | what it costs, exactly | 1 |
 | A live HTTP 402 response | what it costs, right now | 0 of 13 asked |
+
+**Correction (2026-10-16, TUR-1):** the last row is **1 of 14** agents (40
+endpoints asked, every one of each agent's rather than one): Capminal, $0.50 in
+USDC on Base. A fourth source the table lacks, Virtuals ACP `jobOfferings`,
+covers 76 more, but with no currency it says a number and not a cost.
 
 **The registry tells you who exists; Turnstile tells you what they cost.**
 
@@ -285,6 +320,29 @@ there. It is also the strongest argument for the ENS leg — an offer published 
 a resolver record is readable whether or not the seller's HTTP endpoint happens
 to be up.
 
+**Correction (2026-10-16, TUR-1): "Zero live quotes" was the probe's fault, not
+the directory's.** The run above asked `https://www.capminal.ai/mcp` because it
+ranked first, and stopped there. Capminal's quote is on its `custom` service, and
+it is an x402 **v2** 402 whose body is `{}` — the quote is in the
+`PAYMENT-REQUIRED` header, which the probe never read. Re-run 2026-10-16 with
+the fixed probe (every endpoint; GET, `POST {}`, then MCP `tools/list`; header
+first via `@x402/core`'s `decodePaymentRequiredHeader`):
+
+```
+$ node graph/sink/probe-x402.ts --db <copy of the store> --limit 500 --timeout-ms 10000
+14 x402 agents, 40 endpoints to probe
+  no_402           https://www.capminal.ai/mcp
+  quoted         500000 USD Coin https://www.capminal.ai/api/x402/deploy
+  ...
+endpoints {"http_error":14,"no_402":8,"quoted":1,"network_error":17}; agents quoted: 1
+```
+
+The rest of the paragraph above holds: the other 13 agents' endpoints are
+GitHub spec links, Twitter profiles, dead hosts (`gekkoterminal.xyz` no longer
+resolves) and `api.example.com` placeholders. The ENS argument holds too, and
+for the reason it gives: Capminal's price exists only while its endpoint is up
+and only for a caller that knows to POST.
+
 ---
 
 ## The discovery API
@@ -385,7 +443,7 @@ nested object.
 | --- | --- | --- |
 | `settlement_receipt` | MOV-220 | Table exists, empty. Ranking falls back and labels itself. **Correction (2026-09-07, MOV-229):** the table is still empty and the ranking is still a labelled placeholder, so this row is accurate — but the *receipts* are not missing. Twelve exist on HCS topic `0.0.10408013` and every one verifies against the ledger; `npm run ingest-receipts` lands them here and the ranking flips to `settled_volume` on its own. What is outstanding is the ingest, not the evidence. |
 | `world_verification` | MOV-223 | Table exists, empty. Every agent reports `'unknown'` — deliberately not `'unverified'`, which would be a claim we have not earned. Blocked on World Sandbox approval. **Correction (2026-09-11, MOV-277):** no longer blocked or empty. identity/ has written this table since 2026-09-09, and the first real proof landed 2026-09-11 09:06:02 UTC, but under the ENS name `liquidity.turnstile.eth` rather than the agent uid this view joins on, so the seller still read `unknown`. Rows are now keyed by the agent uid for registered listings, and by the ENS name only for reservations (subnames with no registered agent), which by design never join to an agent. `scripts/world-rekey.ts` moves a name-keyed row once its name is registered. The `unknown`-not-`unverified` rule is unchanged. |
-| `x402_quote` | — | Implemented and run; zero live quotes exist to store yet. |
+| `x402_quote` | — | Implemented and run; zero live quotes exist to store yet. **Correction (2026-10-16, TUR-1):** one exists — Capminal's, on its `custom` endpoint. 40 rows (one per endpoint asked, now that every endpoint is asked) are in the working store and in the committed snapshot. |
 
 ## Not verified
 
@@ -430,6 +488,13 @@ nested object.
   `web/data/discovery.db`. The quotes were not written back into the tracked
   snapshot, so `x402_quote` in it remains empty by choice rather than by
   omission.
+  **Correction (2026-10-16, TUR-1):** "zero returned a 402" was a probe bug
+  (one endpoint per agent, body-only parsing); Capminal returns one. And the
+  snapshot now does carry the quotes: the 2026-10-16 probe's 40 rows were
+  written into `web/data/discovery.db` together with the refreshed
+  `agent_current` view, because without them the deployed market could not show
+  the correction. The agent rows are unchanged from 2026-09-07;
+  `web/data/provenance.json` records both dates.
 - **The store is a sample, not a backfill.** 197 agents from four block ranges,
   not the ~85,000 on Base. A full backfill is a matter of runtime and stream
   quota, not of code: `sink.ts` resumes and the cursor is per-network.
