@@ -47,7 +47,8 @@ import { createArcRail } from '../../rails/arc-usdc/index.ts';
 import { RailRegistry } from '../../rails/registry.ts';
 import { createApp } from '../../seller/service/app.ts';
 import { liveAnalyst } from '../../seller/service/analyst-port.ts';
-import { fakeAnalyst } from '../../seller/service/testing.ts';
+import { livePricing } from '../../seller/service/price-records.ts';
+import { fakeAnalyst, fixturePricing } from '../../seller/service/testing.ts';
 import { runBuyer } from './buyer-agent.ts';
 import type { BuyerOutcome } from './buyer-agent.ts';
 import { STRANGER_PRICE_USD, startStrangerSeller } from './stranger-seller.ts';
@@ -78,7 +79,12 @@ function report(outcome: BuyerOutcome): void {
 /** Start the seller's own HTTP service, as `npm run serve` does. */
 async function startTurnstileSeller(): Promise<{ baseUrl: string; close: () => Promise<void> }> {
   const registry = new RailRegistry([createHederaRail(), createArcRail()]);
-  const app = createApp({ registry, analyst: live ? liveAnalyst() : fakeAnalyst() });
+  const app = createApp({
+    registry,
+    analyst: live ? liveAnalyst() : fakeAnalyst(),
+    // --live charges the seller's `turnstile:price` record; otherwise the recorded fixture (TUR-3).
+    pricing: live ? livePricing() : fixturePricing(),
+  });
   const server = app.listen(0, '127.0.0.1');
   await new Promise<void>((resolve, reject) => {
     server.once('listening', resolve);

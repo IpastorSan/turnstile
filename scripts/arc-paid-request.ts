@@ -41,8 +41,8 @@ import { hashscanTransactionUrl } from '../rails/hedera-x402/config.ts';
 import { RailRegistry } from '../rails/registry.ts';
 import { createApp } from '../seller/service/app.ts';
 import { liveAnalyst } from '../seller/service/analyst-port.ts';
-import { TIERS } from '../seller/service/tiers.ts';
-import { fakeAnalyst, withServer } from '../seller/service/testing.ts';
+import { livePricing } from '../seller/service/price-records.ts';
+import { RECORDED_PRICE_RECORDS, fakeAnalyst, fixturePricing, withServer } from '../seller/service/testing.ts';
 
 const args = process.argv.slice(2);
 const useLive = args.includes('--live');
@@ -87,7 +87,9 @@ const signers = [arcSigner, ...(hederaSigner ? [hederaSigner] : [])];
 // Both rails, as the seller really advertises them. Both are live as of MOV-225.
 const registry = new RailRegistry([createHederaRail(), createArcRail()]);
 const analyst = useLive ? liveAnalyst() : fakeAnalyst();
-const app = createApp({ registry, analyst });
+// Charges the live `turnstile:price` record, as `npm run serve` does (TUR-3).
+const pricing = livePricing();
+const app = createApp({ registry, analyst, pricing });
 
 rule('SETUP');
 const before = await agentState();
@@ -137,7 +139,8 @@ try {
     console.log(`\nbought: tier=${arcBody.tier} rating=${arcBody.verdict.rating}`);
     console.log(`\nnote the shape of 'transaction': it is a Gateway authorization id (a UUID),`);
     console.log(`NOT a transaction hash. The hash does not exist yet. See section 6.`);
-    settledOnArc.push({ label: `$${TIERS.standard.priceUsd} standard tier`, authorizationId: arcSettlement.transaction });
+    const charged = await pricing.current();
+    settledOnArc.push({ label: `$${charged.ok ? charged.tiers.standard.priceUsd : '?'} standard tier`, authorizationId: arcSettlement.transaction });
 
     if (hederaSigner) {
       rule('3. THE SAME QUERY, PAID ON HEDERA — the seller cannot tell the difference');
@@ -180,16 +183,14 @@ try {
     rule(`5. NANOPAYMENTS — ${nanoCount} sub-cent queries`);
     // A separate app instance at a nanopayment price. Same rails, same registry,
     // same 402 machinery — only the tier price differs, because the service's own
-    // cheapest tier is $0.07 (pinned to the `turnstile:price` record on
-    // liquidity.turnstile.eth) and a sub-cent tier would make that record a lie.
+    // cheapest tier is the `turnstile:price` record on liquidity.turnstile.eth
+    // ($0.07 when this was written) and a sub-cent tier would make that record a
+    // lie. The demo app prices from a fixed record instead of the live one.
     const nanoPrice = 0.0005;
     const nanoApp = createApp({
       registry,
       analyst,
-      tiers: {
-        standard: { ...TIERS.standard, priceUsd: nanoPrice, description: `Nanopayment demo tier at $${nanoPrice}` },
-        premium: TIERS.premium,
-      },
+      pricing: fixturePricing({ price: String(nanoPrice), ceiling: RECORDED_PRICE_RECORDS.ceiling }),
     });
 
     await withServer(nanoApp, async nanoUrl => {

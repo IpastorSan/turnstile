@@ -27,6 +27,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 import { DEFAULT_DB_PATH, normalizeCapability, openDb } from '../../graph/sink/db.ts';
+import { parsePriceRecord, publishedPrice } from './tiers.ts';
 
 export type PriceSource = 'turnstile' | 'x402' | 'document' | 'acp' | 'ask_x402' | 'none';
 export type RankBasis = 'settled_volume' | 'registration_recency';
@@ -173,14 +174,21 @@ export function normalizePriceUsd(
   source: PriceSource,
 ): { usd: number | null; note?: string } {
   if (raw === null || raw === undefined || raw === '') return { usd: null };
-  const value = Number(raw);
-  if (!Number.isFinite(value)) return { usd: null, note: `unparseable amount ${raw}` };
 
   if (source === 'turnstile') {
     // turnstile:price is a decimal price in USD by construction — the record is
     // written by us, and docs/ens-offer-records.md defines the unit.
-    return { usd: value };
+    //
+    // Parsed by the seller's own `parsePriceRecord()` (TUR-3), so the figure
+    // reported here as exact and the price the seller's 402 is built from are
+    // the same function of the same record. A record the seller would refuse to
+    // charge from is reported as no price, not as `Number()`'s best guess.
+    const usd = parsePriceRecord(raw);
+    return usd === null ? { usd: null, note: `turnstile:price ${JSON.stringify(raw)} is not a decimal price` } : { usd };
   }
+
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return { usd: null, note: `unparseable amount ${raw}` };
 
   const unit = (currency ?? '').toLowerCase();
   if (USD_STABLES.has(unit)) {
@@ -354,15 +362,18 @@ export function acpPrice(row: {
 
 function toPrice(row: Row): SellerPrice | null {
   if (row.price_source === 'turnstile' && row.turnstile_price) {
-    const { usd, note } = normalizePriceUsd(row.turnstile_price, 'usd', 'turnstile');
-    const ceiling = row.turnstile_price_ceiling ? Number(row.turnstile_price_ceiling) : null;
+    // The seller's own pricing function, so discovery reports a price exactly
+    // when the seller would charge it (TUR-3; see tiers.ts).
+    const { usd, ceilingUsd, note } = publishedPrice({
+      price: row.turnstile_price, ceiling: row.turnstile_price_ceiling ?? undefined,
+    });
     return {
       raw: row.turnstile_price,
       usd,
       currency: 'USD',
       source: 'turnstile',
       comparable: usd !== null,
-      ceilingUsd: ceiling !== null && Number.isFinite(ceiling) ? ceiling : null,
+      ceilingUsd,
       note,
     };
   }

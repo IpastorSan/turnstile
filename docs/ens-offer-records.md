@@ -267,6 +267,19 @@ status               1 (success)
 transactionHash      0xda7015d1425fd071b63c92e36c4f81929231edae392244b1c10e187824600a1f
 ```
 
+**Correction (2026-10-16, TUR-3):** until TUR-3 a hot-key reprice repriced
+**discovery only**. The seller service charged a constant copied from this record
+on 2026-09-07 (`ENS_PRICE_USD` in `seller/service/tiers.ts`), so the
+transaction above changed what buyers were told and not what the 402 asked for.
+The service now reads `turnstile:price` and `turnstile:price-ceiling` from this
+resolver itself, cached for 60 seconds (`seller/service/pricing.ts`), so a
+reprice reaches the 402 within a minute with no redeploy. It also enforces the
+ceiling on every read: a `turnstile:price` above `turnstile:price-ceiling` is
+never charged — the seller keeps charging its last good price and reports itself
+stale in `/health`. **Still true:** the record values (re-read 2026-10-16 at
+Sepolia block 11927016: `"0.07"` and `"0.50"`), and everything below about what
+the hot key cannot do.
+
 ### It cannot move the payout address
 
 ```
@@ -285,6 +298,11 @@ matched.
 
 A stolen hot key costs the seller a wrong price for as long as it takes the cold
 key to rotate it. It cannot cost them a single payment.
+
+**Update (2026-10-16, TUR-3):** "a wrong price" is now bounded on the seller
+side too. The service rejects a `turnstile:price` above the cold-key ceiling, so
+a stolen hot key can move the price only within `(0, ceiling]`; above that, the
+seller keeps its last good price rather than following the record.
 
 ### It cannot raise its own ceiling
 

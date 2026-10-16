@@ -157,6 +157,13 @@ The prices come from `seller/service/tiers.ts` and are not invented there either
 `$0.07` is the live value of the `turnstile:price` text record on
 `liquidity.turnstile.eth`, read off Sepolia on 2026-09-07.
 
+**Correction (2026-10-16, TUR-3):** `tiers.ts` held a *copy* of that value, not
+the value. The service now reads the record itself (cached 60s, see
+`seller/service/pricing.ts`), so the prices in the table above are what the
+records said on 2026-10-16 and a reprice on chain moves them without a redeploy.
+Premium stays five times standard, capped at `turnstile:price-ceiling`. The
+gateway's own prices are separate and unaffected — see below.
+
 **Write the descriptions as agent documentation, because that is what they become.**
 Bazantic generates the hosted MCP server from this document, so each operation's
 `description` is the tool doc an agent reads when deciding whether to call it. The

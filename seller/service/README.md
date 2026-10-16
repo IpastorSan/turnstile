@@ -108,8 +108,8 @@ that when you do it anyway.
 | Route | Price | |
 |---|---|---|
 | `GET /health` | free | what this seller sells, accepts, and whether settlement is live |
-| `GET /analyze/:pool` | **$0.07** | the Liquidity Analyst verdict, from the subgraph |
-| `GET /analyze/:pool/attested` | **$0.35** | the verdict, a live depth ladder, and the scorer input behind both |
+| `GET /analyze/:pool` | **`turnstile:price`** ($0.07 on 2026-10-16) | the Liquidity Analyst verdict, from the subgraph |
+| `GET /analyze/:pool/attested` | **5 × that, capped at `turnstile:price-ceiling`** ($0.35) | the verdict, a live depth ladder, and the scorer input behind both |
 | `GET /receipts/:transaction` | free | audit-trail lookup, across every rail |
 
 ### The flow
@@ -170,6 +170,37 @@ would make the discovery layer a liar.
 refuses to start rather than finding out on the first sale. Raising that ceiling
 is a **cold-key** operation — the `CLAUDE.md` invariant applied to the seller
 side.
+
+**Correction (2026-10-16, TUR-3):** the two paragraphs above describe prices
+that were *copied* from the records into `tiers.ts` as constants
+(`ENS_PRICE_USD = 0.07`, `ENS_PRICE_CEILING_USD = 0.5`), and nothing checked the
+copy. A hot-key reprice would have changed what discovery advertised and not what
+the 402 charged — the "liar" case the first paragraph warns about. The service
+now reads the records themselves:
+
+- **Standard** is the `turnstile:price` record, parsed by `parsePriceRecord()`
+  (`tiers.ts`) — the same function `discovery.ts` uses for
+  `priceSource: 'turnstile'`, so the two agree by construction rather than by
+  someone remembering to update a constant. **Premium** is five times standard
+  (the launch relationship, $0.07 → $0.35), capped at the ceiling.
+- The records are read through `graph/sink/ens.ts` (`price-records.ts` wires it
+  to the manifest seller and `SEPOLIA_RPC_URL`) and cached for **60 seconds**
+  (`pricing.ts`): a reprice reaches the 402 within a minute, with no code change
+  or redeploy, and the RPC is called at most once a minute, not per request.
+- A price **above the ceiling is rejected**, as is an unset or non-numeric
+  record. The ceiling check moved from construction time to every read, so it
+  now also covers a reprice made after start-up.
+- **When the records cannot be read:** once a good read has happened, the
+  service keeps charging the last-known-good price and reports `stale: true`
+  with the reason under `pricing` in `/health`; if no read has ever succeeded,
+  both paid routes answer **503** with the reason rather than a guessed price.
+  `pricing.ts`'s header has the reasoning.
+
+**What is unchanged:** the values (re-read live 2026-10-16 at Sepolia block
+11927016: `turnstile:price` = `"0.07"`, `turnstile:price-ceiling` = `"0.50"`),
+the cold-key ceiling invariant, and that discovery's price is the seller's price.
+The 2026-09-07 values now live only as a test fixture, `RECORDED_PRICE_RECORDS`
+in `testing.ts`.
 
 ### The 402 advertises both rails
 

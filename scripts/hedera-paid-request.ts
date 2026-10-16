@@ -33,6 +33,7 @@ import { createArcRail } from '../rails/arc-usdc/index.ts';
 import { RailRegistry } from '../rails/registry.ts';
 import { createApp } from '../seller/service/app.ts';
 import { liveAnalyst } from '../seller/service/analyst-port.ts';
+import { livePricing } from '../seller/service/price-records.ts';
 import { fakeAnalyst, withServer } from '../seller/service/testing.ts';
 
 const args = process.argv.slice(2);
@@ -53,7 +54,8 @@ const rule = (title: string) => console.log(`\n${'='.repeat(72)}\n${title}\n${'=
 // mandate rules Arc out for want of a signer rather than for want of a rail.
 // `scripts/arc-paid-request.ts` is the one that pays the same query over both.
 const registry = new RailRegistry([createHederaRail(), createArcRail()]);
-const app = createApp({ registry, analyst: useFixture ? fakeAnalyst() : liveAnalyst() });
+// Charges the live `turnstile:price` record, as `npm run serve` does (TUR-3).
+const app = createApp({ registry, analyst: useFixture ? fakeAnalyst() : liveAnalyst(), pricing: livePricing() });
 
 const signer = await createHederaSigner();
 const mandate: SpendingLimits = {

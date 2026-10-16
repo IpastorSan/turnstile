@@ -10,13 +10,13 @@ import assert from 'node:assert/strict';
 
 import { createApp } from './app.ts';
 import { GATEWAY_KEY_HEADER, parseGatewayKeys } from './gateway.ts';
-import { fakeAnalyst, testRegistry, withServer } from './testing.ts';
+import { fakeAnalyst, fixturePricing, testRegistry, withServer } from './testing.ts';
 
 const POOL = '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640';
 const KEY = 'a'.repeat(64);
 
 function app(spec?: string) {
-  return createApp({ registry: testRegistry(), analyst: fakeAnalyst(), gateways: parseGatewayKeys(spec) });
+  return createApp({ registry: testRegistry(), analyst: fakeAnalyst(), pricing: fixturePricing(), gateways: parseGatewayKeys(spec) });
 }
 
 test('a call carrying a trusted gateway key is served without a 402', async () => {
