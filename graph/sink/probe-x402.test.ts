@@ -162,3 +162,17 @@ test('selectProbeCandidates returns every unasked http endpoint of an x402 agent
   assert.deepEqual(selectProbeCandidates(db, 10)[0].endpoints.map((e) => e.name), ['custom']);
   db.close();
 });
+
+test('a redirect into a private host is refused at the hop, not followed', async (t) => {
+  // The guard used to check only the first URL and let fetch follow the rest.
+  // A public address (an IP literal, so no DNS) that 302s to cloud metadata.
+  const asked: string[] = [];
+  t.mock.method(globalThis, 'fetch', async (input: string | URL) => {
+    asked.push(String(input));
+    return new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/latest/meta-data' } });
+  });
+  const result = await probeEndpoint('http://93.184.216.34/pay', 2_000);
+  assert.equal(result.status, 'blocked_host');
+  assert.match(result.error ?? '', /169\.254\.169\.254/);
+  assert.deepEqual(asked, ['http://93.184.216.34/pay'], 'the metadata address is never requested');
+});

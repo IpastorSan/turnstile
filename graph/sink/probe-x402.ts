@@ -23,7 +23,7 @@ import { decodePaymentRequiredHeader } from '@x402/core/http';
 
 import { flag, main, numberFlag } from './cli.ts';
 import { DEFAULT_DB_PATH, openDb } from './db.ts';
-import { DEFAULT_TIMEOUT_MS, isBlockedHost } from './card.ts';
+import { DEFAULT_TIMEOUT_MS, MAX_REDIRECTS, isBlockedHost } from './card.ts';
 
 export type ProbeStatus = 'quoted' | 'no_402' | 'http_error' | 'timeout' | 'network_error' | 'parse_error' | 'blocked_host';
 
@@ -140,21 +140,39 @@ async function attempt(
   url: string,
   kind: ProbeAttempt,
   timeoutMs: number,
+  allowPrivateHosts: boolean,
 ): Promise<{ response?: Response; error?: { status: ProbeStatus; error: string } }> {
   const method = kind === 'GET' ? 'GET' : 'POST';
   try {
-    const response = await fetch(url, {
-      method,
-      redirect: 'follow',
-      signal: AbortSignal.timeout(timeoutMs),
-      headers: method === 'POST'
-        ? { accept: 'application/json, text/event-stream', 'content-type': 'application/json' }
-        : { accept: 'application/json' },
-      body: kind === 'POST tools/list'
-        ? JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
-        : kind === 'POST' ? '{}' : undefined,
-    });
-    return { response };
+    // Redirects are followed by hand so every hop passes the private-host
+    // guard, the way card.ts does it. `redirect: 'follow'` would check only the
+    // first URL, and now that every endpoint an agent lists is asked, a stranger
+    // gets more URLs to bounce us through to 169.254.169.254.
+    let current = url;
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      const response = await fetch(current, {
+        method,
+        redirect: 'manual',
+        signal: AbortSignal.timeout(timeoutMs),
+        headers: method === 'POST'
+          ? { accept: 'application/json, text/event-stream', 'content-type': 'application/json' }
+          : { accept: 'application/json' },
+        body: kind === 'POST tools/list'
+          ? JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
+          : kind === 'POST' ? '{}' : undefined,
+      });
+      const location = response.status >= 300 && response.status < 400 ? response.headers.get('location') : null;
+      if (!location) return { response };
+      const next = new URL(location, current);
+      if (next.protocol !== 'http:' && next.protocol !== 'https:') {
+        return { error: { status: 'network_error', error: `redirect to protocol ${next.protocol}` } };
+      }
+      if (!allowPrivateHosts && await isBlockedHost(next.hostname)) {
+        return { error: { status: 'blocked_host', error: `redirect to private host ${next.hostname}` } };
+      }
+      current = next.toString();
+    }
+    return { error: { status: 'http_error', error: `more than ${MAX_REDIRECTS} redirects` } };
   } catch (err) {
     const name = (err as Error).name;
     return {
@@ -213,8 +231,11 @@ export async function probeEndpoint(
 
   let last: ProbeResult | undefined;
   for (const method of PROBE_ATTEMPTS) {
-    const { response, error } = await attempt(url, method, timeoutMs);
+    const { response, error } = await attempt(url, method, timeoutMs, options.allowPrivateHosts ?? false);
     if (!response) {
+      // A redirect into a private address is a refusal, not a flaky endpoint:
+      // report it and stop asking this URL.
+      if (error!.status === 'blocked_host') return { status: 'blocked_host', error: `${method}: ${error!.error}` };
       last = { status: error!.status, error: `${method}: ${error!.error}` };
       continue;
     }
