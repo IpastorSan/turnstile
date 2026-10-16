@@ -243,8 +243,11 @@ export interface PaymentRail {
    *
    * Called only after `verify` returned `{ valid: true }` and after the work
    * succeeded. A rail that cannot settle returns `{ success: false, error }`
-   * rather than throwing — a settlement failure after the work was done is an
-   * accounting problem, not a crash, and the service has an answer to deliver.
+   * rather than throwing: not getting paid is an expected outcome with a reason
+   * (the payer's balance moved since verify, the nonce was used), and the
+   * service passes that reason to the buyer in the 402 while withholding the
+   * answer. A thrown error gets the same 402, for failures the rail did not
+   * anticipate.
    */
   settle(payload: PaymentPayload): Promise<Receipt>;
 
