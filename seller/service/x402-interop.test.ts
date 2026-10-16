@@ -24,12 +24,12 @@ import type { SpendingLimits } from '../../buyer/watchdog/pay.ts';
 import { createStubSigner } from '../../buyer/watchdog/stub-signer.ts';
 import type { PaymentRequirement } from '../../rails/PaymentRail.ts';
 import { createApp } from './app.ts';
-import { fakeAnalyst, testRegistry, withServer } from './testing.ts';
+import { fakeAnalyst, fixturePricing, testRegistry, withServer } from './testing.ts';
 
 const POOL = '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640';
 
 function app() {
-  return createApp({ registry: testRegistry(), analyst: fakeAnalyst() });
+  return createApp({ registry: testRegistry(), analyst: fakeAnalyst(), pricing: fixturePricing() });
 }
 
 const signers = [

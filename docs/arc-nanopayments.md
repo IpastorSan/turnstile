@@ -257,6 +257,12 @@ on `liquidity.turnstile.eth`; a sub-cent tier there would make that record a lie
 So the nanopayment section runs a **second app instance** at $0.0005 — same
 rails, same registry, same 402 machinery, different price.
 
+**Correction (2026-10-16, TUR-3):** "pinned to" was a hand-copied constant at
+the time of these runs, not a read. The main app in `scripts/arc-paid-request.ts`
+now charges the live record (cached 60s); the nanopayment instance prices from a
+fixed `0.0005` record instead (`fixturePricing`), which is the same separation
+the paragraph describes. The settled amounts recorded here are unaffected.
+
 ---
 
 ## The batch: 22 payments, one transaction

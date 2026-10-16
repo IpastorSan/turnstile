@@ -92,7 +92,7 @@ paths:
     get:
       operationId: analyzePoolStandard
       tags: [analysis]
-      summary: LP-safety verdict from indexed history alone ($0.07).
+      summary: LP-safety verdict from indexed history alone (the published turnstile:price, $0.07 as of 2026-10-16).
       description: |-
         **When to use this.** You are screening — ranking or filtering many pools,
         and you want something better than a TVL sort without paying for a live
@@ -117,8 +117,11 @@ paths:
         reason for care, not for walking away. Each signal carries the numbers its
         headline rests on, so the conclusion is auditable rather than asserted.
 
-        **Cost.** $0.07 per call. Escalate to `analyzePoolAttested` only for the
-        candidates that survive this pass.
+        **Cost.** Exactly the `turnstile:price` record on this seller's ENS name
+        ($0.07 as of 2026-10-16), re-read at most once a minute, so a reprice on
+        chain reaches this price without a redeploy. `getHealth` reports the
+        current figure. Escalate to `analyzePoolAttested` only for the candidates
+        that survive this pass.
       parameters:
         - $ref: '#/components/parameters/Pool'
       responses:
@@ -143,6 +146,8 @@ paths:
           $ref: '#/components/responses/PaymentRequired'
         '500':
           $ref: '#/components/responses/ServiceError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
 
   /analyze/{pool}/attested:
     get:
@@ -194,11 +199,12 @@ paths:
         explicitly rather than silently when it is not.
 
         **A standard-tier payment cannot buy this route.** The challenge is bound
-        to the URL it was issued for, and the price differs (70000 < 350000). Pay
-        against a challenge issued by *this* path.
+        to the URL it was issued for, and the price differs (70000 < 350000 at the
+        2026-10-16 prices). Pay against a challenge issued by *this* path.
 
-        **Cost.** $0.35 per call, under the $0.50 ceiling published on chain for
-        this service.
+        **Cost.** Five times the standard tier, capped at the
+        `turnstile:price-ceiling` record published on chain for this service
+        ($0.35 under a $0.50 ceiling as of 2026-10-16).
       parameters:
         - $ref: '#/components/parameters/Pool'
       responses:
@@ -237,6 +243,8 @@ paths:
           $ref: '#/components/responses/PaymentRequired'
         '500':
           $ref: '#/components/responses/ServiceError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
 
   /receipts/{transaction}:
     get:
@@ -324,6 +332,8 @@ paths:
                       $ref: '#/components/schemas/Rail'
                   tiers:
                     type: array
+                    description: >-
+                      Empty when no price can be charged; `pricing.reason` says why.
                     items:
                       type: object
                       required: [id, priceUsd, description]
@@ -336,6 +346,38 @@ paths:
                           examples: [0.07, 0.35]
                         description:
                           type: string
+                  pricing:
+                    type: object
+                    description: >-
+                      Where the tier prices came from. `stale: true` means the
+                      latest read of the records failed (`reason`) and the last
+                      good price is still being charged.
+                    required: [ok]
+                    properties:
+                      ok:
+                        type: boolean
+                      stale:
+                        type: boolean
+                      reason:
+                        type: string
+                      records:
+                        type: object
+                        description: The `turnstile:price` and `turnstile:price-ceiling` strings, verbatim.
+                        properties:
+                          price:
+                            type: string
+                            examples: ['0.07']
+                          ceiling:
+                            type: string
+                            examples: ['0.50']
+                      ceilingUsd:
+                        type: number
+                      readAt:
+                        type: string
+                        format: date-time
+                      provenance:
+                        type: [string, 'null']
+                        examples: ['liquidity.turnstile.eth at Sepolia block 11927016']
 
 components:
 
@@ -398,6 +440,17 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/PaymentRequired'
+
+    Unavailable:
+      description: >-
+        Not your fault, and not a reason to pay. Either no price can be charged
+        (the seller has never managed to read its `turnstile:price` records, and
+        will not guess one), or no payment rail could issue a challenge. `error`
+        says which. Retry later.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
 
     ServiceError:
       description: The service could not complete the analysis.

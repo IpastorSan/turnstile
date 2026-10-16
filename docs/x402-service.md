@@ -373,6 +373,25 @@ camelCase prefix with no word boundary after it.
 charge above its own published maximum refuses to start. Raising the ceiling is a
 cold-key operation; see `docs/ens-offer-records.md`.
 
+**Correction (2026-10-16, TUR-3):** the table above reads as if the service
+reads the record, and it did not: `0.07` and `0.5` were constants in `tiers.ts`,
+copied by hand from the records on 2026-09-07, and the ceiling check ran once
+against those copies. A hot-key reprice would have changed discovery's price and
+not the 402's. The service now prices from the records themselves
+(`seller/service/pricing.ts`, `price-records.ts`):
+
+| | | Source |
+|---|---|---|
+| standard | `turnstile:price` | read through `graph/sink/ens.ts`, cached 60s; parsed by the same `parsePriceRecord()` discovery uses |
+| premium | 5 × standard, capped at `turnstile:price-ceiling` | the launch ratio ($0.07 → $0.35); capping changes nothing anyone published |
+
+A price above the ceiling, or an unset or non-numeric record, is never charged.
+If the records cannot be read the service keeps charging the last good price
+(and says `stale: true` in `/health`); if it has never read them, the paid routes
+answer **503** with the reason. **Still true:** the prices themselves — re-read
+2026-10-16 at Sepolia block 11927016, `"0.07"` and `"0.50"` — and the cold-key
+ceiling rule.
+
 ---
 
 ## Interoperability

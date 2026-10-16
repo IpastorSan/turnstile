@@ -92,6 +92,32 @@ export function makePublicClient(rpcUrl: string): PublicClient {
 
 const emptyToUndefined = (v: string): string | undefined => (v === '' ? undefined : v);
 
+/** One text record; `undefined` when unset. Rejects when the read itself fails. */
+async function readTextRecord(client: PublicClient, resolver: Address, node: `0x${string}`, key: string): Promise<string | undefined> {
+  const value = await client.readContract({ address: resolver, abi: RESOLVER_ABI, functionName: 'text', args: [node, key] });
+  return emptyToUndefined(value);
+}
+
+/**
+ * The two records a seller prices itself from (TUR-3), in one parallel round.
+ *
+ * Unlike `readSellerOffer`, a failed read is NOT folded into "unset": the seller
+ * charges from these, and "the RPC is down" and "the hot key cleared the price"
+ * are different reasons for `/health` to give, even though both stop a sale.
+ */
+export async function readPriceRecords(
+  client: PublicClient,
+  params: { ensName: string; resolver: Address },
+): Promise<{ price?: string; priceCeiling?: string; readAtBlock: number }> {
+  const node = namehash(params.ensName);
+  const [price, priceCeiling, block] = await Promise.all([
+    readTextRecord(client, params.resolver, node, 'turnstile:price'),
+    readTextRecord(client, params.resolver, node, 'turnstile:price-ceiling'),
+    client.getBlockNumber(),
+  ]);
+  return { price, priceCeiling, readAtBlock: Number(block) };
+}
+
 /**
  * Read one seller's whole offer.
  *
@@ -115,19 +141,8 @@ export async function readSellerOffer(
 ): Promise<SellerOffer> {
   const node = namehash(params.ensName);
 
-  const readText = async (key: string): Promise<string | undefined> => {
-    try {
-      const value = await client.readContract({
-        address: params.resolver,
-        abi: RESOLVER_ABI,
-        functionName: 'text',
-        args: [node, key],
-      });
-      return emptyToUndefined(value);
-    } catch {
-      return undefined;
-    }
-  };
+  const readText = (key: string): Promise<string | undefined> =>
+    readTextRecord(client, params.resolver, node, key).catch(() => undefined);
 
   const [agentContext, mcpEndpoint, price, priceCeiling, rails, operatorProof] = await Promise.all([
     readText('agent-context'),

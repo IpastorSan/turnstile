@@ -33,6 +33,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 import { acpPrice, normalizePriceUsd } from '../seller/service/discovery.ts';
+import { publishedPrice } from '../seller/service/tiers.ts';
 import type { PriceSource } from '../seller/service/discovery.ts';
 import { probeEndpoint, probeableEndpoints } from '../graph/sink/probe-x402.ts';
 import type { ProbeResult } from '../graph/sink/probe-x402.ts';
@@ -520,15 +521,16 @@ export async function getOffer(db: DatabaseSync, ref: string, options: GetOfferO
   let published: PublishedTerms | null = null;
 
   if (ens?.price) {
-    const { usd, note } = normalizePriceUsd(ens.price, 'usd', 'turnstile');
-    const ceiling = ens.priceCeiling === null ? null : Number(ens.priceCeiling);
+    // The seller's own pricing function (TUR-3): a dollar figure here exactly
+    // when the seller's 402 would charge one.
+    const { usd, ceilingUsd, note } = publishedPrice({ price: ens.price, ceiling: ens.priceCeiling ?? undefined });
     published = {
       priceUsd: usd,
       priceRaw: ens.price,
       currency: 'USD',
       source: 'turnstile',
       basis: 'ens_record',
-      ceilingUsd: ceiling !== null && Number.isFinite(ceiling) ? ceiling : null,
+      ceilingUsd,
       payTo: ens.payoutAddr,
     };
     if (note) terms.note = note;
