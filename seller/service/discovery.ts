@@ -22,7 +22,7 @@ import type { DatabaseSync } from 'node:sqlite';
 
 import { DEFAULT_DB_PATH, normalizeCapability, openDb } from '../../graph/sink/db.ts';
 
-export type PriceSource = 'turnstile' | 'x402' | 'document' | 'ask_x402' | 'none';
+export type PriceSource = 'turnstile' | 'x402' | 'document' | 'acp' | 'ask_x402' | 'none';
 export type RankBasis = 'settled_volume' | 'registration_recency';
 
 export interface FindSellersQuery {
@@ -169,6 +169,13 @@ export function normalizePriceUsd(
   const value = Number(raw);
   if (!Number.isFinite(value)) return { usd: null, note: `unparseable amount ${raw}` };
 
+  if (source === 'acp') {
+    // Virtuals ACP jobOfferings publish `price: 0.02` and nothing else — no
+    // currency, no asset, no chain. It is probably dollars, and "probably" is
+    // exactly what a price filter must not act on (TUR-1).
+    return { usd: null, note: 'Virtuals ACP job price: no currency or asset is published — not comparable' };
+  }
+
   if (source === 'turnstile') {
     // turnstile:price is a decimal price in USD by construction — the record is
     // written by us, and docs/ens-offer-records.md defines the unit.
@@ -214,6 +221,9 @@ interface Row {
   x402_currency: string | null;
   doc_price_amount: string | null;
   doc_price_currency: string | null;
+  acp_offer_count: number | null;
+  acp_price_min: number | null;
+  acp_price_max: number | null;
   price_source: PriceSource;
   settled_count: number;
   settled_volume: number;
@@ -348,6 +358,17 @@ function toPrice(row: Row): SellerPrice | null {
       source: 'document', comparable: usd !== null, note,
     };
   }
+  if (row.price_source === 'acp' && row.acp_price_min !== null) {
+    const lo = String(row.acp_price_min);
+    const hi = row.acp_price_max !== null ? String(row.acp_price_max) : lo;
+    const { usd, note } = normalizePriceUsd(lo, null, 'acp');
+    const count = row.acp_offer_count ?? 0;
+    return {
+      raw: lo === hi ? lo : `${lo}–${hi}`,
+      usd, currency: null, source: 'acp', comparable: false,
+      note: `${note}. ${count} priced job offering${count === 1 ? '' : 's'}; the range is as published.`,
+    };
+  }
   return null;
 }
 
@@ -389,7 +410,7 @@ export function findSellers(db: DatabaseSync, query: FindSellersQuery = {}): Fin
   let droppedForPriceCeiling = 0;
 
   const priceSources: Record<PriceSource, number> = {
-    turnstile: 0, x402: 0, document: 0, ask_x402: 0, none: 0,
+    turnstile: 0, x402: 0, document: 0, acp: 0, ask_x402: 0, none: 0,
   };
 
   const kept: SellerResult[] = [];

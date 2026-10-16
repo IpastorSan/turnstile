@@ -252,6 +252,7 @@ interface AgentRow {
   x402_endpoint: string | null; x402_amount: string | null; x402_currency: string | null;
   x402_asset: string | null; x402_network: string | null; x402_probed_at: number | null;
   doc_price_amount: string | null; doc_price_currency: string | null; doc_price_asset: string | null;
+  acp_offer_count: number | null; acp_price_min: number | null; acp_price_max: number | null;
   price_source: PriceSource;
 }
 
@@ -547,6 +548,17 @@ export async function getOffer(db: DatabaseSync, ref: string, options: GetOfferO
     };
     terms.quotedAt = row.x402_probed_at;
     if (note) terms.note = note;
+  } else if (row?.price_source === 'acp' && row.acp_price_min !== null) {
+    // Virtuals ACP job prices (TUR-1): published in the document, but with no
+    // currency, so they are reported raw and never as dollars. The cheapest
+    // offering is the headline; the note carries the range.
+    const lo = String(row.acp_price_min);
+    const { note } = normalizePriceUsd(lo, null, 'acp');
+    published = {
+      priceUsd: null, priceRaw: lo, currency: null,
+      source: 'acp', basis: 'document', ceilingUsd: null, payTo: null,
+    };
+    terms.note = `${note}. ${row.acp_offer_count} priced job offering(s), ${lo}–${row.acp_price_max} as published.`;
   }
 
   if (published) {

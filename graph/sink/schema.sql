@@ -296,10 +296,26 @@ CREATE TABLE IF NOT EXISTS sink_cursor (
 --   document  — a non-standard price object in the registration document.
 --               Expect zero of these; the field exists so we notice if it ever
 --               stops being zero.
+--   acp       — Virtuals ACP `jobOfferings` in the registration document: a
+--               per-job `price` / `priceV2` with NO currency or asset. The raw
+--               value is kept; it is never converted to dollars (TUR-1).
 --   ask_x402  — no price, but the agent advertises x402 support: the price is
 --               knowable, we just have not asked yet.
 --   none      — no price and no way to get one.
-CREATE VIEW IF NOT EXISTS agent_current AS
+--
+-- **Correction (2026-10-16, TUR-1):** `document` was described as "expect zero"
+-- and the whole store was read as having one readable price (ours). That was
+-- wrong. 79 Base agents registered through Virtuals carry an ACP-only
+-- `jobOfferings` array, and 76 of them have at least one visible offering with
+-- a non-zero fixed price — but in a shape this view's `document` bucket never
+-- looked for, so they counted as `ask_x402`. They are now `acp`. `document`
+-- itself is unchanged and still zero: none of these is an ERC-8004 price field.
+--
+-- Dropped and recreated on every open, because `CREATE VIEW IF NOT EXISTS`
+-- never replaces a view that exists — a store built before a view change would
+-- keep the old one forever. A view holds no data, so this loses nothing.
+DROP VIEW IF EXISTS agent_current;
+CREATE VIEW agent_current AS
 SELECT
   a.agent_uid,
   a.chain_id,
@@ -376,12 +392,23 @@ SELECT
   COALESCE(c.price_currency, a.price_currency) AS doc_price_currency,
   COALESCE(c.price_asset, a.price_asset)       AS doc_price_asset,
 
+  -- Virtuals ACP job offerings (TUR-1). Fixed-price, visible, non-zero
+  -- offerings only: a `percentage` priceV2 is a fee on a trade, not a price,
+  -- and `hide: true` offerings are not on sale. No currency is published, so
+  -- these are raw numbers and discovery.ts refuses to call them dollars. Read
+  -- from fetched documents only; an in-module (data:) document's JSON is not
+  -- kept as text, and none of the ACP agents seen so far is in-module.
+  o.acp_offer_count                      AS acp_offer_count,
+  o.acp_price_min                        AS acp_price_min,
+  o.acp_price_max                        AS acp_price_max,
+
   -- Where a price could come from. Units differ per source, so normalising to
   -- a comparable number is discovery.ts's job, not the view's.
   CASE
     WHEN s.price IS NOT NULL                                  THEN 'turnstile'
     WHEN q.amount IS NOT NULL                                 THEN 'x402'
     WHEN COALESCE(c.price_amount, a.price_amount) IS NOT NULL THEN 'document'
+    WHEN o.acp_offer_count > 0                                THEN 'acp'
     WHEN COALESCE(c.x402_support, a.x402_support, 0) = 1      THEN 'ask_x402'
     ELSE 'none'
   END                                    AS price_source,
@@ -404,4 +431,23 @@ LEFT JOIN (
   WHERE status = 'quoted'
   GROUP BY agent_uid
   HAVING probed_at = MAX(probed_at)
-) q ON q.agent_uid = a.agent_uid;
+) q ON q.agent_uid = a.agent_uid
+LEFT JOIN (
+  SELECT agent_uid, agent_uri,
+         COUNT(*)   AS acp_offer_count,
+         MIN(price) AS acp_price_min,
+         MAX(price) AS acp_price_max
+  FROM (
+    SELECT oc.agent_uid, oc.agent_uri,
+           CAST(COALESCE(json_extract(j.value, '$.priceV2.value'), json_extract(j.value, '$.price')) AS REAL) AS price
+    FROM agent_card oc,
+         -- json_each raises on malformed JSON rather than yielding nothing, and
+         -- one bad document must not take the whole view down with it.
+         json_each(CASE WHEN json_valid(oc.raw_json) THEN oc.raw_json ELSE '{}' END, '$.jobOfferings') j
+    WHERE oc.raw_json LIKE '%jobOfferings%'
+      AND COALESCE(json_extract(j.value, '$.hide'), 0) = 0
+      AND COALESCE(json_extract(j.value, '$.priceV2.type'), 'fixed') = 'fixed'
+  )
+  WHERE price > 0
+  GROUP BY agent_uid, agent_uri
+) o ON o.agent_uid = c.agent_uid AND o.agent_uri = c.agent_uri;
