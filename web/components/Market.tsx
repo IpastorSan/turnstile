@@ -3,10 +3,25 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { DiscoveryResponse, FindSellersResult, SellerResult } from '../lib/discovery.ts';
-import { priceSlot, shortAddress } from '../lib/price.ts';
+import type { DiscoveryResponse, FindSellersResult, PriceSource, SellerResult } from '../lib/discovery.ts';
+import { priceSlot, shortAddress, TONE_ORDER } from '../lib/price.ts';
+import type { Tone } from '../lib/price.ts';
 
-type Tone = 'turnstile' | 'ask' | 'none';
+const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+const word = (n: number): string => WORDS[n] ?? String(n);
+
+/**
+ * Where each kind of published price lives, in the words the hero uses. Every
+ * count beside these is computed from the rows on screen; nothing is hard-coded,
+ * so the copy cannot drift from the store the way the old "one posts a price"
+ * did (TUR-1).
+ */
+const WHERE: Partial<Record<PriceSource, string>> = {
+  turnstile: 'in an ENS text record',
+  x402: 'in a live x402 quote, an HTTP 402 its endpoint returns',
+  document: 'in a non-standard field of the registration document',
+  acp: 'in Virtuals’ ACP-only jobOfferings field, with no currency',
+};
 
 interface Props {
   initial: FindSellersResult;
@@ -76,21 +91,36 @@ export function Market({ initial, provenanceLabel, capturedAt }: Props) {
   );
 
   const counts = useMemo(() => {
-    const c: Record<Tone, number> = { turnstile: 0, ask: 0, none: 0 };
+    const c: Record<Tone, number> = { turnstile: 0, raw: 0, ask: 0, none: 0 };
     for (const { slot } of withTone) c[slot.tone] += 1;
     return c;
   }, [withTone]);
+
+  // Published prices by where they were published, for the hero's sentence.
+  const bySource = useMemo(() => {
+    const c = new Map<PriceSource, number>();
+    for (const { seller, slot } of withTone) {
+      if (slot.tone === 'turnstile' || slot.tone === 'raw') {
+        c.set(seller.priceSource, (c.get(seller.priceSource) ?? 0) + 1);
+      }
+    }
+    return c;
+  }, [withTone]);
+  const priced = counts.turnstile + counts.raw;
+  const formats = bySource.size;
+  const whereClauses = [...bySource]
+    .filter(([source]) => WHERE[source])
+    .map(([source, n]) => `${n} ${WHERE[source]}`);
 
   const shown = useMemo(
     () => (filters.tones.length ? withTone.filter((r) => filters.tones.includes(r.slot.tone)) : withTone),
     [withTone, filters.tones],
   );
 
-  // Grouped, so the strip reads as a proportion and the single readable price
-  // sits at the head of it rather than being lost somewhere in the middle.
+  // Grouped, so the strip reads as a proportion and the prices you can compare
+  // sit at the head of it rather than being lost somewhere in the middle.
   const strip = useMemo(() => {
-    const order: Tone[] = ['turnstile', 'ask', 'none'];
-    return order.flatMap((tone) => withTone.filter((r) => r.slot.tone === tone).map((r) => ({ tone, ...r })));
+    return TONE_ORDER.flatMap((tone) => withTone.filter((r) => r.slot.tone === tone).map((r) => ({ tone, ...r })));
   }, [withTone]);
 
   const toggleTone = useCallback((tone: Tone) => {
@@ -123,13 +153,18 @@ export function Market({ initial, provenanceLabel, capturedAt }: Props) {
               </p>
               <h1 className="display">
                 {withTone.length} agents.<br />
-                <span className="lit">{counts.turnstile === 1 ? 'One posts a price.' : `${counts.turnstile} post a price.`}</span>
+                <span className="lit">
+                  {priced === 0
+                    ? 'None posts a price.'
+                    : `${priced === 1 ? 'One posts' : `${priced} post`} a price${formats > 1 ? `, in ${word(formats)} formats` : ''}.`}
+                </span>
               </h1>
               <p className="lede">
                 Every agent here is a real registration read off the ERC-8004 Identity Registry on
-                Base, Ethereum mainnet and Sepolia. Registration carries no price field, and under
-                x402 the quote lives in an HTTP 402 response that has to be asked for. So almost
-                nobody in this directory can tell you what they cost.
+                Base, Ethereum mainnet and Sepolia. Registration carries no price field, so every
+                price here lives somewhere else
+                {whereClauses.length ? `: ${whereClauses.join('; ')}.` : ', and none was found.'}
+                {priced > 1 ? ` ${counts.turnstile} of the ${priced} can be compared in dollars.` : ''}
               </p>
             </div>
             <p className="thesis">
@@ -155,14 +190,15 @@ export function Market({ initial, provenanceLabel, capturedAt }: Props) {
             </ul>
             {counts.turnstile > 0 ? (
               <p className="legibility-marker">
-                <span aria-hidden="true">↑</span> the readable {counts.turnstile === 1 ? 'one' : `${counts.turnstile}`}
+                <span aria-hidden="true">↑</span> {counts.turnstile} priced in dollars
               </p>
             ) : null}
 
             <ul className="legend">
               {([
-                ['turnstile', counts.turnstile, 'posted on chain'],
-                ['ask', counts.ask, 'askable · none answer'],
+                ['turnstile', counts.turnstile, 'priced in dollars'],
+                ['raw', counts.raw, 'price with no currency'],
+                ['ask', counts.ask, 'x402 advertised · no quote'],
                 ['none', counts.none, 'no price at all'],
               ] as [Tone, number, string][]).map(([tone, n, label]) => (
                 <li key={tone}>

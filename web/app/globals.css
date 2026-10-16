@@ -1,14 +1,18 @@
 /* Turnstile — "fare gate".
  *
  * A turnstile posts what it costs before you go through it. The finding this
- * site exists to show is that 196 of the 197 agents in the live ERC-8004
- * directory post nothing at all. So the visual system inverts the usual table
- * convention: a missing price is not greyed out and shrunk, it is drawn as an
- * empty fare slot with the reason it is empty. Absence is louder than presence,
- * because absence is the finding.
+ * site exists to show is that most agents in the live ERC-8004 directory post
+ * no price in any form a buyer can compare. So the visual system inverts the
+ * usual table convention: a missing price is not greyed out and shrunk, it is
+ * drawn as an empty fare slot with the reason it is empty.
  *
- * Brass is spent on exactly one thing — a price that can actually be read. It
- * appears once in the whole directory, which is the point.
+ * Brass is spent on one thing — a price in a unit that converts to dollars. A
+ * price published with no currency gets a brass outline and no fill: there is a
+ * number, and nothing to compare it to.
+ *
+ * Correction (2026-10-16, TUR-1): this comment said 196 of 197 agents post
+ * nothing and that brass "appears once in the whole directory". Both were
+ * wrong; the market page now derives every count from the store.
  */
 
 :root {
@@ -257,6 +261,13 @@ a {
   box-shadow: 0 0 0 1px var(--brass), 0 0 16px color-mix(in oklab, var(--brass) 55%, transparent);
 }
 
+/* A price with no currency: outlined, unfilled — a number with no unit. */
+.cell.is-raw {
+  height: 36px;
+  border: 1px solid var(--brass-deep);
+  background: color-mix(in oklab, var(--brass) 8%, transparent);
+}
+
 /* Askable but unanswered: hatched, because something is there and it does not reply. */
 .cell.is-ask {
   height: 28px;
@@ -338,6 +349,7 @@ a {
 }
 
 .swatch.is-turnstile { background: var(--brass); }
+.swatch.is-raw { border: 1px solid var(--brass-deep); background: color-mix(in oklab, var(--brass) 8%, transparent); }
 .swatch.is-ask {
   background-image: repeating-linear-gradient(-45deg, var(--enamel-500) 0 1px, transparent 1px 4px);
   border: 1px solid var(--enamel-600);
@@ -597,6 +609,11 @@ a {
 }
 .slot.is-turnstile .slot-source { color: var(--brass); }
 .slot.is-turnstile .slot-value { color: var(--brass); }
+
+/* A price with no currency: brass edge, chalk number, no fill. */
+.slot.is-raw { border-color: var(--brass-deep); }
+.slot.is-raw .slot-source { color: var(--brass-deep); }
+.slot.is-raw .slot-value { color: var(--chalk); }
 
 /* Askable, unanswered: hatched, because the endpoint is there and does not reply. */
 .slot.is-ask {

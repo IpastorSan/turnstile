@@ -1,16 +1,29 @@
 // How a price — or the absence of one — is described to a buyer.
 //
-// The five sources are not five styles of the same thing. Two of them are a
-// number you can act on; three of them are different reasons you cannot get
-// one, and a buyer's agent has to tell them apart to decide whether to ask, to
-// skip, or to look elsewhere. Collapsing them into a blank cell is the bug this
-// whole page argues against, so each has its own words.
+// The six sources are not six styles of the same thing. Some are a number in a
+// unit you can act on; one (Virtuals ACP) is a number with no unit at all; the
+// rest are different reasons you cannot get one, and a buyer's agent has to
+// tell them apart to decide whether to ask, to skip, or to look elsewhere.
+// Collapsing them into a blank cell is the bug this whole page argues against,
+// so each has its own words.
+//
+// **Correction (2026-10-16, TUR-1):** this page used to have three tones and,
+// in practice, one priced row: ours. Capminal's live x402 v2 quote and 76
+// Virtuals ACP job prices were in the store's reach and were missed. `raw` is
+// the tone for a price published with no currency, so a number nobody can
+// compare is not drawn in the same brass as one that can.
 
 import type { PriceSource, SellerResult } from './discovery.ts';
 
+export type Tone = 'turnstile' | 'raw' | 'ask' | 'none';
+
 export interface SlotCopy {
-  /** Which of the three visual states this price gets. */
-  tone: 'turnstile' | 'ask' | 'none';
+  /**
+   * Which visual state this price gets. `turnstile` is any price in a unit we
+   * can convert to dollars, whoever published it; `raw` is a published number
+   * with no convertible unit.
+   */
+  tone: Tone;
   source: string;
   value: string;
   note: string;
@@ -21,31 +34,43 @@ export function priceSlot(seller: SellerResult): SlotCopy {
   // `price` is null for both 'ask_x402' and 'none', so it cannot be the thing
   // that distinguishes them. `priceSource` carries the reason.
   const source: PriceSource = seller.priceSource;
+  const tone = (p: NonNullable<typeof price>): Tone => (p.usd !== null ? 'turnstile' : 'raw');
+  const value = (p: NonNullable<typeof price>): string =>
+    p.usd !== null ? `$${p.usd.toFixed(2)}` : `${p.raw}${p.currency ? ` ${p.currency}` : ''}`;
 
   if (source === 'turnstile' && price) {
     return {
-      tone: 'turnstile',
+      tone: tone(price),
       source: 'ENS resolver record',
-      value: price.usd !== null ? `$${price.usd.toFixed(2)}` : price.raw,
+      value: value(price),
       note: 'Published as turnstile:price on this seller’s ENSv2 name. Readable by anyone, without asking the seller.',
     };
   }
 
   if (source === 'x402' && price) {
     return {
-      tone: 'turnstile',
-      source: 'live 402 quote',
-      value: price.usd !== null ? `$${price.usd.toFixed(2)}` : price.raw,
-      note: 'Quoted by the endpoint just now, in an HTTP 402 response.',
+      tone: tone(price),
+      source: 'live x402 quote',
+      value: value(price),
+      note: 'Quoted by one of this agent’s endpoints in an HTTP 402 response when we probed it. A quote is perishable; ask again before paying.',
     };
   }
 
   if (source === 'document' && price) {
     return {
-      tone: 'turnstile',
+      tone: tone(price),
       source: 'registration document',
-      value: price.usd !== null ? `$${price.usd.toFixed(2)}` : price.raw,
+      value: value(price),
       note: 'Stated in the agent’s own registration document.',
+    };
+  }
+
+  if (source === 'acp' && price) {
+    return {
+      tone: 'raw',
+      source: 'Virtuals ACP job offerings',
+      value: price.raw,
+      note: 'Per-job prices from the Virtuals-only jobOfferings field in this agent’s document. No currency or asset is published, so they are shown as written and never compared to a dollar ceiling.',
     };
   }
 
@@ -54,7 +79,7 @@ export function priceSlot(seller: SellerResult): SlotCopy {
       tone: 'ask',
       source: 'x402 advertised',
       value: 'No knowable price',
-      note: 'A price exists, but only this agent’s endpoint can quote it, and it did not answer a payable 402 when we asked.',
+      note: 'The agent says it takes x402 payments, but no endpoint of it has answered a payable 402 on record, and its document states no price.',
     };
   }
 
@@ -66,8 +91,10 @@ export function priceSlot(seller: SellerResult): SlotCopy {
   };
 }
 
-/** The three buckets the legibility strip is drawn from, in strip order. */
-export function priceTone(seller: SellerResult): 'turnstile' | 'ask' | 'none' {
+/** The buckets the legibility strip is drawn from, in strip order. */
+export const TONE_ORDER: Tone[] = ['turnstile', 'raw', 'ask', 'none'];
+
+export function priceTone(seller: SellerResult): Tone {
   return priceSlot(seller).tone;
 }
 
