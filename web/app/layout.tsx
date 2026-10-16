@@ -28,7 +28,7 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: 'Turnstile — the registry says who exists, Turnstile says what they cost',
   description:
-    'A price-legible directory over the live ERC-8004 agent registry. 197 agents across Base, Ethereum mainnet and Sepolia; one publishes a price anyone can read.',
+    'A price-legible directory over the live ERC-8004 agent registry: who exists across Base, Ethereum mainnet and Sepolia, and which of them publish a price, where, and in what unit.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

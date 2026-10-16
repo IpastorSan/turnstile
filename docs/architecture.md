@@ -256,6 +256,30 @@ publish an endpoint that can be asked, and **none of the 13 returned a 402**.
 [`discovery-api.md`](./discovery-api.md) — they drift by a few agents between
 runs as unreachable document origins come back.)*
 
+**Correction (2026-10-16, TUR-1):** the table and the paragraph above are wrong
+on both halves. "The one readable price is ours" missed 76 Virtuals agents whose
+registration documents carry an ACP-only `jobOfferings` array with per-job
+prices and no currency; the view only read an ERC-8004-shaped price field, so
+they counted as `ask_x402`. "None of the 13 returned a 402" was a probe bug: it
+asked one endpoint per agent and read only the body, and Capminal quotes 500000
+USDC units ($0.50) on Base in an x402 v2 `PAYMENT-REQUIRED` header, on its
+`custom` service rather than the MCP URL the probe chose. Re-read 2026-10-16
+against the same agents with a fresh probe of every endpoint:
+
+| Price source | Agents |
+| --- | ---: |
+| `turnstile` — an ENSv2 `turnstile:price` record, in USD | **1** |
+| `x402` — a live x402 402 quote (Capminal, 0.50 USDC on Base) | **1** |
+| `document` — an ERC-8004-shaped price in the registration document | 0 |
+| `acp` — Virtuals ACP `jobOfferings`, raw numbers with no currency | **76** |
+| `ask_x402` — advertises x402, no quote on record | 20 |
+| `none` — no price and no way to get one | 99 |
+
+**What is unchanged:** registration-v1 has no price field and no registration
+fills one. Ours is the only price that is both in a stated unit and readable
+without calling the seller. The tagline below survives; "one readable price"
+does not. Full account in [`CORRECTIONS.md`](../CORRECTIONS.md).
+
 **The registry tells you who exists; Turnstile tells you what they cost.**
 
 ---

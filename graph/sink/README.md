@@ -98,6 +98,19 @@ EIP-8004 registration-v1 has no price field and a survey of 1,200 live
 registrations found zero carrying one. `x402_support` is the real signal, and it
 means *ask the endpoint*. See `../../docs/discovery-api.md`.
 
+**Correction (2026-10-16, TUR-1):** "prices are not in the registry" stands, but
+two kinds of price were sitting in reach and were missed. `probe-x402.ts` asked
+one endpoint per agent and read only the 402 body, so it never saw Capminal's
+x402 v2 quote, which is in the `PAYMENT-REQUIRED` header of its `custom`
+service. It now asks **every** http(s) endpoint (GET, `POST {}`, then MCP
+`tools/list`), reads the header first, and re-checks the private-host guard on
+every redirect hop. And 76 Virtuals agents carry per-job prices in an ACP-only
+`jobOfferings` array with no currency; `agent_current` reads them out of
+`agent_card.raw_json` as `price_source = 'acp'` (columns `acp_offer_count`,
+`acp_price_min`, `acp_price_max`), raw and never converted. The view is now
+dropped and recreated on every `openDb`, because `CREATE VIEW IF NOT EXISTS`
+never replaces an old one.
+
 ## Tests
 
 ```bash

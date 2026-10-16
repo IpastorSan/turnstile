@@ -51,7 +51,9 @@ const page = await context.newPage();
 console.log('recording…');
 
 // 1. The market. The claim the whole project rests on is the headline here:
-//    197 registrations, one readable price.
+//    197 registrations, and how few of their prices are readable or comparable.
+//    Correction (2026-10-16, TUR-1): this said "one readable price"; 78 post a
+//    price in three formats (see CORRECTIONS.md). The page computes the counts.
 await page.goto(`${BASE}/`, { waitUntil: 'networkidle', timeout: 60_000 });
 await settle(page, /agents?/i);
 await page.waitForTimeout(READ + 1_500);

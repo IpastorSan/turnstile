@@ -927,3 +927,15 @@ transfers summing to 144500 atomic units, split 7/4 across the two batches.
 seller's Gateway balance, so the reconciliation is one command rather than a
 paragraph. **Show that, not a block explorer**, when demonstrating that the seller
 was paid.
+
+**Correction (2026-10-16, TUR-1):** the Graph section's "ERC-8004 / x402 finding
+worth putting in the pitch" bullet says that of 197 live agents "exactly one has
+a price anyone can read, and it is ours", and that none of the 13 askable
+endpoints returns a 402. Both are wrong. Capminal answers a live x402 v2 402
+(0.50 USDC on Base) on a service the probe never asked, with the quote in a
+header the probe never read; and 76 Virtuals agents publish ACP job prices with
+no currency. Counts as of 2026-10-16: `turnstile` 1, `x402` 1, `acp` 76,
+`ask_x402` 20, `none` 99. The pitch line that survives: no price lives in an
+ERC-8004 field, and ours is the only one in a stated unit that can be read
+without calling the seller. Appended rather than edited because `CHECKLIST.md`
+is `merge=union`; the bullet's owner should rewrite it. See `CORRECTIONS.md`.

@@ -14,9 +14,15 @@
 //   3. A live HTTP 402 response says what anyone ELSE costs, at the moment you
 //      ask, because under x402 that is the only place the quote exists.
 //
+// **Correction (2026-10-16, TUR-1):** there is a fourth place, and "the only
+// place the quote exists" was too strong. Virtuals ACP agents list per-job
+// prices in a `jobOfferings` array in their registration document — readable
+// without asking, but with no currency, so they surface as `acp` with
+// `usd: null` and are never compared to a ceiling. See CORRECTIONS.md.
+//
 // So: the registry tells you who exists; Turnstile tells you what they cost.
-// Every result says which of the three its price came from, or that there is
-// none — `priceSource` is never absent and never guessed.
+// Every result says where its price came from, or that there is none —
+// `priceSource` is never absent and never guessed.
 
 import type { DatabaseSync } from 'node:sqlite';
 
@@ -151,10 +157,11 @@ const SIX_DECIMALS = 1_000_000;
 /**
  * Put a price on a comparable scale, or refuse to.
  *
- * The three price sources do not share a unit. `turnstile:price` is a decimal
+ * The price sources do not share a unit. `turnstile:price` is a decimal
  * string of dollars, written by a human-authorised hot key ("0.07"). An x402
  * quote's `maxAmountRequired` is an integer in the asset's smallest unit
- * ("70000" USDC). A document price is whatever the agent felt like publishing.
+ * ("70000" USDC). A document price is whatever the agent felt like publishing,
+ * and a Virtuals ACP job price ("0.02") has no unit at all.
  * Comparing them without saying so would produce a filter that silently ranks a
  * seven-cent seller against a seventy-thousand-dollar one, so anything we
  * cannot convert comes back with `usd: null` and `comparable: false` rather
@@ -512,8 +519,10 @@ export function findSellers(db: DatabaseSync, query: FindSellersQuery = {}): Fin
         "worldVerification: 'unknown', never 'unverified': absence of a proof is not evidence " +
         'of a failed one, and most of these 197 agents are not ours to verify.',
       livePricing:
-        'A price for a non-Turnstile agent only exists in its HTTP 402 response. probe-x402.ts ' +
-        'fetches one on demand; agents with x402Support and no quote report priceSource: ask_x402.',
+        'A payable price for a non-Turnstile agent only exists in its HTTP 402 response. probe-x402.ts ' +
+        'asks every endpoint an agent lists and caches what answers; agents with x402Support and no ' +
+        'quote report priceSource: ask_x402. Virtuals ACP job prices (priceSource: acp) are read from ' +
+        'the registration document, carry no currency, and are never converted to dollars.',
     },
   };
 }

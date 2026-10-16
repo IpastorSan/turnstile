@@ -173,3 +173,63 @@ row it was refused for. Both now leave the verified row alone.
 
 **What is unchanged:** the three-listing cap, the nullifier never reaching the
 browser, and `unknown` rather than `unverified` for agents with no proof.
+
+---
+
+**Correction (2026-10-16, TUR-1): "197 agents, exactly one publishes a readable
+price, and it is ours; 97 set `x402Support` and none answer with a 402" was
+wrong on both halves.** It was the headline of the README, the market page,
+`docs/EVIDENCE.md`, `docs/discovery-api.md`, `docs/architecture.md`, the MCP
+skill and the demo voiceover. Prices exist in the same 197-agent store in three
+formats, and none of them is an ERC-8004 field:
+
+| Where the price is | Agents | Unit | How it was missed |
+| --- | ---: | --- | --- |
+| Our ENSv2 `turnstile:price` record | 1 | USD | — |
+| A live x402 v2 402 from Capminal (`eip155:8453:0x8004a169…a432/1380`) | 1 | 500000 USDC units = **$0.50 on Base** | The probe asked one endpoint per agent and read only the body |
+| Virtuals ACP `jobOfferings` in the registration document | 76 | **none published** | The view's `document` bucket only read an ERC-8004-shaped price field |
+
+**Capminal**, verified 2026-10-16: `POST https://www.capminal.ai/api/x402/deploy`
+(the agent's service named `custom`) answers `402` with an x402 v2
+`PAYMENT-REQUIRED` header — scheme `exact`, network `eip155:8453`, amount
+`500000`, asset USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`, payTo
+`0xf9d1d63f362bbf1ee08ab9acb36fe74afc48d5f1` — and a body of `{}`. A GET is
+`405`. `probe-x402.ts` missed it twice over: it picked ONE endpoint per agent,
+ranked x402 > api > mcp > a2a, so it chose Capminal's MCP URL (an HTML page) and
+never asked the `custom` one; and it parsed only the body, where v2 no longer
+puts the quote.
+
+**Virtuals ACP**: 79 Base agents (all `x402Support: true`, all `services: []`)
+carry a `jobOfferings` array. 76 have at least one visible offering with a
+non-zero fixed price — 221 such offerings, from 0.01 to 79.99 — in the shape
+`{"price": 0.02, "priceV2": {"type": "fixed", "value": 0.02}}`, with **no
+currency or asset**. They are probably dollars; nothing in the document says
+so. (Six more offerings have a `percentage` priceV2, which is a trade fee, not a
+price, and are not counted.)
+
+**Fixed in the same branch.** The probe asks every http(s) endpoint, as GET,
+`POST {}` and an MCP `tools/list` POST, and decodes the v2 header with
+`@x402/core` before falling back to the v1 body. `agent_current` has a sixth
+`price_source`, `acp`, which keeps the raw numbers and never converts them:
+`normalizePriceUsd` returns `usd: null`, so a dollar ceiling excludes them like
+any unknown price. Re-read 2026-10-16 against the 2026-09-07 snapshot plus a
+fresh probe of all 40 endpoints the 14 endpoint-publishing x402 agents list:
+
+| `price_source` | Before | After |
+| --- | ---: | ---: |
+| `turnstile` | 1 | 1 |
+| `x402` | 0 | **1** |
+| `document` | 0 | 0 |
+| `acp` | — | **76** |
+| `ask_x402` | 97 | **20** |
+| `none` | 99 | 99 |
+
+**What is unchanged.** EIP-8004 registration-v1 has no price field, and still
+no registration in the store fills one (`document` is 0). Ours is still the
+only price that is both readable without calling the seller **and** stated in
+a unit, and the only one bounded by a cold-key ceiling. Of the other two,
+Capminal's has to be asked for and is perishable, and the 76 ACP prices are
+readable but say nothing about what they are denominated in. 99 agents publish
+no price anywhere. So the case for the ENS leg survives; the "only one" framing
+does not. The market page now counts these from the store instead of stating
+them.

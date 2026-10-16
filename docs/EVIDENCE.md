@@ -25,7 +25,7 @@ with none of the thing it exists to show.
 
 | Screen | Shows | Image |
 |---|---|---|
-| Market | 197 registrations; one readable price | [`market.png`](./screenshots/market.png) |
+| Market | 197 registrations; 78 post a price in three formats, 2 of them in dollars (re-captured 2026-10-16, see below) | [`market.png`](./screenshots/market.png) |
 | Seller | `liquidity.turnstile.eth` resolved live from Sepolia, block number moving on reload | [`seller.png`](./screenshots/seller.png) |
 | Mandate | both key quorums, the policy, and 25 settled payments across two rails | [`mandate.png`](./screenshots/mandate.png) |
 | Create a mandate | operator keys generated in the browser, never sent to the server | [`mandate-new.png`](./screenshots/mandate-new.png) |
@@ -91,7 +91,18 @@ npm run demo        # discover a seller, read its price from Sepolia, pay on bot
 | Our registry and registrar are ours and deployed | Registry `0x10969a72…2d24`, Registrar `0x8e428Cc0…656a` | [`addresses.turnstile.sepolia.json`](../contracts/addresses.turnstile.sepolia.json) |
 | The name is linked into the real ENSv2 hierarchy | `linkedIntoHierarchy: true`, verified against the live `eth` registry rather than a local deployment | [`testFork_nameIsDerivedFromTheLiveHierarchy`](../contracts/test/fork/SepoliaEnsV2.t.sol) |
 | The market reads real registrations, not fixtures | 197 ERC-8004 registrations across Base, mainnet and Sepolia | `npm run discover` |
-| **Exactly one of those 197 publishes a readable price, and it is ours** | This is the measured claim the whole project rests on. EIP-8004 registration-v1 has no price field | [`docs/architecture.md`](./architecture.md) |
+| **78 of those 197 publish a price, in three formats, none of them an ERC-8004 field. Ours is the only one in a stated unit that is readable without calling the seller** | `price_source` counts re-read 2026-10-16: `turnstile` 1 (ENS, USD), `x402` 1 (Capminal, a live x402 v2 402 for 500000 USDC units on Base), `acp` 76 (Virtuals `jobOfferings`, no currency), `document` 0, `ask_x402` 20, `none` 99. EIP-8004 registration-v1 has no price field | [`CORRECTIONS.md`](../CORRECTIONS.md), [`docs/discovery-api.md`](./discovery-api.md) |
+
+**Correction (2026-10-16, TUR-1):** the row above previously read "**Exactly
+one of those 197 publishes a readable price, and it is ours** — the measured
+claim the whole project rests on". It was not true. Capminal answers a POST to
+its `custom` service with an x402 v2 402 whose quote is in the
+`PAYMENT-REQUIRED` header, which the probe never read and never asked; and 76
+Virtuals agents publish ACP job prices the store never looked for. The claim
+the project rests on narrows rather than falls: no ERC-8004 field carries a
+price, and ours is the only one that is both in a unit and readable without a
+request. `market.png` was re-captured the same day from a local build against
+the committed snapshot, because the old image displayed the old claim.
 
 ## The Graph
 
