@@ -23,7 +23,7 @@ import { decodePaymentRequiredHeader } from '@x402/core/http';
 
 import { flag, main, numberFlag } from './cli.ts';
 import { DEFAULT_DB_PATH, openDb } from './db.ts';
-import { DEFAULT_TIMEOUT_MS, MAX_REDIRECTS, isBlockedHost } from './card.ts';
+import { DEFAULT_TIMEOUT_MS, guardedFetch, isBlockedHost } from './card.ts';
 
 export type ProbeStatus = 'quoted' | 'no_402' | 'http_error' | 'timeout' | 'network_error' | 'parse_error' | 'blocked_host';
 
@@ -74,49 +74,42 @@ export function parseX402Body(body: unknown): Partial<ProbeResult> {
 }
 
 /**
- * Read the quote out of an x402 v2 `PAYMENT-REQUIRED` header.
+ * Read a 402 the way a v2 client does: the `PAYMENT-REQUIRED` header first,
+ * then the body.
  *
  * v2 moved the challenge out of the body: the header carries the whole
  * `PaymentRequired` object base64-encoded, and the body may be `{}`. Reading only
  * the body reported a perfectly good v2 quote as "402 body carried no amount" —
  * that is how Capminal's 0.50 USDC quote on Base was missed (TUR-1, verified
  * 2026-10-16). Decoding is `@x402/core`'s, the same helper `purchase.ts` pays
- * through, so the probe and the buyer cannot disagree on what a header says.
- */
-export function parseX402Header(value: string): Partial<ProbeResult> {
-  const decoded = decodePaymentRequiredHeader(value) as unknown;
-  return parseX402Body(decoded);
-}
-
-/**
- * Read a 402 the way a v2 client does: the header first, then the body.
- *
- * Returns the fields plus where they came from, or `null` fields when neither
- * carries an amount. A malformed header falls through to the body rather than
- * hiding a body that does quote.
+ * through. A malformed header falls through to the body rather than hiding a
+ * body that does quote. `raw` is what the quote was read from, for storage.
  */
 export function parseX402Response(
   headerValue: string | null,
   bodyText: string,
-): { fields: Partial<ProbeResult>; from: 'header' | 'body' | null; error?: string } {
+): { fields: Partial<ProbeResult>; from: 'header' | 'body' | null; raw: string; error?: string } {
   let headerError: string | undefined;
   if (headerValue) {
     try {
-      const fields = parseX402Header(headerValue);
-      if (fields.amount) return { fields, from: 'header' };
+      const decoded = decodePaymentRequiredHeader(headerValue) as unknown;
+      const fields = parseX402Body(decoded);
+      if (fields.amount) return { fields, from: 'header', raw: JSON.stringify(decoded) };
     } catch (err) {
       headerError = `PAYMENT-REQUIRED header: ${(err as Error).message.slice(0, 160)}`;
     }
   }
+  const raw = headerValue ?? bodyText;
   try {
     const fields = parseX402Body(JSON.parse(bodyText));
-    if (fields.amount) return { fields, from: 'body' };
+    if (fields.amount) return { fields, from: 'body', raw: bodyText };
   } catch (err) {
-    return { fields: {}, from: null, error: headerError ?? (err as Error).message.slice(0, 200) };
+    return { fields: {}, from: null, raw, error: headerError ?? (err as Error).message.slice(0, 200) };
   }
   return {
     fields: {},
     from: null,
+    raw,
     error: headerError ?? (headerValue ? '402 header and body carried no amount' : '402 body carried no amount'),
   };
 }
@@ -133,7 +126,7 @@ export function parseX402Response(
  *                  cheapest legitimate call, and a paid MCP server should answer
  *                  it with a 402.
  */
-export const PROBE_ATTEMPTS = ['GET', 'POST', 'POST tools/list'] as const;
+const PROBE_ATTEMPTS = ['GET', 'POST', 'POST tools/list'] as const;
 type ProbeAttempt = typeof PROBE_ATTEMPTS[number];
 
 async function attempt(
@@ -143,45 +136,24 @@ async function attempt(
   allowPrivateHosts: boolean,
 ): Promise<{ response?: Response; error?: { status: ProbeStatus; error: string } }> {
   const method = kind === 'GET' ? 'GET' : 'POST';
-  try {
-    // Redirects are followed by hand so every hop passes the private-host
-    // guard, the way card.ts does it. `redirect: 'follow'` would check only the
-    // first URL, and now that every endpoint an agent lists is asked, a stranger
-    // gets more URLs to bounce us through to 169.254.169.254.
-    let current = url;
-    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-      const response = await fetch(current, {
-        method,
-        redirect: 'manual',
-        signal: AbortSignal.timeout(timeoutMs),
-        headers: method === 'POST'
-          ? { accept: 'application/json, text/event-stream', 'content-type': 'application/json' }
-          : { accept: 'application/json' },
-        body: kind === 'POST tools/list'
-          ? JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
-          : kind === 'POST' ? '{}' : undefined,
-      });
-      const location = response.status >= 300 && response.status < 400 ? response.headers.get('location') : null;
-      if (!location) return { response };
-      const next = new URL(location, current);
-      if (next.protocol !== 'http:' && next.protocol !== 'https:') {
-        return { error: { status: 'network_error', error: `redirect to protocol ${next.protocol}` } };
-      }
-      if (!allowPrivateHosts && await isBlockedHost(next.hostname)) {
-        return { error: { status: 'blocked_host', error: `redirect to private host ${next.hostname}` } };
-      }
-      current = next.toString();
-    }
-    return { error: { status: 'http_error', error: `more than ${MAX_REDIRECTS} redirects` } };
-  } catch (err) {
-    const name = (err as Error).name;
-    return {
-      error: {
-        status: name === 'TimeoutError' || name === 'AbortError' ? 'timeout' : 'network_error',
-        error: (err as Error).message.slice(0, 300),
-      },
-    };
-  }
+  // `guardedFetch` re-checks the private-host guard on every redirect hop, the
+  // same code that guards document resolution: now that every endpoint an agent
+  // lists is asked, a stranger gets more URLs to bounce us through.
+  const result = await guardedFetch(url, {
+    method,
+    timeoutMs,
+    headers: method === 'POST'
+      ? { accept: 'application/json, text/event-stream', 'content-type': 'application/json' }
+      : { accept: 'application/json' },
+    body: kind === 'POST tools/list'
+      ? JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
+      : kind === 'POST' ? '{}' : undefined,
+  }, { allowPrivateHosts });
+  if ('response' in result) return { response: result.response };
+  const status: ProbeStatus = result.status === 'unsupported_scheme' || result.status === 'resolved' || result.status === 'parse_error'
+    ? 'network_error'
+    : result.status;
+  return { error: { status, error: result.error } };
 }
 
 /**
@@ -252,14 +224,10 @@ export async function probeEndpoint(
       continue;
     }
 
-    const header = response.headers.get('payment-required');
     const text = (await response.text()).slice(0, 16_384);
-    const { fields, from, error: parseError } = parseX402Response(header, text);
-    // Store what the quote was read from. For a v2 header that is the header —
-    // the body is often `{}` and would make the stored evidence look empty.
-    const raw = from === 'header' ? JSON.stringify(decodePaymentRequiredHeader(header!)) : text;
+    const { fields, raw, error: parseError } = parseX402Response(response.headers.get('payment-required'), text);
     if (!fields.amount) {
-      return { status: 'parse_error', httpStatus: 402, error: `${method}: ${parseError}`, raw: header ?? text };
+      return { status: 'parse_error', httpStatus: 402, error: `${method}: ${parseError}`, raw };
     }
     return { status: 'quoted', httpStatus: 402, raw, ...fields };
   }
@@ -271,7 +239,7 @@ export async function probeEndpoint(
  * Endpoint roles in the order worth asking first. Order only — every http(s)
  * endpoint is asked (see `probeAgent`).
  */
-export const ENDPOINT_PRIORITY = ['x402', 'api', 'mcp', 'a2a'];
+const ENDPOINT_PRIORITY = ['x402', 'api', 'mcp', 'a2a'];
 
 export interface ProbeEndpointRef {
   name: string | null;
@@ -363,7 +331,8 @@ export function selectProbeCandidates(db: DatabaseSync, limit: number, network?:
     }
     byAgent.get(r.agent_uid)!.push({ name: r.name, uri: r.uri });
   }
-  return [...byAgent].map(([agent_uid, endpoints]) => ({ agent_uid, endpoints: probeableEndpoints(endpoints) }));
+  // Ordering and dedup happen once, in probeAgent.
+  return [...byAgent].map(([agent_uid, endpoints]) => ({ agent_uid, endpoints }));
 }
 
 export function writeQuote(db: DatabaseSync, agentUid: string, endpoint: string, result: ProbeResult): void {

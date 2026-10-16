@@ -32,7 +32,7 @@
 
 import type { DatabaseSync } from 'node:sqlite';
 
-import { normalizePriceUsd } from '../seller/service/discovery.ts';
+import { acpPrice, normalizePriceUsd } from '../seller/service/discovery.ts';
 import type { PriceSource } from '../seller/service/discovery.ts';
 import { probeEndpoint, probeableEndpoints } from '../graph/sink/probe-x402.ts';
 import type { ProbeResult } from '../graph/sink/probe-x402.ts';
@@ -485,30 +485,33 @@ export async function getOffer(db: DatabaseSync, ref: string, options: GetOfferO
   // read out of a stranger's on-chain registration is not, and following one of
   // those to `http://169.254.169.254/` would be an SSRF with extra steps.
   let callerSupplied = false;
+  // Where a quote might be. A URL the caller named, or the one an ENS record
+  // names, is the resource by assertion and is asked alone; a document's
+  // endpoints are all asked, in priority order, because an agent's service
+  // names do not say which one takes money (TUR-1).
+  let toProbe: string[] = [];
   if (options.resource) {
     resource = options.resource;
     callerSupplied = true;
+    toProbe = [resource];
     resolvedVia.push('resource URL supplied by the caller, overriding anything published');
   } else if (directResource) {
     resource = directResource;
     callerSupplied = true;
+    toProbe = [resource];
   } else if (ens?.mcpEndpoint) {
     resource = ens.mcpEndpoint;
+    toProbe = [resource];
     resolvedVia.push(`resource taken from the ENSIP-26 agent-endpoint[mcp] record`);
   } else if (agent) {
-    const chosen = preferredEndpoint(agent.endpoints);
-    if (chosen?.uri) {
+    const endpoints = probeableEndpoints(agent.endpoints);
+    const chosen = endpoints[0];
+    if (chosen) {
       resource = chosen.uri;
+      toProbe = endpoints.map((e) => e.uri!);
       resolvedVia.push(`resource taken from the agent's '${chosen.name ?? 'unnamed'}' endpoint in its registration document`);
     }
   }
-  // Every endpoint the agent published is a place a quote might be. Only the
-  // document's endpoints fan out: a URL the caller named, or the one an ENS
-  // record names, is the resource by assertion and is asked alone.
-  const fromDocument = resource !== null && !callerSupplied && !ens?.mcpEndpoint && agent !== null;
-  const toProbe = fromDocument
-    ? probeableEndpoints(agent!.endpoints).map((e) => e.uri!)
-    : resource ? [resource] : [];
 
   // --- what does it cost? ---------------------------------------------------
 
@@ -548,17 +551,17 @@ export async function getOffer(db: DatabaseSync, ref: string, options: GetOfferO
     };
     terms.quotedAt = row.x402_probed_at;
     if (note) terms.note = note;
-  } else if (row?.price_source === 'acp' && row.acp_price_min !== null) {
-    // Virtuals ACP job prices (TUR-1): published in the document, but with no
-    // currency, so they are reported raw and never as dollars. The cheapest
-    // offering is the headline; the note carries the range.
-    const lo = String(row.acp_price_min);
-    const { note } = normalizePriceUsd(lo, null, 'acp');
-    published = {
-      priceUsd: null, priceRaw: lo, currency: null,
-      source: 'acp', basis: 'document', ceilingUsd: null, payTo: null,
-    };
-    terms.note = `${note}. ${row.acp_offer_count} priced job offering(s), ${lo}–${row.acp_price_max} as published.`;
+  } else if (row?.price_source === 'acp') {
+    // Virtuals ACP job prices (TUR-1): reported raw and never as dollars. The
+    // cheapest offering is the headline; the note carries the range.
+    const acp = acpPrice(row);
+    if (acp) {
+      published = {
+        priceUsd: null, priceRaw: acp.min, currency: null,
+        source: 'acp', basis: 'document', ceilingUsd: null, payTo: null,
+      };
+      terms.note = acp.note;
+    }
   }
 
   if (published) {
@@ -578,7 +581,7 @@ export async function getOffer(db: DatabaseSync, ref: string, options: GetOfferO
   // --- ask the endpoint, which is the only price `purchase` can act on ------
 
   let probe: (ProbeResult & { url: string }) | null = null;
-  if (resource && options.probe !== false) {
+  if (options.probe !== false) {
     for (const url of toProbe) {
       const attempt = await (options.probeFn ?? probeEndpoint)(url, timeoutMs, { allowPrivateHosts: callerSupplied });
       resolvedVia.push(`probed ${url} for a live 402: ${attempt.status}`);

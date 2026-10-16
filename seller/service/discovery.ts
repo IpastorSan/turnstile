@@ -176,13 +176,6 @@ export function normalizePriceUsd(
   const value = Number(raw);
   if (!Number.isFinite(value)) return { usd: null, note: `unparseable amount ${raw}` };
 
-  if (source === 'acp') {
-    // Virtuals ACP jobOfferings publish `price: 0.02` and nothing else — no
-    // currency, no asset, no chain. It is probably dollars, and "probably" is
-    // exactly what a price filter must not act on (TUR-1).
-    return { usd: null, note: 'Virtuals ACP job price: no currency or asset is published — not comparable' };
-  }
-
   if (source === 'turnstile') {
     // turnstile:price is a decimal price in USD by construction — the record is
     // written by us, and docs/ens-offer-records.md defines the unit.
@@ -337,6 +330,28 @@ function toEndpoints(db: DatabaseSync, agentUid: string): SellerEndpoint[] {
   }));
 }
 
+/**
+ * Virtuals ACP job prices, as the view summarises them (TUR-1).
+ *
+ * `jobOfferings` publish `price: 0.02` and nothing else — no currency, no
+ * asset, no chain. It is probably dollars, and "probably" is exactly what a
+ * price filter must not act on, so this never yields a dollar figure.
+ */
+export function acpPrice(row: {
+  acp_offer_count: number | null; acp_price_min: number | null; acp_price_max: number | null;
+}): { raw: string; min: string; note: string } | null {
+  if (row.acp_price_min === null) return null;
+  const min = String(row.acp_price_min);
+  const max = row.acp_price_max !== null ? String(row.acp_price_max) : min;
+  const count = row.acp_offer_count ?? 0;
+  return {
+    raw: min === max ? min : `${min}–${max}`,
+    min,
+    note: 'Virtuals ACP job price: no currency or asset is published — not comparable. ' +
+      `${count} priced job offering${count === 1 ? '' : 's'}; the range is as published.`,
+  };
+}
+
 function toPrice(row: Row): SellerPrice | null {
   if (row.price_source === 'turnstile' && row.turnstile_price) {
     const { usd, note } = normalizePriceUsd(row.turnstile_price, 'usd', 'turnstile');
@@ -365,16 +380,9 @@ function toPrice(row: Row): SellerPrice | null {
       source: 'document', comparable: usd !== null, note,
     };
   }
-  if (row.price_source === 'acp' && row.acp_price_min !== null) {
-    const lo = String(row.acp_price_min);
-    const hi = row.acp_price_max !== null ? String(row.acp_price_max) : lo;
-    const { usd, note } = normalizePriceUsd(lo, null, 'acp');
-    const count = row.acp_offer_count ?? 0;
-    return {
-      raw: lo === hi ? lo : `${lo}–${hi}`,
-      usd, currency: null, source: 'acp', comparable: false,
-      note: `${note}. ${count} priced job offering${count === 1 ? '' : 's'}; the range is as published.`,
-    };
+  if (row.price_source === 'acp') {
+    const acp = acpPrice(row);
+    if (acp) return { ...acp, usd: null, currency: null, source: 'acp', comparable: false };
   }
   return null;
 }

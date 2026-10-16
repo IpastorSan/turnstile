@@ -29,48 +29,39 @@ export interface SlotCopy {
   note: string;
 }
 
+/** Copy for the sources that carry a number. Tone and value come from the number itself. */
+const PUBLISHED: Partial<Record<PriceSource, { source: string; note: string }>> = {
+  turnstile: {
+    source: 'ENS resolver record',
+    note: 'Published as turnstile:price on this seller’s ENSv2 name. Readable by anyone, without asking the seller.',
+  },
+  x402: {
+    source: 'live x402 quote',
+    note: 'Quoted by one of this agent’s endpoints in an HTTP 402 response when we probed it. A quote is perishable; ask again before paying.',
+  },
+  document: {
+    source: 'registration document',
+    note: 'Stated in the agent’s own registration document.',
+  },
+  acp: {
+    source: 'Virtuals ACP job offerings',
+    note: 'Per-job prices from the Virtuals-only jobOfferings field in this agent’s document. No currency or asset is published, so they are shown as written and never compared to a dollar ceiling.',
+  },
+};
+
 export function priceSlot(seller: SellerResult): SlotCopy {
   const price = seller.price;
   // `price` is null for both 'ask_x402' and 'none', so it cannot be the thing
   // that distinguishes them. `priceSource` carries the reason.
   const source: PriceSource = seller.priceSource;
-  const tone = (p: NonNullable<typeof price>): Tone => (p.usd !== null ? 'turnstile' : 'raw');
-  const value = (p: NonNullable<typeof price>): string =>
-    p.usd !== null ? `$${p.usd.toFixed(2)}` : `${p.raw}${p.currency ? ` ${p.currency}` : ''}`;
+  const copy = PUBLISHED[source];
 
-  if (source === 'turnstile' && price) {
+  if (price && copy) {
     return {
-      tone: tone(price),
-      source: 'ENS resolver record',
-      value: value(price),
-      note: 'Published as turnstile:price on this seller’s ENSv2 name. Readable by anyone, without asking the seller.',
-    };
-  }
-
-  if (source === 'x402' && price) {
-    return {
-      tone: tone(price),
-      source: 'live x402 quote',
-      value: value(price),
-      note: 'Quoted by one of this agent’s endpoints in an HTTP 402 response when we probed it. A quote is perishable; ask again before paying.',
-    };
-  }
-
-  if (source === 'document' && price) {
-    return {
-      tone: tone(price),
-      source: 'registration document',
-      value: value(price),
-      note: 'Stated in the agent’s own registration document.',
-    };
-  }
-
-  if (source === 'acp' && price) {
-    return {
-      tone: 'raw',
-      source: 'Virtuals ACP job offerings',
-      value: price.raw,
-      note: 'Per-job prices from the Virtuals-only jobOfferings field in this agent’s document. No currency or asset is published, so they are shown as written and never compared to a dollar ceiling.',
+      ...copy,
+      // A number with no convertible unit is `raw`, not brass.
+      tone: price.usd !== null ? 'turnstile' : 'raw',
+      value: price.usd !== null ? `$${price.usd.toFixed(2)}` : `${price.raw}${price.currency ? ` ${price.currency}` : ''}`,
     };
   }
 
@@ -93,10 +84,6 @@ export function priceSlot(seller: SellerResult): SlotCopy {
 
 /** The buckets the legibility strip is drawn from, in strip order. */
 export const TONE_ORDER: Tone[] = ['turnstile', 'raw', 'ask', 'none'];
-
-export function priceTone(seller: SellerResult): Tone {
-  return priceSlot(seller).tone;
-}
 
 export function shortAddress(a: string | null | undefined): string {
   if (!a) return '—';
