@@ -72,14 +72,14 @@ Every row is a binary disqualifier. **This is `CHECKLIST.md` in the repo from da
 **ENS — ENSv2 ($4,500)**
 - [x] ENSv2 on **Sepolia**; features **central, not cosmetic** — done (MOV-217 + MOV-218). Registry, registrar and a `PermissionedResolver` live on Sepolia; `liquidity.turnstile.eth` minted with ENSIP-25/26 records and a cold/hot EAC role split enforced by the resolver. Tx hashes and on-chain reads in `docs/ens-offer-records.md`
 - [ ] Demo functional, **no hard-coded values**
-- [x] Video **and/or** live demo link (ideally both); open source — **live demo link since 2026-09-11 (MOV-273): <https://turnstile.moveseventyeight.com>**, a GCP VM running `deploy/compose.yaml` behind Caddy with a Let's Encrypt certificate; `/analyze/:pool` answers `402` over real TLS. The gate's "and/or" is met by the link alone. **Still to do:** the video is not recorded; "open source" depends on the visibility flip under [Before submitting](#before-submitting--blocks-all-12-submissions); and the URL published in `agent-endpoint[mcp]` (`…/liquidity.turnstile.eth/sse`) returns 404 — submit the host link, not the record's URL. See `docs/deploy.md`, "Known gap"
+- [x] Video **and/or** live demo link (ideally both); open source — **live demo link since 2026-09-11 (MOV-273): <https://turnstile.moveseventyeight.com> (inactive since 2026-11-04)**, a GCP VM running `deploy/compose.yaml` behind Caddy with a Let's Encrypt certificate; `/analyze/:pool` answers `402` over real TLS. The gate's "and/or" is met by the link alone. **Still to do:** the video is not recorded; "open source" depends on the visibility flip under [Before submitting](#before-submitting--blocks-all-12-submissions); and the URL published in `agent-endpoint[mcp]` (`…/liquidity.turnstile.eth/sse`) returns 404 — submit the host link, not the record's URL. See `docs/deploy.md`, "Known gap"
 
 **Arc — Agentic ($1,667) + Launch ($3,500)**
 - [x] **A live agentic payment on Arc** — done (MOV-225). USDC on Arc testnet (`eip155:5042002`) through **Circle Gateway Nanopayments**, `@circle-fin/x402-batching@3.4.0`, facilitator `https://gateway-api-testnet.circle.com` with no API key. Seven payments settled 2026-09-07 — one at $0.07 and six at $0.000500 — from agent `0x0633a193017939Bb1eB242982397224c66948e2F`, whose **nonce stayed 0 throughout**: it signs EIP-3009 authorizations offchain and never submits a transaction, so it paid exactly zero gas. Transcript and verified/unverified table in `docs/arc-nanopayments.md`
 - [x] **The same query settles over both rails** — done (MOV-225). One run, one URL: Arc returned authorization `fa4ca648-863c-4f61-9a1e-2953eb789f7f`, Hedera returned `0.0.7162784@1788800327.098234984`, same verdict both times. `seller/service/no-chain-code.test.ts` fails the build if any file on the payment path names a chain, so this is enforced rather than asserted
 - [x] **Nanopayments, batched, with the transaction as evidence** — done (MOV-225). Six $0.000500 queries and the $0.07 query settled in **one** Arc transaction, [`0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1`](https://testnet.arcscan.app/tx/0xd6e77a59ad4740e5f89c9c601a05e7cf7859c9253fb1b3c31a8eae97e859a0c1) — block 60940635, 22 payments in it including other Gateway users', 0.133111 USDC, `from` = Circle's batcher `0xc73ef0d8…a884`, `to` = the GatewayWallet. A second run settled four more in [`0xe50b8be6…5c39`](https://testnet.arcscan.app/tx/0xe50b8be63a2fe102c70de3b62a43251fbfcac1d8ca93f9f1760dd3c7a7985c39) (block 60942503) — eleven settled payments in two transactions. Both runs' six-minute inline poll **expired before the batch landed**: Circle's batcher fires on its own schedule (2 to 15 minutes observed on one afternoon). **Do not script a demo around a fixed window** — run `npm run arc:receipts -- --ours --watch` as a second step
 - [ ] **State explicitly which bounty** each submission targets
-- [x] Working **frontend and backend** — done (MOV-230). Next.js 16 app in `web/`: market and seller pages server-rendered, plus `/api/sellers`, `/api/offer/:name` and `/api/health` as real routes over the discovery store and live Sepolia. Not a static export. ~~**Still not deployed**~~ — see `docs/deploy.md`. **Update (2026-09-11, MOV-273):** deployed. <https://turnstile.moveseventyeight.com> serves the web app and the x402 service since 2026-09-11 (`/`, `/api/health`, `/seller-health` 200; `/analyze/:pool` 402)
+- [x] Working **frontend and backend** — done (MOV-230). Next.js 16 app in `web/`: market and seller pages server-rendered, plus `/api/sellers`, `/api/offer/:name` and `/api/health` as real routes over the discovery store and live Sepolia. Not a static export. ~~**Still not deployed**~~ — see `docs/deploy.md`. **Update (2026-09-11, MOV-273):** deployed. <https://turnstile.moveseventyeight.com> (inactive since 2026-11-04) serves the web app and the x402 service since 2026-09-11 (`/`, `/api/health`, `/seller-health` 200; `/analyze/:pool` 402)
 - [x] **Architecture diagram** (§2.1 + §2.2) — done (MOV-230). `docs/architecture.svg` + `.png`, embedded in `README.md`, walked through in `docs/architecture.md`. Panel A the cold/warm/hot key tiers, Panel B discovery → offer → 402 → rail → answer
 - [ ] Video + presentation + detailed docs; GitHub link
 - [ ] Launch track: deployed or **deployment-ready on Arc mainnet by 30 Sep**
@@ -170,7 +170,7 @@ deploy, which is the point.~~ **The Sept 14 beat is therefore no longer "repair 
 see the note below.**
 
 **Update (2026-09-11, MOV-273): the real deploy happened on 2026-09-11, not Sept 14, and it
-stays up.** <https://turnstile.moveseventyeight.com> is a GCP Compute Engine VM running
+stays up.** <https://turnstile.moveseventyeight.com> (inactive since 2026-11-04) is a GCP Compute Engine VM running
 `deploy/compose.yaml` behind Caddy with a Let's Encrypt certificate, `main` at `5feaec2`.
 Verified from outside over TLS: `/`, `/api/health`, `/seller-health` 200; `/analyze/:pool`
 **402**; http→https 308. The struck sentence said the host did not resolve; it does now. **What
@@ -275,7 +275,7 @@ recording **or** link to a live demo (ideally both)"* — the video alone satisf
 a working frontend and backend *demonstrated*, not hosted. Only Bazantic ($1,000, cut-line #1)
 strictly needs public URLs, because its facilitator fetches them server-side.
 
-**Update (2026-09-11, MOV-273):** the public host now exists (<https://turnstile.moveseventyeight.com>,
+**Update (2026-09-11, MOV-273):** the public host now exists (<https://turnstile.moveseventyeight.com> (inactive since 2026-11-04),
 live since 2026-09-11), so Bazantic registration is no longer waiting on a deploy. It still needs
 `baz login` in a browser. Whether the `--spec-url` Bazantic wants is served from this host was
 **not checked** in this change. "Not hosted" above describes what Arc requires, not our state,
@@ -635,7 +635,7 @@ The lines below are appended rather than edited, per the union-merge rule.
 - **Update (2026-09-11, MOV-273):** three bullets above are out of date on the deploy. Arc's "true,
   not deployed", ENS's "the missing half is the deploy … not hosted anywhere", and ENS's "video
   and/or live demo link: still open" were all accurate for MOV-230. The stack has been live at
-  <https://turnstile.moveseventyeight.com> since 2026-09-11, so the web app and the x402 service are
+  <https://turnstile.moveseventyeight.com> (inactive since 2026-11-04) since 2026-09-11, so the web app and the x402 service are
   hosted, and the live-demo-link row above is ticked. What still stands: the video is not recorded,
   and the URL in `agent-endpoint[mcp]` returns 404 (`docs/deploy.md`, "Known gap"). The
   "Demo functional, no hard-coded values" row is left unticked for Ignacio's call, now that its

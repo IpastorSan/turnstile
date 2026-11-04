@@ -16,6 +16,10 @@ Current state of every claim: [`docs/EVIDENCE.md`](./docs/EVIDENCE.md).
 
 ---
 
+**Update (2026-11-04):** the public deployment at `https://turnstile.moveseventyeight.com` is **inactive**. The GCP VM `turnstile` was shut down to stop the cost, so the host, the x402 service at `/analyze/:pool` and the MCP endpoint the ENS record publishes no longer answer. Every page that pointed at it as live now says `(inactive)`; the dated entries below that verified it are left as they were, because they were true when written. The contracts, ENS records and transactions are on chain and unaffected; the demo video shows the hosted app running.
+
+---
+
 **Correction (2026-09-08, MOV-000):** the Cold row previously named **Ledger Key
 Ring (`wallet-cli ring`)** as the vendor and claimed it "seals upstream API
 keys". Both are withdrawn — **we do not use a Ledger device and never got one
