@@ -114,7 +114,7 @@ internet.~~
 
 **Update (2026-09-11, MOV-273):** this previously said the published host had no
 DNS record. It changed because the stack went live on 2026-09-11:
-<https://turnstile.moveseventyeight.com> serves the web app, and the x402 service
+<https://turnstile.moveseventyeight.com> (inactive since 2026-11-04) serves the web app, and the x402 service
 on it answers `402 Payment Required` at `/analyze/:pool` (verified 2026-09-11
 over real TLS). **What is still true is the gap itself — it moved from the host to
 the path.** `agent-endpoint[mcp]` publishes `…/liquidity.turnstile.eth/sse`, and

@@ -25,7 +25,7 @@ no native module, no API key.
 > (`npm view mcp-turnstile` returns 404, checked 2026-09-13), so the `npx -y mcp-turnstile`
 > commands in this file do not work as written. What works today: from a clone of the repo,
 > `npm install` then `npm run mcp` (stdio, same four tools), or point an MCP client at the
-> hosted endpoint `https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`
+> hosted endpoint `https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse` (inactive since 2026-11-04)
 > (MCP over HTTP/SSE). The package metadata and bundle entry are ready for a publish; the
 > publish itself has not happened.
 
@@ -303,8 +303,8 @@ papered over.
 
 **The endpoint published on chain answers as MCP, and not as an x402 resource.**
 `liquidity.turnstile.eth` publishes `agent-endpoint[mcp]` pointing at
-`https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`. That URL now
-serves this same toolbox over HTTP/SSE (verified 2026-09-11): `GET` with
+`https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse` (inactive since 2026-11-04). That URL
+served this same toolbox over HTTP/SSE (verified 2026-09-11): `GET` with
 `Accept: text/event-stream` opens a stream whose first frame names its
 `POST …/messages?sessionId=…` return path, `initialize` answers with our
 capabilities, and `tools/list` returns all four tools. An agent that speaks the
@@ -313,7 +313,7 @@ SSE transport reaches this server by following the record.
 What it does not do is answer a bare `POST` with a `402`: a `POST` to the stream
 URL is `404` by design, because in this transport the client posts to
 `…/messages`, not to the stream. The payable resource is a different URL —
-`https://turnstile.moveseventyeight.com/analyze/:pool`, which answers `402`.
+`https://turnstile.moveseventyeight.com/analyze/:pool` (inactive since 2026-11-04), which answered `402`.
 Pass that as `resource` to `purchase`.
 
 **Update history (2026-09-11, MOV-273):** this paragraph was headed "not deployed"

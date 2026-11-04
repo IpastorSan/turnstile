@@ -17,7 +17,7 @@ same buyer code.
 > (`npm view mcp-turnstile` returns 404, checked 2026-09-13), so the `npx -y mcp-turnstile`
 > commands in this file do not work as written. What works today: from a clone of the repo,
 > `npm install` then `npm run mcp` (stdio, same four tools), or point an MCP client at the
-> hosted endpoint `https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse`
+> hosted endpoint `https://turnstile.moveseventyeight.com/liquidity.turnstile.eth/sse` (inactive since 2026-11-04)
 > (MCP over HTTP/SSE). The package metadata and bundle entry are ready for a publish; the
 > publish itself has not happened.
 

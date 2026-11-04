@@ -3,9 +3,9 @@
 One host runs everything: the Next.js app, the x402 seller service, the evidence
 server the CRE enclave fetches from, and Caddy in front of all three.
 
-## Live since 2026-09-11
+## Live from 2026-09-11 to 2026-11-04 (inactive)
 
-**<https://turnstile.moveseventyeight.com>** is served from a GCP Compute Engine
+**<https://turnstile.moveseventyeight.com>** (inactive since 2026-11-04) was served from a GCP Compute Engine
 VM, `turnstile` (e2-medium, `europe-southwest1-a`, static IP `34.175.99.87`),
 running `deploy/compose.yaml` from `main` at `5feaec2`, with Caddy holding a
 Let's Encrypt certificate.

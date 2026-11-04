@@ -3,6 +3,8 @@
 One row per claim, one link per row. Everything here is on a public chain or a
 public endpoint, and every link was checked on 2026-09-09.
 
+> **Update (2026-11-04):** the public deployment at `turnstile.moveseventyeight.com` is inactive; its VM was shut down to stop the cost. Rows that cite it record what it answered while it was up. The demo video shows it running: [`docs/demo/turnstile-demo.mp4`](./demo/turnstile-demo.mp4).
+
 Where something is **not** proven, this page says so in the same table rather
 than in a footnote. Two rows do exactly that, and they are the two worth reading
 first if you are looking for the seam.
